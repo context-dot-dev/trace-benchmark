@@ -17,3 +17,6 @@ site/assets/
 site/index.html
 site/trace-source.zip
 site/pricing.json
+
+._*
+.DS_Store
