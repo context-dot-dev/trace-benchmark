@@ -89,6 +89,40 @@ serves eight result rows at a time, with evidence fetched only when inspected.
 The browser checks the small summary every minute using conditional requests. Components are in `src/components/ui`
 via the `@/components/ui` alias. The runtime needs no public database or browser keys.
 
+## Evaluator spending
+
+Jev has a shared **$5 per UTC day dispatch budget** across grading, output
+comparisons and legacy reference judgments. Set `TRACE_JEV_DAILY_BUDGET_USD`
+in the worker environment; `0` stops new evaluator calls. The smaller of this
+limit and the collection profile's token ceiling applies. Scraper and discovery
+request ceilings remain separate; this is not a total infrastructure budget or
+an account-wide limit on other applications using the same API key.
+
+We reserve estimated input tokens before dispatch, then settle against saved
+usage, including uncertain answers and error responses that report tokens.
+Batched questions count shared state once. Missing usage keeps its reservation;
+resuming never repeats a dispatched request. Estimates are conservative byte
+bounds, not an exact tokenizer: reported overruns are retained and reduce the
+remaining budget, but already-dispatched calls cannot be cancelled retroactively.
+
+`/api/summary` exposes `operations.evaluator_costs`: the verified model tariff,
+current dispatch limit, daily reported cost, unsettled reserves and overruns.
+Reported cost covers jobs with complete usage; partially reported jobs remain
+reserved. It is a token-based estimate, not a provider invoice. Scraper plan
+prices remain separate from the cost of running the evaluator.
+
+Reconcile interrupted or historical accounting from private receipts without
+making API calls (run with the worker's environment and state directory):
+
+```sh
+.venv/bin/python -m bench.costs --state state/live --reconcile
+.venv/bin/python scripts/verify-evaluator-costs.py
+```
+
+The verifier runs scoring and comparison against a local HTTP fixture with real
+SQLite persistence, writing `artifacts/costs/verification.json`. It makes no paid
+API calls. The reconciliation command takes the collector's worker lock.
+
 ## Optional Neon dashboard
 
 Production currently uses SQLite for the collector and atomic JSON exports for

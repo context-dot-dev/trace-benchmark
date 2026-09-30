@@ -3,9 +3,9 @@ import os
 import math
 import httpx
 from .storage import digest, now
+from .costs import MODEL, request_estimate
 
 VERSION='identity-content-jev-v2'
-MODEL='jev-1.13.0'
 CONTENT={
  'substantive':'Coherent main content: article passages, populated data/table, exact job description, product details, release notes, abstract, or a complete short post. Partial content may qualify; do not infer completeness.',
  'thin':'Mostly navigation, an empty viewer, generic listing instead of detail, title alone when a larger document is intended, or a shell with little target content.',
@@ -69,7 +69,7 @@ async def _judge_sample(task, observation, client=None, excerpt=None):
         cf=min(confidences)
         return dict(base,content_label=c,identity_label=i,success=decision(c,i),judgment_status='triaged',confidence=cf,reason='Provider-hidden model triage; not independent gold or full-document completeness.',usage=raw.get('usage',{}),private={'request':request,'response':raw})
     except (httpx.HTTPError,ValueError,KeyError,TypeError) as e:
-        return dict(base,content_label='unknown',identity_label='unknown',success=None,judgment_status='judge_error',confidence=None,reason=str(e)[:180],private={'request':request,'response':raw})
+        return dict(base,content_label='unknown',identity_label='unknown',success=None,judgment_status='judge_error',confidence=None,reason=str(e)[:180],usage=raw.get('usage',{}) if isinstance(raw,dict) else {},private={'request':request,'response':raw})
     finally:
         if owned:await client.aclose()
 
@@ -80,13 +80,12 @@ def review_windows(text):
 
 
 def reservation_estimate(task, observation):
-    from .storage import safe_json
     request=payload(task,observation)
-    estimate=len(safe_json(request).encode())+2048
+    estimate=request_estimate(request)
     if len(observation['text'])>12000:
         for excerpt in review_windows(observation['text']):
             request['state']['excerpts']=[excerpt]
-            estimate+=len(safe_json(request).encode())+2048
+            estimate+=request_estimate(request)
     return estimate
 
 
