@@ -40,6 +40,7 @@ export function Pricing({rows,scenario,onScenarioChange}) {
   return <section id="pricing" className="pricing">
     <h2>Quality vs. cost</h2>
     <p className="section-intro">Each point is one scraper. Higher means more useful content; further left means a lower price. The best value is toward the top left.</p>
+    {rows.some(r=>r.balanced)&&<p className="micro">Quality uses the selected new/control view with equal category weights. Cost per useful page projects that balanced workload; raw observed page counts may have a different mix.</p>}
     <div className="value-controls">
       <ToggleGroup variant="segmented" value={[scenario.billing]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,billing:v[0]})} aria-label="Pricing billing period"><ToggleGroupItem value="monthly">Monthly billing</ToggleGroupItem><ToggleGroupItem value="annual">Annual billing</ToggleGroupItem></ToggleGroup>
       <ToggleGroup variant="segmented" value={[scenario.basis||'workload']} onValueChange={v=>v[0]&&onScenarioChange({...scenario,basis:v[0]})} aria-label="Cost calculation"><ToggleGroupItem value="workload">At your volume</ToggleGroupItem><ToggleGroupItem value="allowance">Full allowance</ToggleGroupItem></ToggleGroup>

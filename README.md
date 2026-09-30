@@ -73,8 +73,12 @@ resumption and exports. `config/benchmark.json` declares the release provider se
 `bench/capacity.py` holds daily collection ceilings. Each run freezes both. The
 legacy `shadow` and `scale3000` profiles preserve earlier experiment behavior.
 The `live` profile targets at most 3,000 independent URLs and 400 search-result slots
-per UTC day. A single daily run freezes up to 3,000 independent URLs, bounded by
-3,500 requests per reader and 4,000 shared Context requests. These are ceilings,
+per UTC day. One daily sample targets 300 new + 75 control URLs per category. Controls stay
+fixed for 30 UTC days, with versioned replacement; new pages exclude all earlier
+selections. Scores average the eight category rates separately for each role.
+Missing categories withhold the full score, and shortages are never backfilled
+from other categories. The total is bounded by
+4,000 requests per reader and 4,000 shared Context requests. These are ceilings,
 not guaranteed throughput: source replenishment, pacing and budget availability
 can reduce collection. The leaderboard uses the latest completed daily run; earlier
 small batches remain labeled until that first daily run finishes. A 90-day daily

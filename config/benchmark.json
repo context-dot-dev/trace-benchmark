@@ -8,7 +8,7 @@
     "keenable"
   ],
   "browser_reference": false,
-  "description": "3,000 independent pages plus up to 400 search-result slots daily; category and domain caps apply, supply and budget shortfalls remain visible.",
+  "description": "One daily sample: up to 2,400 new pages and 600 controls frozen for 30 days, plus up to 400 search-result slots daily; category and domain caps apply, supply and budget shortfalls remain visible.",
   "execution": {
     "page_concurrency": 64,
     "host_concurrency": 8,

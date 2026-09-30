@@ -49,6 +49,8 @@ def sampling_history(store):
             'shortfall':sum(c['shortfall'] for c in categories.values()) if quota is not None else None,
             'kind':'rerun' if rerun else 'daily_selection' if quota is not None else 'query_selection' if run['cohort']=='needle' else 'earlier_batch',
             'parent_run_id':metadata.get('parent_run_id'),
+            'roles':metadata.get('roles'), 'control_panel':metadata.get('control_panel'),
+            'sample_design':metadata.get('sample_design'),
         }
     return history
 

@@ -55,3 +55,20 @@ def supply(store):
         c=json.loads(row['data']);v=categories[c['category']]
         v['inventory']+=1;v['new_24h']+=row['first_seen']>=cutoff;v['domains'].add(urlsplit(c['url']).hostname)
     return {k:dict(v,domains=len(v['domains'])) for k,v in categories.items()}
+
+
+def sample_scores(records):
+    """Equal category weights, with no combined score across sample roles."""
+    from .discovery import CATEGORIES
+    scores = {}
+    for role in ('new','control'):
+        subset = [r for r in records if r.get('sample_role')==role]
+        scores[role] = {}
+        for provider in sorted({r['provider'] for r in subset}):
+            own = [r for r in subset if r['provider']==provider]
+            categories = {cat:summarize([r for r in own if r['category']==cat]) for cat in CATEGORIES}
+            present = sum(c['pages']>0 for c in categories.values())
+            scores[role][provider] = dict(pages=len(own),success=sum(r['success'] is True for r in own),unknown=sum(r['success'] is None for r in own),categories_present=present,
+                success_rate=sum(c['success_rate'] for c in categories.values())/len(CATEGORIES) if present==len(CATEGORIES) else None,
+                success_upper_bound=sum(c['success_upper_bound'] for c in categories.values())/len(CATEGORIES) if present==len(CATEGORIES) else None)
+    return scores

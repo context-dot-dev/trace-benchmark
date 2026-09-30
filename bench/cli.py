@@ -39,6 +39,9 @@ def discover_into(store, due_only=False):
 def select_run(store,per_category,cohort='independent'):
     from .discovery import select_candidates
     p=profile(store)
+    if p['name']=='live' and cohort=='independent' and per_category==p['batch_per_category']:
+        from .daily_sample import select_daily_run
+        return select_daily_run(store)
     daily_cap=p['daily_per_category'];org_cap=p['organization_cap']
     day=now()[:10]
     prior=list(store.db.execute('SELECT t.data,r.metadata AS run_metadata FROM tasks t JOIN runs r ON r.id=t.run_id WHERE r.cohort=? AND r.started_at LIKE ?',(cohort,day+'%')))

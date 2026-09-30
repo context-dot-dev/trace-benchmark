@@ -88,6 +88,8 @@ def make_export(store):
                 record.update(json.loads(score['data']) if score else {'browser_recall':None})
                 record['output_comparison']=meta('output_comparison:'+run['id']+':'+t['id'])
                 records.append(record)
+                record['sample_role']=task.get('sample_role')
+                record['control_panel_version']=task.get('control_panel_version')
                 record['repeated_url']=task.get('repeated_url')
                 record['prior_run_id']=task.get('prior_run_id')
                 record['judgment']['saved_model_success']=j.get('success')
@@ -128,15 +130,16 @@ def make_export(store):
     if operations['last_tick'] and operations['last_tick'].get('errors'):
         operations['notes'].append('Latest worker tick had errors; inspect its retained health record. Last valid measurements are preserved.')
     categories=CATEGORIES+[{'id':'needle_'+family,'label':label+' queries'} for family,label in [('news','News'),('scholar','Scholar'),('agentic_rare','Rare'),('legal','Legal')] if any(r['category']=='needle_'+family for r in records)]
-    from .metrics import aggregate,supply
+    from .metrics import aggregate,supply,sample_scores
     completed={r['id'] for r in runs if r['status']=='completed'}
     scored=[r for r in records if r['protocol_version']==PROTOCOL and not r.get('run_exclusion') and r['run_id'] in completed]
     metrics=aggregate(scored)
     for run in runs:
+        run['sample_scores']=sample_scores([r for r in scored if r['run_id']==run['id']]) if run['sampling'].get('sample_design') else None
         key='run_metrics:'+run['id']
         if run['status']!='completed' or run['exclusion'] or run['protocol_version']!=PROTOCOL or key in metadata_values:continue
         summary={'run_id':run['id'],'protocol_version':PROTOCOL,'sample_kind':'daily' if (run.get('collection_profile') or {}).get('cadence')=='daily' else 'pilot',
-                 'day':run['started_at'][:10],'cohort':run['cohort'],'providers':aggregate([r for r in scored if r['run_id']==run['id']])['cohorts'].get(run['cohort'],{})}
+                 'day':run['started_at'][:10],'cohort':run['cohort'],'sample_scores':run['sample_scores'],'control_panel':run['sampling'].get('control_panel'),'providers':aggregate([r for r in scored if r['run_id']==run['id']])['cohorts'].get(run['cohort'],{})}
         store.meta(key,summary);metadata_values[key]=summary
     history=[v for k,v in metadata_values.items() if k.startswith('run_metrics:') and v['protocol_version']==PROTOCOL and not meta('run_exclusion:'+v['run_id']) and v['day']>=(utc-timedelta(days=89)).date().isoformat()]
     replaced=set()
@@ -152,6 +155,7 @@ def make_export(store):
     daily_days={(v['day'],v['cohort']) for v in history if v['sample_kind']=='daily'}
     totals={}
     for item in history:
+        if item.get('sample_scores'):continue
         if (item['day'],item['cohort']) in daily_days and item['sample_kind']!='daily':continue
         for provider,values in item['providers'].items():
             key=(item['day'],item['cohort'],provider)
@@ -165,6 +169,8 @@ def make_export(store):
     for run in runs:run['detail_available']=run['id'] in detail_ids
     records=[r for r in records if r['run_id'] in detail_ids]
     metrics=aggregate([r for r in scored if r['run_id'] in detail_ids])
+    metrics['sample_daily']=[dict(day=item['day'],cohort=item['cohort'],run_id=item['run_id'],sample_role=role,control_panel_version=(item.get('control_panel') or {}).get('version'),**{k:values[k] for k in ('success_rate','pages','categories_present')},provider=provider)
+        for item in sorted(history,key=lambda i:(i['day'],i['run_id'])) for role,providers in (item.get('sample_scores') or {}).items() for provider,values in providers.items()]
     metrics['daily']=[dict(row,success_rate=row['success']/row['pages'] if row['pages'] else None) for _,row in sorted(totals.items())]
     return {'sampling_history':samples,'replenishment':replenishment(store),'metrics':metrics,'supply':supply(store),'schema_version':1,'generated_at':now(),'protocol_version':PROTOCOL,'decision_policy':'full-returned-text-review-v2','mode':'live' if profile(store)['name']=='live' else 'shadow','benchmark_card':evidence_card([r for r in records if not r.get('run_exclusion')]),'run':runs[0] if runs else None,'runs':runs,'providers':providers,'categories':categories,'records':records,'discovery':{'sources':len(receipts),'total_candidates':store.db.execute('SELECT COUNT(*) FROM candidates').fetchone()[0],'receipts':receipts,'shortfalls':meta('last_shortfalls') or {}},'operations':operations}
 
@@ -179,7 +185,7 @@ def publish(store,path):
         if not target.exists() or 'public_tasks_sha256' not in json.loads(target.read_text()):
             metadata=json.loads(run['metadata'])
             tasks=[json.loads(r[0]) for r in store.db.execute('SELECT data FROM tasks WHERE run_id=? ORDER BY id',(run['id'],))]
-            public_tasks=[{k:t.get(k) for k in ('id','url','title','category','source_id','organization','published_at','discovered_at')} for t in tasks]
+            public_tasks=[{k:t.get(k) for k in ('id','url','title','category','source_id','organization','published_at','discovered_at','sample_role','control_panel_version')} for t in tasks]
             atomic_json(target,{'run_id':run['id'],'tasks':public_tasks,'public_tasks_sha256':digest(safe_json(public_tasks)),**{k:metadata.get(k) for k in ('selection_sha256','protocol_version','provider_ids','benchmark_config','code_sha256','code_manifest','collector','seed')}})
         segments=store.meta('execution:'+run['id']) or []
         manifest=json.loads(target.read_text())
