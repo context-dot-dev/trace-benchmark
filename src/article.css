@@ -260,3 +260,35 @@ footer{display:flex;justify-content:space-between;align-items:start;gap:24px;fon
 .pricing-choice [data-slot="toggle-group-item"]{font-size:12px;padding-inline:10px}
 .pricing-choice [data-pressed]{background:var(--muted);color:var(--foreground)}
 .pricing-table td:not(:first-child){font-variant-numeric:tabular-nums}
+
+.value-controls{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+.value-controls button,.value-volume button{font-size:12px}
+.value-volume{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--muted-foreground)}
+.value-chart{margin:28px 0 20px;min-width:0}
+.value-chart figcaption{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted-foreground)}
+.value-chart svg{display:block;overflow:visible}
+.value-grid{stroke:var(--border);stroke-width:.6;stroke-dasharray:3 5}
+.value-axis{fill:var(--muted-foreground);font-size:10px;font-variant-numeric:tabular-nums}
+.value-axis-title{fill:var(--paragraph);font-size:11px}
+.value-point{cursor:pointer;outline:none}
+.value-anchor{fill:var(--foreground)}
+.value-leader{stroke:var(--muted-foreground);stroke-width:.7;fill:none}
+.value-uncertainty{stroke:var(--foreground);stroke-width:3}
+.value-label-bg{fill:var(--background)}
+.value-label{fill:var(--foreground);font-size:12px}
+.value-point[aria-pressed=true] .value-label{font-weight:600}
+.value-point:focus-visible .value-label-bg{stroke:var(--ring);stroke-width:2}
+.value-point:hover .value-label-bg{fill:var(--muted)}
+.value-reading{display:flex;align-items:flex-start;gap:9px;min-height:60px;padding-top:12px;color:var(--paragraph);font-size:12px;font-variant-numeric:tabular-nums}
+.value-reading span{display:block;color:var(--muted-foreground);font-size:11px;margin-top:4px}
+.value-best-plans{padding-inline:0!important;white-space:normal!important;text-align:left;height:auto!important}
+@media(max-width:600px){
+  .value-controls{gap:12px}
+  .value-controls>[data-slot=toggle-group]{width:100%}
+  .value-controls button{flex:1}
+  .value-volume{gap:4px 12px}
+  .value-chart figcaption{font-size:10px}
+  .value-reading{font-size:11px}
+  .value-reading span{font-size:10px}
+}
+.value-controls [data-pressed],.value-volume [data-pressed]{color:var(--foreground)}

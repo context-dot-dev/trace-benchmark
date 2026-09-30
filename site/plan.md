@@ -98,13 +98,22 @@ vendors' credits are not comparable. Missing billing is never zero. USD per 1,00
 useful pages is published only with complete reported USD coverage for every
 selected page, fully resolved content judgments and at least one useful result. Search, judging, independent browser
 and hosting are separate operational costs and are excluded from that metric.
-The separate published-price comparison uses each named plan's base price divided
-by its full included allowance, at one base credit per page. Annual billing uses
-exact annual commitments divided by 12. The default is the largest public
-self-service tier; free allowances and enterprise quotes are excluded. Plan
-selection changes projections, not measured quality or latency. The appendix's
-93,000-page monthly budget includes unused capacity and whole top-up blocks.
-Neither estimate is an invoice. Current rates and sources are in
+The separate published-price comparison defaults to the lowest-cost public paid
+plans for 93,000 monthly base pages (3,000 per day in a 31-day month). Its workload
+rate includes subscription fees, unused capacity and whole top-up blocks. The
+full-allowance view instead divides the base subscription by all included credits,
+following NEEDLE's unit-rate convention. Annual fees use exact commitments divided
+by 12. Free allowances and negotiated quotes are excluded. Plan selection models
+cost only; it does not establish that a plan meets the measured throughput.
+
+The scatter plot pairs that modeled USD per 1,000 attempted base pages with
+confirmed useful pages divided by all selected pages. Unresolved pages stay in
+the denominator; their all-useful upper bound is disclosed. Projected cost per
+1,000 useful pages uses the same rate, with an optimistic bound for unresolved
+results. This projection differs from the stricter provider-reported cost metric
+above. Unknown live-fetch prices are excluded from the plot, never treated as zero.
+Changing volume, plan or billing does not change measured quality or latency.
+Neither modeled cost is an invoice. Current rates and sources are in
 [the pricing catalog](pricing.json) and [provider research](research/provider-costs-3000-daily.md).
 
 Daily reservations cap each reader at 4,000 calls, Context searches+scrapes at 4,000
