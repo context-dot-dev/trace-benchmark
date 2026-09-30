@@ -8,10 +8,9 @@ import os
 import re
 import time
 import httpx
-from .storage import now,digest
+from .storage import now,safe_json,digest
 from .judging import MODEL,windows
 from .capacity import profile
-from .costs import request_estimate
 from .export import run_providers,reported_decision
 
 VERSION='observed-output-pairwise-v1'
@@ -20,20 +19,13 @@ POLICY={'version':VERSION,'model':MODEL,'max_start_skew_seconds':120,
         'meaning':'Preference among observed outputs; not factual accuracy or full-page recall.'}
 
 
-class ComparisonHTTPError(ValueError):
-    def __init__(self, status, response):
-        super().__init__('comparison_http_'+str(status))
-        self.response=response
-
-
 async def request_comparison(payload,client):
     key=os.environ.get('TYPESAFE_API_KEY')
     if not key:raise ValueError('missing_judge_key')
     response=await client.post('https://api.typesafe.ai/v1/systemone',
                                headers={'Authorization':'Bearer '+key},json=payload)
-    raw=response.json()
-    if response.status_code!=200:raise ComparisonHTTPError(response.status_code,raw)
-    return raw
+    if response.status_code!=200:raise ValueError('comparison_http_'+str(response.status_code))
+    return response.json()
 
 
 def build_request(task,entries):
@@ -95,7 +87,7 @@ async def compare_run(store,run_id):
                 payload,labels,pairs=build_request(task,entries)
                 response=None;started=time.monotonic();day=now()[:10]
                 if payload['questions']:
-                    estimate=request_estimate(payload)
+                    estimate=(len(safe_json(payload).encode())+2048)*len(payload['questions'])
                     if not store.reserve('jev_input_token_reservations',key,estimate,profile(store)['judge_input_reservations'],day=day):
                         store.meta(key,dict(result,status='pending_budget',day=day));return
                     store.meta(key,dict(result,status='dispatched'))
@@ -107,7 +99,6 @@ async def compare_run(store,run_id):
                             if choice not in ('left','right','tie','unclear') or isinstance(confidence,bool) or not isinstance(confidence,(float,int)) or not math.isfinite(confidence) or not 0<=confidence<=1:raise ValueError('invalid_comparison_schema')
                             pairs[question]={'choice':choice if confidence>=POLICY['minimum_choice_confidence'] else 'unclear','confidence':confidence,'method':'model'}
                     except (httpx.HTTPError,ValueError,KeyError,TypeError) as exc:
-                        if isinstance(exc,ComparisonHTTPError):response=exc.response
                         result['reason']=type(exc).__name__+': '+str(exc)[:120]
                 complete=len(pairs)==len(labels)*(len(labels)-1)//2 and all(p['choice']!='unclear' for p in pairs.values())
                 if complete:
@@ -124,11 +115,9 @@ async def compare_run(store,run_id):
                          'labels':{label:{'provider':e['provider'],'text_sha256':e['text_sha256']} for label,e in labels.items()},
                          'elapsed_ms':round((time.monotonic()-started)*1000),'result':result}
                 result=dict(result,receipt_sha256=store.blob(receipt))
-                store.meta(key,result)
                 usage=response.get('usage') if isinstance(response,dict) else None
                 measured=usage.get('input_tokens') if isinstance(usage,dict) else None
-                if payload['questions'] and type(measured) is int and measured>=0:store.settle('jev_input_token_reservations',key,measured,day=day)
-                return
+                if payload['questions'] and type(measured) is int and 0<=measured<=estimate:store.settle('jev_input_token_reservations',key,measured,day=day)
             store.meta(key,result)
     async with httpx.AsyncClient(timeout=60,limits=httpx.Limits(max_connections=concurrency)) as client:
         await asyncio.gather(*(compare(t) for t in tasks))

@@ -209,7 +209,7 @@ async def judge_observations(store,run_id,export_path,config):
             with store.db:store.db.execute('UPDATE judgments SET status=?,data=?,blob=? WHERE observation_id=?',('completed',safe_json(public),blob,oid))
             usage=j.get('usage',{})
             measured=usage.get('input_tokens')
-            if not simple and type(measured) is int and measured>=0:
+            if j.get('judgment_status')=='triaged' and isinstance(measured,int) and not isinstance(measured,bool) and 0<=measured<=estimate:
                 store.settle('jev_input_token_reservations',oid,measured,day=reservation_day)
             await publish_progress_async(store,export_path)
     async with httpx.AsyncClient(timeout=60,limits=httpx.Limits(max_connections=config['judge_concurrency'])) as judge_client:

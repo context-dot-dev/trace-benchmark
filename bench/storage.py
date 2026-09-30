@@ -85,9 +85,6 @@ class Store:
     def reserve(self, bucket, reservation_id, amount, cap, day=None):
         if not _finite_number(amount) or amount<=0 or not _finite_number(cap) or cap<0:
             raise ValueError('invalid reservation amount or cap')
-        if bucket == 'jev_input_token_reservations':
-            from .costs import daily_token_cap
-            cap = min(cap, daily_token_cap())
         day = day or now()[:10]
         with self.db:
             self.db.execute('BEGIN IMMEDIATE')
@@ -126,8 +123,7 @@ class Store:
         Call only after persisting a complete receipt with validated provider usage.
         Missing/failed usage is not zero: leave its full reservation outstanding.
         Returns True on insertion and False on identical replay. Conflicting
-        settlements and negative amounts raise ValueError. Actual usage above the
-        estimate is retained so later dispatch cannot ignore an overrun.
+        settlements and amounts outside [0, original] raise ValueError.
         """
         if not _finite_number(amount) or amount < 0:
             raise ValueError('invalid measured usage')
@@ -139,6 +135,8 @@ class Store:
                 (day,bucket,reservation_id)).fetchone()
             if original is None:
                 raise ValueError('settlement requires an existing reservation')
+            if amount > original['amount']:
+                raise ValueError('measured usage exceeds the original reservation')
             existing = self.db.execute(
                 'SELECT amount FROM budget_settlements WHERE day=? AND bucket=? AND reservation_id=?',
                 (day,bucket,reservation_id)).fetchone()

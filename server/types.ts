@@ -15,7 +15,7 @@ export interface Archive {
   schema_version:number;generated_at:string;protocol_version:string;
   records:Observation[];providers:{id:string;name:string;status?:string;status_detail?:string}[];categories:{id:string;label:string}[];runs:Run[];
   discovery?:{receipts:{status:string}[]};
-  operations?:{evaluator_costs?:Record<string,unknown>;last_tick?:{started_at:string;finished_at:string|null;errors:unknown[]};scheduler_status?:string;next_run_at?:string;collection_profile?:Record<string,unknown>;capacity_plan?:Record<string,unknown>};
+  operations?:{last_tick?:{started_at:string;finished_at:string|null;errors:unknown[]};scheduler_status?:string;next_run_at?:string;collection_profile?:Record<string,unknown>;capacity_plan?:Record<string,unknown>};
   metrics?:{daily:{day:string;cohort:string;provider:string;success_rate:number|null;pages:number;sample_kind?:string}[]};
   supply:Record<string,{inventory:number;new_24h:number;domains:number}>;
 }

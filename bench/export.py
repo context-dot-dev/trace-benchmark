@@ -119,8 +119,9 @@ def make_export(store):
         operations['needle_status']['snapshot']={k:needle['snapshot'].get(k) for k in ('hf_revision','downloaded_at','rows')}
     operations['exported_history']='Latest completed daily panels and in-progress results; 12 run summaries and 90 days of quality history. Full receipts remain in the private database.'
     operations['original_reservations']=store.usage_reserved()
-    from .costs import cost_report
-    operations['evaluator_costs']=cost_report(store)
+    judged=[json.loads(r[0]) for r in store.db.execute('SELECT data FROM judgments WHERE data IS NOT NULL')]
+    today=[j for j in judged if str(j.get('judged_at','')).startswith(now()[:10])]
+    operations['judge_reported_usage_today']={'scope':'Provider-output judgments only; reference and output-comparison judgments are included in reservations but excluded from these reported token totals.','input_tokens':sum(j.get('usage',{}).get('input_tokens',0) for j in today),'output_tokens':sum(j.get('usage',{}).get('output_tokens',0) for j in today),'responses_with_usage':sum(bool(j.get('usage')) for j in today)}
     if operations['last_tick'] and operations['last_tick'].get('errors'):
         operations['notes'].append('Latest worker tick had errors; inspect its retained health record. Last valid measurements are preserved.')
     categories=CATEGORIES+[{'id':'needle_'+family,'label':label+' queries'} for family,label in [('news','News'),('scholar','Scholar'),('agentic_rare','Rare'),('legal','Legal')] if any(r['category']=='needle_'+family for r in records)]

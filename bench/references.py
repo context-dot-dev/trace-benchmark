@@ -147,7 +147,7 @@ async def assess_references(store,run_id):
             with store.db:
                 store.db.execute('UPDATE browser_references SET status=?,data=?,blob=? WHERE id=?',(rec['status'],safe_json(public),store.blob(rec),row['id']))
             measured=assessment.get('usage',{}).get('input_tokens')
-            if type(measured) is int and measured>=0:store.settle('jev_input_token_reservations',reservation,measured,day=reservation_day)
+            if type(measured) is int and 0<=measured<=amount:store.settle('jev_input_token_reservations',reservation,measured,day=reservation_day)
     import httpx
     async with httpx.AsyncClient(timeout=60,limits=httpx.Limits(max_connections=concurrency)) as judge_client:
         await asyncio.gather(*(assess(row) for row in rows))
