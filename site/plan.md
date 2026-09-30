@@ -27,6 +27,14 @@ favor Context and is never pooled with independent discovery.
 A manifest freezes each selected page, provider list, source metadata, settings,
 selection hash and code hashes. Empty sources and unmet quotas are retained.
 Inventory is not a measured daily replenishment rate; the initial poll is stock.
+Each run publishes first-time and repeated selections across both cohorts, publication
+age at run start (including unknown and future dates), and per-category targets
+and shortfalls. A rerun identifies its parent and has no fresh-supply quota.
+Daily replenishment counts unique first-seen URLs after each source’s entire
+initial inventory day; those baseline days are reported separately. These are
+discoveries, not necessarily new publications or eligible selections. Missing
+polls do not establish zero supply. Category counts and poll failures accompany
+the daily totals in data/replenishment.json; data/run-sampling.json covers all runs.
 
 ## Matched requests
 
@@ -155,6 +163,9 @@ Public exports contain the latest completed daily panels and in-progress results
 manifests, summary metrics, short previews and hashes. Compact daily quality totals
 are retained separately for 90 days. Daily points never include unfinished runs;
 a completed daily panel replaces earlier small batches on the same UTC date.
+An explicitly recorded, completed same-day replacement rerun supersedes its parent in
+the trend; the original measurements and manifest remain available. Ordinary
+repeat measurements are not automatically treated as replacements.
 Gaps are not interpolated. Small batches from before the daily schedule remain
 labeled. The initial migration may select its first daily panel after earlier
 hourly batches on the same day; API budgets still include every dispatched call. Full API bodies, browser DOM,

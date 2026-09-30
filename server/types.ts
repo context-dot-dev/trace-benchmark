@@ -9,6 +9,7 @@ export interface Observation {
 }
 export interface Run {
   id:string;started_at:string;finished_at:string|null;status:string;cohort:string;
+  sampling?:{first_time_urls:number;repeated_urls:number;publication_age:Record<string,number>;categories:Record<string,{selected:number;first_time:number;repeated:number;target:number|null;shortfall:number|null}>;target:number|null;shortfall:number|null;kind:string;parent_run_id:string|null};
   selected_count:number;collection_profile?:{cadence?:string};manifest_url:string;exclusion?:unknown;protocol_version:string;
 }
 export interface Archive {
@@ -17,6 +18,7 @@ export interface Archive {
   discovery?:{receipts:{status:string}[]};
   operations?:{last_tick?:{started_at:string;finished_at:string|null;errors:unknown[]};scheduler_status?:string;next_run_at?:string;collection_profile?:Record<string,unknown>;capacity_plan?:Record<string,unknown>};
   metrics?:{daily:{day:string;cohort:string;provider:string;success_rate:number|null;pages:number;sample_kind?:string}[]};
+  replenishment?:{days:{day:string;new_urls:number;baseline_urls:number;categories:Record<string,number>;polls:number;failed_polls:number}[];definition:string};
   supply:Record<string,{inventory:number;new_24h:number;domains:number}>;
 }
 export interface SearchParams {cohort:string;provider:string;q:string;page:number;version:string|null;}
