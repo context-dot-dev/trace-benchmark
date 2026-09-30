@@ -25,7 +25,7 @@ export function QualityTable({ rows, sort, ascending, onSort, onProvider, loadin
         <Table.Body renderEmptyState={() => loading ? "Loading observations…" : "No collection loaded."}>
           {rows.map(p => <Table.Row key={p.id} id={p.id}>
             <Table.Cell textValue={p.name}><Button variant="ghost" className="provider-button" onClick={() => onProvider(p.id)}><ProviderLogo id={p.id} /><span>{p.name}{p.id === "hetzner" && <small className="reader-label">Self-hosted</small>}</span></Button></Table.Cell>
-            <Table.Cell><span className="score">{p.accountAffected>0?"Incomplete":pct(p.rate)}</span>{p.accountAffected>0&&<span className="cell-detail">{pct(p.rate)} confirmed coverage</span>}<span className="cell-detail">{p.success} / {p.count} pages</span>{p.unknown>0 && <span className="cell-detail">{p.unknown} unresolved · up to {pct(p.upper)}</span>}</Table.Cell>
+            <Table.Cell><span className="score">{p.accountAffected>0?"Incomplete":pct(p.rate)}</span>{p.accountAffected>0&&<span className="cell-detail">{pct(p.rate)} confirmed coverage</span>}<span className="cell-detail">{p.success} / {p.count} pages{p.balanced&&<> · {p.categoriesPresent}/8 categories</>}</span>{p.unknown>0 && <span className="cell-detail">{p.unknown} unresolved · up to {pct(p.upper)}</span>}</Table.Cell>
             <Table.Cell>{secs(p.p50)}</Table.Cell>
           </Table.Row>)}
         </Table.Body>
@@ -46,7 +46,7 @@ export function ResultsTable({ records, categoryName, providerName, onInspect })
         </Table.Header>
         <Table.Body>
           {records.map(r => <Table.Row key={r.id} id={r.id}>
-            <Table.Cell textValue={r.title || r.url || r.task_id}><span className="result-title">{r.title || r.url || r.task_id}</span><span className="cell-detail">{r.domain || r.source_id || "Source unavailable"} · {categoryName(r.category)}</span><span className="mobile-provider"><ProviderLogo id={r.provider} />{providerName(r.provider)}</span></Table.Cell>
+            <Table.Cell textValue={r.title || r.url || r.task_id}><span className="result-title">{r.title || r.url || r.task_id}</span><span className="cell-detail">{r.domain || r.source_id || "Source unavailable"} · {categoryName(r.category)}{r.sample_role&&<> · {r.sample_role==='control'?'Control':'New'} page</>}</span><span className="mobile-provider"><ProviderLogo id={r.provider} />{providerName(r.provider)}</span></Table.Cell>
             <Table.Cell><span className="provider-name"><ProviderLogo id={r.provider} />{providerName(r.provider)}</span></Table.Cell>
             <Table.Cell><Outcome record={r} /><span className="cell-detail">{finite(r.elapsed_ms) ? secs(r.elapsed_ms / 1000) : "—"}</span></Table.Cell>
             <Table.Cell><Button variant="ghost" size="icon" aria-label={`Inspect ${providerName(r.provider)} result for ${r.title || r.url || r.task_id}`} onClick={e => onInspect(r, e.currentTarget)}><ArrowUpRight /></Button></Table.Cell>

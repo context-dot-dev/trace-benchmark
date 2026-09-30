@@ -88,7 +88,8 @@ export function priceRows(rows,scenario) {
     const quote=quotePlan(plan,scenario.billing,pages);
     const comparisonPrice=basis==='allowance'?unitPrice:quote.monthly===null?null:quote.monthly/pages*1000;
     const count=observed?.count||0,success=observed?.success||0,unknown=observed?.unknown||0;
-    const quality=count?success/count:null,qualityUpper=count?(success+unknown)/count:null;
+    const quality=observed?.balanced?observed.rate:count?success/count:null;
+    const qualityUpper=observed?.balanced?observed.upper:count?(success+unknown)/count:null;
     return {...provider,plan,unitPrice,quote,comparisonPrice,quality,qualityUpper,count,success,unknown,
       usefulPrice:comparisonPrice!==null&&quality>0?comparisonPrice/quality:null,
       usefulPriceLow:comparisonPrice!==null&&qualityUpper>0?comparisonPrice/qualityUpper:null};

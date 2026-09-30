@@ -48,6 +48,8 @@ with (root/'worker.lock').open('a') as lock:
         parent,cohort,tasks,parent_metadata=source
         if not store.db.execute('SELECT 1 FROM runs WHERE id=?',(run['id'],)).fetchone():
             metadata={'seed':JOB+':'+cohort,'parent_run_id':parent,'operator_rerun':existing,'counts':{c:sum(t['category']==c for t in tasks) for c in {t['category'] for t in tasks}},'repeat_quota':0}
+            for key in ('sample_design','roles','control_panel'):
+                if key in parent_metadata:metadata[key]=parent_metadata[key]
             if cohort=='needle':
                 for key in ('queries','slots','selected_query_count','selected_slot_count','unique_urls','new_acquisition_count','reused_url_count','reused_slot_count','repeated_url_count'):metadata[key]=parent_metadata.get(key)
                 metadata['new_acquisition_count']=len(tasks)

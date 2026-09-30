@@ -7,13 +7,18 @@ Context, one of the measured providers. Selection and scoring are open source.
 
 Independent URLs come from the versioned registry in config/sources.json.
 Sources are polled at their recorded 1-, 6- or 24-hour intervals. Eight categories
-receive equal daily ceilings of 375 pages (3,000 total). Each daily run selects
-at most 375 per category (3,000 total), with 125 per organization and 375 per hostname
+receive equal daily ceilings of 300 new pages and 75 control pages (3,000 total).
+One sample contains both roles; each URL is sent to all four providers.
+Controls are frozen for 30 UTC days starting on their selection date, even when
+requests fail or inventory later grows. Replacement panels exclude the previous
+panel and retain a version, start, expiry and predecessor. There is no archive-wide rerun.
+The combined sample is capped at 125 per organization and 375 per hostname
 per UTC day. A large inventory does not guarantee sustained new-URL replenishment.
 Selection uses a saved seed before outcomes exist. Publication within seven days
 is preferred, but old or unknown-age pages remain eligible. First seen is not
-publication time. Duplicate identities already selected are not reused in this
-cohort. Sources sharing a platform remain a limitation of domain diversity.
+publication time. New pages exclude identities and known aliases selected in any earlier cohort.
+Controls may reuse older tested URLs but are selected without inspecting provider outcomes.
+An underfilled control panel remains underfilled until its version expires. Sources sharing a platform remain a limitation of domain diversity.
 
 The separate NEEDLE stream snapshots an upstream Hugging Face revision and reads
 queries produced within 24 hours. Context Search receives the unchanged query,
@@ -35,6 +40,12 @@ initial inventory day; those baseline days are reported separately. These are
 discoveries, not necessarily new publications or eligible selections. Missing
 polls do not establish zero supply. Category counts and poll failures accompany
 the daily totals in data/replenishment.json; data/run-sampling.json covers all runs.
+
+New and control scores are separate arithmetic means of the eight category rates
+(12.5% weight each). Unresolved and unattempted results remain in each denominator.
+If a category is empty, the complete score is unavailable, not renormalized.
+Counts, timing and request costs use the actual selected pages for the displayed role.
+The supply report measures arrivals, not a promise of 300 new pages per category/day.
 
 ## Matched requests
 
@@ -166,6 +177,8 @@ a completed daily panel replaces earlier small batches on the same UTC date.
 An explicitly recorded, completed same-day replacement rerun supersedes its parent in
 the trend; the original measurements and manifest remain available. Ordinary
 repeat measurements are not automatically treated as replacements.
+New/control daily series are separate from the earlier page-weighted history.
+Control series break at panel-version boundaries. Fixed URLs may change content.
 Gaps are not interpolated. Small batches from before the daily schedule remain
 labeled. The initial migration may select its first daily panel after earlier
 hourly batches on the same day; API budgets still include every dispatched call. Full API bodies, browser DOM,

@@ -27,6 +27,7 @@ const ResultsBrowser = lazy(() => import("./results-browser"));
 export default function App({ initialData = null }) {
   const [pricing, setPricing] = useState(DEFAULT_PRICING);
   const [cohort, setCohort] = useState("independent");
+  const [sampleRole, setSampleRole] = useState("new");
   const [provider, setProvider] = useState("all");
   const [sort, setSort] = useState("rate");
   const [ascending, setAscending] = useState(false);
@@ -40,7 +41,9 @@ export default function App({ initialData = null }) {
     return () => observer.disconnect();
   }, []);
   useEffect(() => { document.documentElement.classList.toggle("dark", dark); }, [dark]);
-  const group = data?.cohorts[cohort];
+  const baseGroup = data?.cohorts[cohort];
+  const mixedSample = cohort==="independent" && Boolean(baseGroup?.lastCompleted?.sampling?.sample_design);
+  const group = mixedSample ? data?.cohorts[`${cohort}:${sampleRole}`] : baseGroup;
   const providers = data?.providers || [];
   const categoryName = id => data?.categories.find(c => c.id === id)?.label || human(id);
   const tasks = group?.tasks || 0;
@@ -80,18 +83,21 @@ export default function App({ initialData = null }) {
             <ToggleGroupItem value="independent">Independent pages</ToggleGroupItem>
             <ToggleGroupItem value="needle">Search-discovered pages</ToggleGroupItem>
           </ToggleGroup>
-          <p className="micro">{cohort === "needle" ? "Target: up to 400 search result slots per day." : <>Target: {data?.operations?.collection_profile ? (data.operations.collection_profile.daily_per_category*8).toLocaleString("en-US") : "—"} URLs in one daily independent run. The same frozen set goes to every provider; shortages remain visible.</>}</p>
+          <p className="micro">{cohort === "needle" ? "Target: up to 400 search result slots per day." : <>Target: {data?.operations?.collection_profile ? (data.operations.collection_profile.daily_per_category*8).toLocaleString("en-US") : "—"} URLs in one daily independent run. 300 new pages + 75 control pages per category. All four providers fetch the same daily sample; shortages remain visible.</>}</p>
+          {cohort==="independent" && <p className="micro">New pages measure breadth. Control pages measure change: the same URLs are fetched daily for 30 days, then replaced with a versioned panel. Their content can still change.</p>}
+          {mixedSample && <ToggleGroup value={[sampleRole]} onValueChange={v=>v[0]&&setSampleRole(v[0])} aria-label="Daily sample score"><ToggleGroupItem value="new">New pages · {baseGroup.lastCompleted.sampling.roles.new.selected}</ToggleGroupItem><ToggleGroupItem value="control">Control pages · {baseGroup.lastCompleted.sampling.roles.control.selected}</ToggleGroupItem></ToggleGroup>}
+          {mixedSample && <p className="micro">Showing {sampleRole==='new'?'new':'control'} pages throughout the comparisons below. Each of eight categories has 12.5% weight. {baseGroup.lastCompleted.sampling.roles[sampleRole].shortfall} pages short of target.{sampleRole==='control'&&<> Panel {baseGroup.lastCompleted.sampling.control_panel.version}, fixed until {baseGroup.lastCompleted.sampling.control_panel.expires_at.slice(0,10)} UTC.</>}</p>}
           <p className="dataset-description">{cohort === "independent" ? "How often does each scraper return the page’s main content? These URLs come from public feeds and registries." : "URLs found by Context Search using NEEDLE queries. This selection may favor Context, so these results are kept separate."}</p>
-          <p className="micro">{group?.sampleKind==="daily" ? "Latest completed daily run." : "Showing earlier small batches until the first daily run finishes."}</p>
+          <p className="micro">{group?.sampleKind==="daily" ? (cohort==="needle" ? "Latest completed daily run." : mixedSample ? "Latest completed daily sample. Scores for new and control pages are never pooled." : "Latest completed run uses the earlier sampling design; the new/control split starts with the next scheduled daily sample.") : "Showing earlier small batches until the first daily run finishes."}</p>
           <p id="collection-summary" className="collection-summary" role="status">{data ? `${group.uniqueUrls} unique URLs · ${group.domains} domains · ${categories} page types · ${group.count} recorded page tests. ${group.first ? `Collected ${collectionDates([{started_at:group.first},{started_at:group.last}])} (UTC).` : "Awaiting the first completed run under the new scoring protocol."}` : "Loading published results…"}</p>
           {error && <Alert variant="destructive"><AlertTitle>{data ? "Could not check for newer results" : "Could not load results"}</AlertTitle><AlertDescription>{data ? "The last loaded results are still shown." : "Check your connection and try again."}<Button variant="outline" disabled={loading} onClick={refresh}>Retry</Button></AlertDescription></Alert>}
           <AccountIssues rows={rows}/>
           <div className="leaderboard"><QualityTable rows={rows} sort={sort} ascending={ascending} onSort={descriptor => { setSort(descriptor.column); setAscending(descriptor.direction === "ascending"); }} onProvider={chooseProvider} loading={loading} /></div>
-          <p className="micro">Useful = pages with matching, substantive content / all selected page tests. Partial content can qualify. Time = median request duration. <a href="#appendix">Scoring details</a></p>
-          <div className="wide-comparison"><MetricPanels label="Scraping" rows={rows.map(r => ({...r, unresolvedRate:r.count ? r.unknown/r.count : null}))} metrics={scrapingMetrics} /></div>
+          <p className="micro">{mixedSample ? "Useful = the mean of eight category rates, each measuring matching, substantive content / selected pages. Missing categories withhold the score. Page counts below each score are raw totals." : "Useful = pages with matching, substantive content / all selected page tests."} Partial content can qualify. Time = median request duration. <a href="#appendix">Scoring details</a></p>
+          <div className="wide-comparison"><MetricPanels label="Scraping" rows={rows.map(r => ({...r, unresolvedRate:r.count ? r.unknown/r.count : null}))} metrics={scrapingMetrics.map(m=>mixedSample&&m.key==="rate"?{...m,detail:"Eight equally weighted category rates, including unresolved"}:m)} /></div>
         </section>
         <Pricing rows={rows} scenario={pricing} onScenarioChange={setPricing}/>
-        <History data={data} cohort={cohort} providers={providers}/>
+        <History data={data} cohort={cohort} providers={providers} sampleRole={mixedSample?sampleRole:null}/>
         <section id="page-types">
           <h2>Different pages, different results</h2>
           <p className="section-intro">An average hides the hard parts. Compare useful-content rates across page types to find the fit for your workload.</p>
@@ -112,9 +118,9 @@ export default function App({ initialData = null }) {
           <Freshness rows={rows}/>
           <PricingAppendix rows={rows} scenario={pricing}/>
           <h3 id="methodology">Methodology & data</h3>
-          <p><strong>Rotating pages.</strong> Inspired by <a href="https://keenableai.github.io/needle/">NEEDLE</a>, Trace collects URLs from changing public sources instead of relying on a fixed test set. Independent pages cover news, commerce, jobs, finance, research, government, software, and community sites.</p>
+          <p><strong>One daily sample.</strong> The target is 300 previously untested pages and 75 control pages in each of eight categories: up to 3,000 pages total. Controls are frozen for 30 UTC days, with versioned replacements excluding the previous panel. Short panels stay short until replacement; failed controls are not swapped out. All providers fetch both roles fresh. Equal-category scores are reported separately, and no entire accumulated archive is re-fetched. New pages exclude known aliases selected in any earlier run. Inspired by <a href="https://keenableai.github.io/needle/">NEEDLE</a>, Trace collects URLs from changing public sources instead of relying on a fixed test set. Independent pages cover news, commerce, jobs, finance, research, government, software, and community sites.</p>
           <p><strong>Same task.</strong> Every reader receives the same selected URL with a 30-second deadline and a 250,000-character text limit. Their returned text, errors, and timings are saved. Each provider receives its fresh-fetch setting: maxAgeMs=0, maxAgeHours=0, maxAge=0, or live=true. Provider-reported cache evidence is tracked separately; origin freshness is not independently verified.</p>
-          <p><strong>Content checks.</strong> The judge checks page identity and substantive content. The v3 protocol first checks a 12,000-character sample. If it finds no useful match, overlapping chunks cover the remaining returned text. A negative requires a completed full-text review; judge errors and ambiguous content remain unresolved. Earlier protocol results remain in the downloads and are excluded from v3 comparisons. If every unresolved result were useful, the score would rise by that count divided by the number of tests.</p>
+          <p><strong>Content checks.</strong> The judge checks page identity and substantive content. The v3 protocol first checks a 12,000-character sample. If it finds no useful match, overlapping chunks cover the remaining returned text. A negative requires a completed full-text review; judge errors and ambiguous content remain unresolved. Earlier protocol results remain in the downloads and are excluded from v3 comparisons. For the daily sample, unresolved bounds are calculated within each category and averaged with equal weight.</p>
           <p><strong>Scoring.</strong> A model grades the returned text without seeing the provider’s name. Factual accuracy has not been independently verified. Unresolved results stay in the denominator; timings include failed requests. The collected mix of sites affects the ranking. New runs compare fresh provider outputs directly without rendering a reference browser. Pairwise Jev preferences identify the best observed output, including ties. No useful output means unknown recoverability, not an impossible page. A comparison requires resolved content judgments for every provider, fresh-fetch requests, no reported cache hits and request starts within 120 seconds. Conflicting preferences remain unresolved. Providers with missing observations remain in the denominator. Entire batches invalidated by a collector fault are excluded for every provider, with reasons and raw results retained in the downloads.</p>
           <p><strong>Output comparison.</strong> Each useful output contributes up to 12,000 characters from the beginning, middle and end. Pairwise choices below 0.75 model confidence remain unresolved; this threshold is provisional. A winner must beat or tie every other useful output. This measures sampled preference, not factual accuracy or complete-page recall. Identical text ties without a model call; a sole useful response is reported separately.</p>
           <p><strong>Reproducibility.</strong> Each run freezes its URLs, provider set, configuration and code hashes before requests begin. Raw API responses and comparison receipts are retained privately. Historical browser captures remain in the archive. The public manifests and result hashes let others audit the selection and rerun the same URLs. Live pages can change.</p>
@@ -122,6 +128,7 @@ export default function App({ initialData = null }) {
         <RunSampling data={data} categoryName={categoryName}/>
           <div id="result-browser" ref={resultsAnchor}>
             <h3>Individual results</h3>
+            <p className="micro">All pages in the latest completed run, including both new and control pages where available.</p>
             {resultsVisible && data ? <Suspense fallback={<p role="status">Loading result browser…</p>}><ResultsBrowser data={data} cohort={cohort} provider={provider} setProvider={setProvider} refresh={refresh} /></Suspense> : <p className="micro">Individual results load when you reach this section.</p>}
           </div>
         </section>
