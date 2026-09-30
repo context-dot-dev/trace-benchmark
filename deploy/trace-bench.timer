@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily TRACE discovery and 3,000-page four-reader measurement
+
+[Timer]
+OnCalendar=*-*-* 00:15:00 UTC
+Persistent=true
+AccuracySec=10s
+Unit=trace-bench.service
+
+[Install]
+WantedBy=timers.target

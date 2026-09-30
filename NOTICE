@@ -1,0 +1,16 @@
+The MIT license applies to TRACE code, not to collected third-party page content,
+provider logos or upstream datasets. Raw responses, DOM and screenshots are
+private evidence and are excluded from the source release. Publishers retain
+rights to their pages. Provider marks identify the services being measured and
+do not imply endorsement.
+
+The changing-query stream is inspired by and sourced from NEEDLE:
+https://github.com/keenableai/needle
+https://huggingface.co/datasets/keenable-ai/needle-results
+NEEDLE's authors are Andrey Styskin, Matthias Petri and Ilya Gusev.
+TRACE scores scraping, not NEEDLE search relevance. Upstream datasets retain
+their own license terms. The source release does not redistribute their corpus.
+
+The UI uses React, Tailwind, HeroUI, Base UI, shadcn and Lucide. Dependencies keep
+their original licenses. Inter is by Rasmus Andersson under the SIL Open Font
+License; the distributed font assets require its license alongside them.

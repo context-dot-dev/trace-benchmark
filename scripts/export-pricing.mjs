@@ -1,0 +1,52 @@
+import fs from 'node:fs/promises';
+import {PRICING,DEFAULT_PRICING,MONTHLY_PAGES,planRate,quotePlan,bestPlan} from '../src/pricing-data.js';
+
+const money=(value,digits=2)=>value===null?'Unverified':`$${value.toFixed(digits)}`;
+const catalog={schema_version:1,currency:'USD',default_scenario:DEFAULT_PRICING,
+  methodology:{reference:'https://github.com/keenableai/needle/blob/main/dashboard/index.html',
+    unit_price:'Base subscription / monthly included credits * 1000; annual subscription / 12 replaces base. One base credit per page. Exa text-only is metered per page.',
+    default_plan:'Largest published self-service paid tier; same billing period across subscriptions.',
+    exclusions:'Enterprise quotes, free allowances, promotional credits, search, judging, hosting, tax, extra formats and special URL surcharges. These are modeled prices, not invoices.',
+    useful_price:'Unit price divided by useful rate, only with resolved judgments and at least one useful page. Assumes one billable base page per attempt.',
+    budget_pages:MONTHLY_PAGES},
+  providers:PRICING.map(provider=>({...provider,plans:provider.plans.map(plan=>({...plan,
+    monthly_unit_usd_per_1000:planRate(plan,'monthly'),annual_unit_usd_per_1000:planRate(plan,'annual'),
+    monthly_budget:quotePlan(plan,'monthly'),annual_budget:quotePlan(plan,'annual')}))}))};
+await fs.writeFile('site/pricing.json',JSON.stringify(catalog,null,2)+'\n');
+const lines=[
+ '# Scraping provider pricing',
+ '',
+ 'Checked **September 30, 2026** against official sources for all four active benchmark providers. Generated from `src/pricing-data.js` by `npm run build`; the report and downloadable `pricing.json` use this same catalog.',
+ '',
+ '## Comparison basis',
+ '',
+ '[NEEDLE](https://github.com/keenableai/needle/blob/main/dashboard/index.html) maintains a dated price and plan per engine and describes its price table as the biggest self-serve tier, excluding enterprise quotes. Trace applies that convention to scraping. Monthly billing is the default; annual rates use exact yearly fees divided by twelve. A selected plan changes price projections, not the recorded quality or latency.',
+ '',
+ 'The unit rate assumes the full included allowance is consumed at one base credit per page. It is not the marginal overage rate or the blended rate for an underused subscription. Published rates are rounded to three decimals; full-precision values are in the JSON. Free tiers are limited allowances, never an unlimited zero-dollar tariff.',
+ '',
+ '## Budget at 3,000 base pages/day',
+ '',
+ 'At most 93,000 pages in a month; 1,095,000 in a 365-day year. These are separate lowest-spend scenarios, not the largest-tier default in the comparison. Every page is assumed billable, with no opening balance, shared API usage or promotional credits. Actual failure charges and special URL charges can differ.',
+ '',
+ '| Provider | Covering plan | Monthly bill at 93k | Annual bill for 365 days |',
+ '|---|---|---:|---:|',
+ ...PRICING.map(p=>{const m=bestPlan(p,'monthly'),a=bestPlan(p,'annual');return `| ${p.name} | ${m?.plan.name||'Live fetch — quote needed'} | ${money(m?.monthly??null)} | ${money(a?(a.plan.perThousand?1095*a.plan.perThousand:a.monthly*12):null)} |`;}),
+ '',
+ 'Context Pro and Firecrawl Standard each cost $990/year on annual billing ($1,188/year paid monthly). Exa text-only adds $1,095/year gross. Their combined annual-commitment scenario is $3,075/year; monthly subscriptions make it $3,471/year. **The four-provider total remains unknown because Keenable live fetch is unpriced.** Neither total includes discovery, judging, hosting, tax or special formats. A 93k-month rate is not multiplied by twelve to price Exa’s 365-day year.',
+ '',
+ '## All published plans',
+];
+for(const p of PRICING){
+ lines.push('',`### ${p.name}`,'',`${p.endpoint}. [Official pricing](${p.source}).${p.billingSource?` [Billing rules](${p.billingSource}).`:''}`,'',
+ '| Plan | Monthly fee | Annual upfront | Credits/month | Monthly / 1k pages | Annual / 1k pages | Extra / 1k credits |',
+ '|---|---:|---:|---:|---:|---:|---:|',
+ ...p.plans.map(plan=>`| ${plan.name} | ${plan.custom?'Quote':plan.perThousand?'None':money(plan.monthly)} | ${plan.annual?money(plan.annual):'—'} | ${plan.included?.toLocaleString('en-US')||'—'} | ${plan.monthly===0?'Limited free tier':money(planRate(plan,'monthly'),3)} | ${plan.monthly===0?'Limited free tier':money(planRate(plan,'annual'),3)} | ${plan.block?money(plan.blockUsd*1000/plan.block):plan.perThousand?'Same rate':'—'} |`),
+ '',p.notes);
+}
+lines.push('','## Reported costs and unknowns','','Provider-returned USD and credit receipts remain separate from modeled prices. Credits are not converted into an invented invoice. Reported cost per 1,000 useful pages requires USD receipts on every selected page, no unresolved judgments and at least one useful page. Missing receipts are unknown, including timeouts that may still have been billed. Partial subtotals disclose coverage. Valid zero-dollar receipts remain zero.','',
+ 'Exa’s eligible free balance resets to $10 monthly and onboarding can add $10 once. These shared account credits are excluded from gross rates. Context grandfathered accounts may have older prices. Firecrawl annual totals are $190/$990/$3,990/$7,190, not twelve times the rounded monthly marketing labels. Firecrawl enhanced proxies have no surcharge; PDF parsing is disabled in this adapter. Returned error documents can be billed. Keenable Search prices do not price its distinct `fetch.live` SKU.','');
+for(const dir of ['docs/research','site/research']){
+ await fs.mkdir(dir,{recursive:true});
+ await fs.writeFile(`${dir}/provider-costs-3000-daily.md`,lines.join('\n'));
+}
+console.log('Published pricing catalog and research from the shared plan data.');

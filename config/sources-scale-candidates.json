@@ -1,0 +1,2136 @@
+[
+  {
+    "category": "news",
+    "source_id": "scale-local10-com",
+    "organization": "www.local10.com",
+    "kind": "feed",
+    "url": "https://www.local10.com/arc/outboundfeeds/rss/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.local10.com/arc/outboundfeeds/rss/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 100,
+      "validated_at": "2026-09-18T01:34:18.845087+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-seattletimes-com",
+    "organization": "www.seattletimes.com",
+    "kind": "feed",
+    "url": "https://www.seattletimes.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.seattletimes.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 33,
+      "validated_at": "2026-09-18T01:34:18.460750+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-chicago-suntimes-com",
+    "organization": "chicago.suntimes.com",
+    "kind": "feed",
+    "url": "https://chicago.suntimes.com/rss/index.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://chicago.suntimes.com/rss/index.xml"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 55,
+      "validated_at": "2026-09-18T01:34:19.289952+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-nypost-com",
+    "organization": "nypost.com",
+    "kind": "feed",
+    "url": "https://nypost.com/metro/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://nypost.com/metro/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:19.039402+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-gothamist-com",
+    "organization": "gothamist.com",
+    "kind": "feed",
+    "url": "https://gothamist.com/feed",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://gothamist.com/feed"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 40,
+      "validated_at": "2026-09-18T01:34:18.579168+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-12news-com",
+    "organization": "www.12news.com",
+    "kind": "feed",
+    "url": "https://www.12news.com/feeds/syndication/rss/news/local",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.12news.com/feeds/syndication/rss/news/local"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 40,
+      "validated_at": "2026-09-18T01:34:18.980111+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-kxan-com",
+    "organization": "www.kxan.com",
+    "kind": "feed",
+    "url": "https://www.kxan.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.kxan.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 29,
+      "validated_at": "2026-09-18T01:34:19.674010+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-blockclubchicago-org",
+    "organization": "blockclubchicago.org",
+    "kind": "feed",
+    "url": "https://blockclubchicago.org/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://blockclubchicago.org/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "local_civic",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:19.105359+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-techcrunch-com",
+    "organization": "techcrunch.com",
+    "kind": "feed",
+    "url": "https://techcrunch.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://techcrunch.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "tech",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:19.291476+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-theverge-com",
+    "organization": "www.theverge.com",
+    "kind": "feed",
+    "url": "https://www.theverge.com/rss/index.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.theverge.com/rss/index.xml"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "tech",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:19.559381+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-wired-com",
+    "organization": "www.wired.com",
+    "kind": "feed",
+    "url": "https://www.wired.com/feed/rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.wired.com/feed/rss"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "tech",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 50,
+      "validated_at": "2026-09-18T01:34:19.497760+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-engadget-com",
+    "organization": "www.engadget.com",
+    "kind": "feed",
+    "url": "https://www.engadget.com/rss.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.engadget.com/rss.xml"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "tech",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:19.549122+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-search-cnbc-com",
+    "organization": "search.cnbc.com",
+    "kind": "feed",
+    "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "finance",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:20.159215+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-finance-yahoo-com",
+    "organization": "finance.yahoo.com",
+    "kind": "feed",
+    "url": "https://finance.yahoo.com/news/rssindex",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://finance.yahoo.com/news/rssindex"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "finance",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 50,
+      "validated_at": "2026-09-18T01:34:19.761627+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-variety-com",
+    "organization": "variety.com",
+    "kind": "feed",
+    "url": "https://variety.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://variety.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "entertainment",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:19.932909+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-hollywoodreporter-com",
+    "organization": "www.hollywoodreporter.com",
+    "kind": "feed",
+    "url": "https://www.hollywoodreporter.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.hollywoodreporter.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "entertainment",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:20.340285+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-sports-yahoo-com",
+    "organization": "sports.yahoo.com",
+    "kind": "feed",
+    "url": "https://sports.yahoo.com/rss/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://sports.yahoo.com/rss/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "sports",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 50,
+      "validated_at": "2026-09-18T01:34:20.238387+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-espn-com",
+    "organization": "www.espn.com",
+    "kind": "feed",
+    "url": "https://www.espn.com/espn/rss/news",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.espn.com/espn/rss/news"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "sports",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 26,
+      "validated_at": "2026-09-18T01:34:20.121752+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-polygon-com",
+    "organization": "www.polygon.com",
+    "kind": "feed",
+    "url": "https://www.polygon.com/rss/index.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.polygon.com/rss/index.xml"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "gaming",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:21.123921+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-eurogamer-net",
+    "organization": "www.eurogamer.net",
+    "kind": "feed",
+    "url": "https://www.eurogamer.net/feed",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.eurogamer.net/feed"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "gaming",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 100,
+      "validated_at": "2026-09-18T01:34:20.490874+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-statnews-com",
+    "organization": "www.statnews.com",
+    "kind": "feed",
+    "url": "https://www.statnews.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.statnews.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "health",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:20.600306+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-phys-org",
+    "organization": "phys.org",
+    "kind": "feed",
+    "url": "https://phys.org/rss-feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://phys.org/rss-feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "science",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:20.898249+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-the74million-org",
+    "organization": "www.the74million.org",
+    "kind": "feed",
+    "url": "https://www.the74million.org/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://www.the74million.org/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "education",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 25,
+      "validated_at": "2026-09-18T01:34:20.836554+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "news",
+    "source_id": "scale-onemileatatime-com",
+    "organization": "onemileatatime.com",
+    "kind": "feed",
+    "url": "https://onemileatatime.com/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "publisher_link",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://onemileatatime.com/feed/"
+    ],
+    "proposed_only": true,
+    "upstream_topical_domain": "travel",
+    "upstream_source_kind": "rss_news",
+    "organization_resolution": "publisher hostname provisional; ownership requires review",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 25,
+      "validated_at": "2026-09-18T01:34:20.873760+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-go",
+    "organization": "Google Go",
+    "kind": "feed",
+    "url": "https://go.dev/blog/feed.atom",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://go.dev/blog/feed.atom"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:21.241480+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-rustblog",
+    "organization": "Rust Foundation",
+    "kind": "feed",
+    "url": "https://blog.rust-lang.org/feed.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://blog.rust-lang.org/feed.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:21.125889+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-pythonblog",
+    "organization": "Python Software Foundation",
+    "kind": "feed",
+    "url": "https://blog.python.org/feeds/posts/default",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://blog.python.org/feeds/posts/default"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 50,
+      "validated_at": "2026-09-18T01:34:21.434491+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-djangoblog",
+    "organization": "Django Software Foundation",
+    "kind": "feed",
+    "url": "https://www.djangoproject.com/rss/weblog/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://www.djangoproject.com/rss/weblog/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:21.501778+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-webkit",
+    "organization": "WebKit",
+    "kind": "feed",
+    "url": "https://webkit.org/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://webkit.org/feed/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:21.852846+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-mozillahacks",
+    "organization": "Mozilla",
+    "kind": "feed",
+    "url": "https://hacks.mozilla.org/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://hacks.mozilla.org/feed/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:21.671924+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-chromium",
+    "organization": "Google Chromium",
+    "kind": "feed",
+    "url": "https://blog.chromium.org/feeds/posts/default",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://blog.chromium.org/feeds/posts/default"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 25,
+      "validated_at": "2026-09-18T01:34:21.980908+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-cloudflare",
+    "organization": "Cloudflare",
+    "kind": "feed",
+    "url": "https://blog.cloudflare.com/rss/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://blog.cloudflare.com/rss/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:21.802649+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-gitlab",
+    "organization": "GitLab",
+    "kind": "feed",
+    "url": "https://about.gitlab.com/atom.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://about.gitlab.com/atom.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:22.026054+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-docker",
+    "organization": "Docker",
+    "kind": "feed",
+    "url": "https://www.docker.com/blog/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://www.docker.com/blog/feed/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:22.093825+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-nginx",
+    "organization": "F5 NGINX",
+    "kind": "feed",
+    "url": "https://blog.nginx.org/feed",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://blog.nginx.org/feed"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:22.492641+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-fedoramagazine",
+    "organization": "Fedora Project",
+    "kind": "feed",
+    "url": "https://fedoramagazine.org/feed/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://fedoramagazine.org/feed/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:23.142788+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-ubuntu",
+    "organization": "Canonical",
+    "kind": "feed",
+    "url": "https://ubuntu.com/blog/feed",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://ubuntu.com/blog/feed"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 12,
+      "validated_at": "2026-09-18T01:34:23.225714+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-archlinux",
+    "organization": "Arch Linux",
+    "kind": "feed",
+    "url": "https://archlinux.org/feeds/news/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://archlinux.org/feeds/news/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:23.344993+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-debian",
+    "organization": "Debian",
+    "kind": "feed",
+    "url": "https://bits.debian.org/feeds/feed.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://bits.debian.org/feeds/feed.rss"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 339,
+      "validated_at": "2026-09-18T01:34:23.230305+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim. Large historical backlog; not evidence of daily replenishment.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "software_docs",
+    "source_id": "scale-freebsd",
+    "organization": "FreeBSD Foundation",
+    "kind": "feed",
+    "url": "https://www.freebsd.org/news/feed.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_engineering_blog_or_release",
+    "provenance_urls": [
+      "https://www.freebsd.org/news/feed.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Software news/engineering article; not automatically an API reference document.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:22.835786+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-pythonforum",
+    "organization": "Python Software Foundation",
+    "kind": "feed",
+    "url": "https://discuss.python.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discuss.python.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:23.498392+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-rustforum",
+    "organization": "Rust Foundation",
+    "kind": "feed",
+    "url": "https://users.rust-lang.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://users.rust-lang.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:23.715915+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-kotlinforum",
+    "organization": "JetBrains",
+    "kind": "feed",
+    "url": "https://discuss.kotlinlang.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discuss.kotlinlang.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:23.990916+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-juliaforum",
+    "organization": "Julia community",
+    "kind": "feed",
+    "url": "https://discourse.julialang.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discourse.julialang.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:24.305083+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-ocamlforum",
+    "organization": "OCaml community",
+    "kind": "feed",
+    "url": "https://discuss.ocaml.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discuss.ocaml.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:24.178962+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-elixirforum",
+    "organization": "Elixir Forum",
+    "kind": "feed",
+    "url": "https://elixirforum.com/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://elixirforum.com/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:34:25.384172+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-djangoforum",
+    "organization": "Django Software Foundation",
+    "kind": "feed",
+    "url": "https://forum.djangoproject.com/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://forum.djangoproject.com/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:24.331415+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-discoursemeta",
+    "organization": "Discourse",
+    "kind": "feed",
+    "url": "https://meta.discourse.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://meta.discourse.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:24.523347+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-openaiforum",
+    "organization": "OpenAI",
+    "kind": "feed",
+    "url": "https://community.openai.com/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://community.openai.com/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:24.675488+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-huggingfaceforum",
+    "organization": "Hugging Face",
+    "kind": "feed",
+    "url": "https://discuss.huggingface.co/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discuss.huggingface.co/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:25.037307+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-pytorchforum",
+    "organization": "PyTorch Foundation",
+    "kind": "feed",
+    "url": "https://discuss.pytorch.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discuss.pytorch.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:25.207121+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-ardupilotforum",
+    "organization": "ArduPilot",
+    "kind": "feed",
+    "url": "https://discuss.ardupilot.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discuss.ardupilot.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:26.078403+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-blenderforum",
+    "organization": "Blender Foundation",
+    "kind": "feed",
+    "url": "https://devtalk.blender.org/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://devtalk.blender.org/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:26.345671+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-homeassistantforum",
+    "organization": "Open Home Foundation",
+    "kind": "feed",
+    "url": "https://community.home-assistant.io/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://community.home-assistant.io/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:25.890111+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-ansibleforum",
+    "organization": "Red Hat Ansible",
+    "kind": "feed",
+    "url": "https://forum.ansible.com/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://forum.ansible.com/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:25.973455+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-ubuntuforum",
+    "organization": "Canonical",
+    "kind": "feed",
+    "url": "https://discourse.ubuntu.com/latest.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "discussion",
+    "provenance_urls": [
+      "https://discourse.ubuntu.com/",
+      "https://meta.discourse.org/t/finding-discourse-rss-feeds/264134"
+    ],
+    "proposed_only": true,
+    "shared_platform": "Discourse",
+    "scope_note": "Distinct host, shared forum software; platform correlation must remain visible.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 30,
+      "validated_at": "2026-09-18T01:34:27.005305+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-devto",
+    "organization": "Forem",
+    "kind": "feed",
+    "url": "https://dev.to/feed",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "community_feed_item",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://dev.to/feed"
+    ],
+    "proposed_only": true,
+    "scope_note": "Inspect target hosts: feed link may point to outbound article rather than discussion.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 12,
+      "validated_at": "2026-09-18T01:34:25.935140+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim. Mixed-language items observed; unknown-language policy still requires downstream language audit.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "community_social",
+    "source_id": "scale-lobsters",
+    "organization": "Lobsters",
+    "kind": "feed",
+    "url": "https://lobste.rs/rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "community_feed_item",
+    "provenance_urls": [
+      "https://github.com/keenableai/needle/blob/main/src/needle/news/configs/feeds.default.toml",
+      "https://lobste.rs/rss"
+    ],
+    "proposed_only": true,
+    "scope_note": "Inspect target hosts: feed link may point to outbound article rather than discussion.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 25,
+      "validated_at": "2026-09-18T01:34:26.611699+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": false,
+      "scope": "Feed link is outbound article, not the community discussion. Needs explicit link-mode/category correction before promotion.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-doj",
+    "organization": "US Department of Justice",
+    "kind": "feed",
+    "url": "https://www.justice.gov/news/rss?type%5B0%5D=press_release&search_api_language=en",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.justice.gov/atr/news-feeds",
+      "https://www.justice.gov/news/rss?type%5B0%5D=press_release&search_api_language=en"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 25,
+      "validated_at": "2026-09-18T01:34:27.374640+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-govinfobills",
+    "organization": "US Government Publishing Office",
+    "kind": "feed",
+    "url": "https://www.govinfo.gov/rss/bills.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.govinfo.gov/feeds",
+      "https://www.govinfo.gov/rss/bills.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 99,
+      "validated_at": "2026-09-18T01:34:26.514317+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-virginiacourt",
+    "organization": "Virginia Court System",
+    "kind": "feed",
+    "url": "https://www.vacourts.gov/static/rss/rss_scv_opinions.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.courts.state.va.us/rss/rssfeed",
+      "https://www.vacourts.gov/static/rss/rss_scv_opinions.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 1,
+      "validated_at": "2026-09-18T01:34:26.876322+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-fccfiles",
+    "organization": "US Federal Communications Commission",
+    "kind": "feed",
+    "url": "https://publicfiles.fcc.gov/rss/",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://publicfiles.fcc.gov/faq",
+      "https://publicfiles.fcc.gov/rss/"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:34:26.998254+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-cftc",
+    "organization": "US Commodity Futures Trading Commission",
+    "kind": "feed",
+    "url": "https://www.cftc.gov/RSS/RSSENF/rssenf.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.cftc.gov/RSS/index.htm",
+      "https://www.cftc.gov/RSS/RSSENF/rssenf.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:35:09.803663+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013509Z-legal/result.json",
+      "error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-eurlex",
+    "organization": "European Union",
+    "kind": "feed",
+    "url": "https://eur-lex.europa.eu/EN/rss/jol.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://eur-lex.europa.eu/content/help/pages/rss.html",
+      "https://eur-lex.europa.eu/EN/rss/jol.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:34:27.474942+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-canadascc",
+    "organization": "Supreme Court of Canada",
+    "kind": "feed",
+    "url": "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/rss.do",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://decisions.scc-csc.ca/scc-csc/en/nav.do",
+      "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/rss.do"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 100,
+      "validated_at": "2026-09-18T01:34:28.226323+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim. Observed historical cases dating to1988; not evidence of daily replenishment.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-ico",
+    "organization": "UK Information Commissioner",
+    "kind": "feed",
+    "url": "https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://ico.org.uk/about-the-ico/media-centre/",
+      "https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/rss"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:34:27.775291+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-fca",
+    "organization": "UK Financial Conduct Authority",
+    "kind": "feed",
+    "url": "https://www.fca.org.uk/news/rss.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.fca.org.uk/news",
+      "https://www.fca.org.uk/news/rss.xml"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 20,
+      "validated_at": "2026-09-18T01:34:27.509247+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-ofcom",
+    "organization": "Ofcom",
+    "kind": "feed",
+    "url": "https://www.ofcom.org.uk/about-ofcom/latest/media/media-releases/rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.ofcom.org.uk/",
+      "https://www.ofcom.org.uk/about-ofcom/latest/media/media-releases/rss"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:34:27.482080+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": "HTTPError: HTTP Error 403: Forbidden",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-dpc",
+    "organization": "Irish Data Protection Commission",
+    "kind": "feed",
+    "url": "https://www.dataprotection.ie/en/news-media/latest-news/feed",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.dataprotection.ie/en/news-media",
+      "https://www.dataprotection.ie/en/news-media/latest-news/feed"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "error",
+      "candidate_rows": 0,
+      "validated_at": "2026-09-18T01:34:28.084067+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>",
+      "recommended_for_promotion": false,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-edpb",
+    "organization": "European Data Protection Board",
+    "kind": "feed",
+    "url": "https://www.edpb.europa.eu/feed/news_en",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.edpb.europa.eu/news/news_en",
+      "https://www.edpb.europa.eu/feed/news_en"
+    ],
+    "proposed_only": true,
+    "scope_note": "Reference endpoint candidate; only adapter-validated successes may be promoted; agency news is distinct from primary legal text.",
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 10,
+      "validated_at": "2026-09-18T01:34:29.007398+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013417Z/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-nycourts",
+    "organization": "New York State Law Reporting Bureau",
+    "kind": "feed",
+    "url": "https://www.nycourts.gov/reporter/RSS/COA.xml",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.nycourts.gov/reporter/RSS.shtml",
+      "https://www.nycourts.gov/reporter/RSS/COA.xml"
+    ],
+    "proposed_only": true,
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 1,
+      "validated_at": "2026-09-18T01:35:09.915145+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013509Z-legal/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  },
+  {
+    "category": "legal_regulatory",
+    "source_id": "scale-ukbills",
+    "organization": "UK Parliament",
+    "kind": "feed",
+    "url": "https://bills.parliament.uk/rss/allbills.rss",
+    "registry_version": "scale-candidates-v1-20260918",
+    "parser_version": "independent-discovery-v1",
+    "poll_interval_hours": 6,
+    "pagination": "first_response_only",
+    "language_policy": "preserve_metadata_else_unknown",
+    "target_type": "official_legal_or_regulatory_item",
+    "provenance_urls": [
+      "https://www.parliament.uk/site-information/rss-feeds/",
+      "https://bills.parliament.uk/rss/allbills.rss"
+    ],
+    "proposed_only": true,
+    "validation": {
+      "status": "ok",
+      "candidate_rows": 50,
+      "validated_at": "2026-09-18T01:35:09.918952+00:00",
+      "receipt_result": "artifacts/scale-discovery/20260918T013509Z-legal/result.json",
+      "error": null,
+      "recommended_for_promotion": true,
+      "scope": "Parsed metadata only; no reader quality claim.",
+      "egress": "local development host; not Hetzner origin"
+    }
+  }
+]

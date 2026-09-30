@@ -1,0 +1,27 @@
+[Unit]
+Description=TRACE benchmark collection and measurement worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=trace-bench
+Group=trace-bench
+WorkingDirectory=/opt/trace-bench
+EnvironmentFile=/etc/trace-bench.env
+Environment=TRACE_STATE=/var/lib/trace-bench-v2
+Environment=PLAYWRIGHT_BROWSERS_PATH=/var/lib/trace-bench-v2/browsers
+Environment=TRACE_COLLECTOR=hetzner-worker
+Environment=HOME=/var/lib/trace-bench-v2
+Environment=XDG_CACHE_HOME=/var/lib/trace-bench-v2/cache
+ExecStart=/opt/trace-bench/.venv/bin/python -m bench.cli tick
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/trace-bench-v2 /opt/trace-bench/site/data
+MemoryMax=5G
+CPUQuota=400%
+TasksMax=512
+TimeoutStartSec=18h
