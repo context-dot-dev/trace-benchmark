@@ -4,13 +4,13 @@ Checked **September 30, 2026** against official sources for all four active benc
 
 ## Comparison basis
 
-[NEEDLE](https://github.com/keenableai/needle/blob/main/dashboard/index.html) maintains a dated price and plan per engine and describes its price table as the biggest self-serve tier, excluding enterprise quotes. Trace applies that convention to scraping. Monthly billing is the default; annual rates use exact yearly fees divided by twelve. A selected plan changes price projections, not the recorded quality or latency.
+[NEEDLE](https://github.com/keenableai/needle/blob/main/dashboard/index.html) maintains a dated price and plan per engine and describes its price table as the biggest self-serve tier, excluding enterprise quotes. Trace offers that full-allowance comparison and defaults to the lowest-cost paid plans for a workload of 93,000 base pages/month. The workload rate includes unused subscription capacity and whole top-up blocks. Plan selection does not establish throughput suitability. Monthly billing is the default; annual rates use exact yearly fees divided by twelve. A selected plan changes price projections, not the recorded quality or latency.
 
-The unit rate assumes the full included allowance is consumed at one base credit per page. It is not the marginal overage rate or the blended rate for an underused subscription. Published rates are rounded to three decimals; full-precision values are in the JSON. Free tiers are limited allowances, never an unlimited zero-dollar tariff.
+The unit rate assumes the full included allowance is consumed at one base credit per page. It is not the marginal overage rate or the blended rate for an underused subscription. The graph plots confirmed useful-content rate against the selected cost basis. Providers with unknown live-fetch prices are omitted from the plot, not plotted at zero. Projected cost per confirmed useful page retains unresolved pages in the denominator and shows an optimistic bound. Published rates are rounded to three decimals; full-precision values are in the JSON. Free tiers are limited allowances, never an unlimited zero-dollar tariff.
 
 ## Budget at 3,000 base pages/day
 
-At most 93,000 pages in a month; 1,095,000 in a 365-day year. These are separate lowest-spend scenarios, not the largest-tier default in the comparison. Every page is assumed billable, with no opening balance, shared API usage or promotional credits. Actual failure charges and special URL charges can differ.
+At most 93,000 pages in a month; 1,095,000 in a 365-day year. These are separate lowest-spend scenarios, matching the default comparison workload. The full-allowance view remains available. Every page is assumed billable, with no opening balance, shared API usage or promotional credits. Actual failure charges and special URL charges can differ.
 
 | Provider | Covering plan | Monthly bill at 93k | Annual bill for 365 days |
 |---|---|---:|---:|

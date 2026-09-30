@@ -2,7 +2,9 @@ import {Table} from '@/components/ui/heroui-table';
 import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
 import {ProviderLogo} from './provider-logo';
 import {finite} from './model';
-import {PRICING,MONTHLY_PAGES,quotePlan,planRate,priceRows} from './pricing-data';
+import {Button} from '@/components/ui/button';
+import {ValueChart} from './value-chart';
+import {PRICING,MONTHLY_PAGES,quotePlan,planRate,priceRows,recommendPlans} from './pricing-data';
 
 const money=(value,digits=2)=>finite(value)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:digits,maximumFractionDigits:digits}).format(value):'Unknown';
 const rate=value=>money(value,3);
@@ -34,40 +36,49 @@ export function PlanTable({provider,billing}) {
 
 export function Pricing({rows,scenario,onScenarioChange}) {
   const prices=priceRows(rows,scenario);
+  const pages=scenario.monthlyPages??MONTHLY_PAGES;
   return <div id="pricing" className="pricing">
-    <h3>Report pricing</h3>
-    <p className="section-intro">The price of 1,000 fresh, base-rate pages on a named plan. Like NEEDLE, the default is the largest published self-service tier. Change a plan to compare its rate.</p>
-    <ToggleGroup variant="segmented" value={[scenario.billing]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,billing:v[0]})} aria-label="Pricing billing period"><ToggleGroupItem value="monthly">Monthly billing</ToggleGroupItem><ToggleGroupItem value="annual">Annual billing</ToggleGroupItem></ToggleGroup>
+    <h3>Quality vs. cost</h3>
+    <p className="section-intro">How much useful content do you get for your money? Compare the same measured results at the price you would pay for your workload.</p>
+    <div className="value-controls">
+      <ToggleGroup variant="segmented" value={[scenario.billing]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,billing:v[0]})} aria-label="Pricing billing period"><ToggleGroupItem value="monthly">Monthly billing</ToggleGroupItem><ToggleGroupItem value="annual">Annual billing</ToggleGroupItem></ToggleGroup>
+      <ToggleGroup variant="segmented" value={[scenario.basis||'workload']} onValueChange={v=>v[0]&&onScenarioChange({...scenario,basis:v[0]})} aria-label="Cost calculation"><ToggleGroupItem value="workload">At your volume</ToggleGroupItem><ToggleGroupItem value="allowance">Full allowance</ToggleGroupItem></ToggleGroup>
+    </div>
+    <div className="value-volume"><span>Pages / month</span><ToggleGroup value={[String(pages)]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,monthlyPages:Number(v[0]),plans:recommendPlans(scenario.billing,Number(v[0]))})} aria-label="Monthly page volume">{[10000,93000,1000000].map(n=><ToggleGroupItem key={n} value={String(n)}>{number(n)}</ToggleGroupItem>)}</ToggleGroup></div>
+    <p className="micro">{scenario.basis==='allowance'?'Full-allowance rate: subscription price divided by every included credit.':'Workload rate: subscription + whole top-up blocks, divided by your volume. Includes unused capacity.'} {pages===93000?'93,000 pages = 3,000 a day in a 31-day month.':''}</p>
+    <ValueChart prices={prices}/>
     <div className="pricing-choices">{PRICING.filter(p=>p.plans.some(plan=>plan.annual)).map(provider=><div className="pricing-choice" key={provider.id}>
       <span className="provider-name"><ProviderLogo id={provider.id}/>{provider.name}</span>
       <ToggleGroup size="sm" value={[scenario.plans[provider.id]]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,plans:{...scenario.plans,[provider.id]:v[0]}})} aria-label={`${provider.name} pricing plan`}>{provider.plans.filter(plan=>plan.annual).map(plan=><ToggleGroupItem key={plan.name} value={plan.name}>{plan.name}</ToggleGroupItem>)}</ToggleGroup>
     </div>)}</div>
+    <Button variant="link" className="value-best-plans" onClick={()=>onScenarioChange({...scenario,plans:recommendPlans(scenario.billing,pages)})}>Use lowest-cost paid plans for this volume</Button>
     <Table><Table.ScrollContainer><Table.Content aria-label="Plan-specific scraping prices" className="comparison-table pricing-table">
-      <Table.Header><Table.Column isRowHeader>Provider & selected plan</Table.Column><Table.Column>Base / 1k pages</Table.Column><Table.Column>Projected / 1k useful</Table.Column></Table.Header>
+      <Table.Header><Table.Column isRowHeader>Provider & plan</Table.Column><Table.Column>Cost / 1k pages</Table.Column><Table.Column>Projected / 1k useful</Table.Column></Table.Header>
       <Table.Body>{prices.map(provider=><Table.Row key={provider.id}>
-        <Table.Cell><span className="provider-name"><ProviderLogo id={provider.id}/>{provider.name}</span><span className="cell-detail">{provider.plan.name}{provider.plan.annual?` · ${scenario.billing}`:''}</span></Table.Cell>
-        <Table.Cell>{rate(provider.unitPrice)}</Table.Cell>
-        <Table.Cell>{rate(provider.usefulPrice)}{provider.unitPrice!==null&&provider.usefulPrice===null&&<span className="cell-detail">Needs resolved results and useful pages</span>}</Table.Cell>
+        <Table.Cell><span className="provider-name"><ProviderLogo id={provider.id}/>{provider.name}</span><span className="cell-detail">{provider.plan.name}{provider.plan.annual?` · ${scenario.billing}`:''}</span><span className="cell-detail">{provider.quote.monthly===null?'Price unverified':`${money(provider.quote.monthly)}/mo`}{provider.quote.commitment!==null?` · ${money(provider.quote.commitment)} yearly upfront`:''}</span></Table.Cell>
+        <Table.Cell>{rate(provider.comparisonPrice)}</Table.Cell>
+        <Table.Cell>{rate(provider.usefulPrice)}{provider.unknown>0&&provider.usefulPrice!==null&&<span className="cell-detail">{provider.unknown} unresolved; as low as {rate(provider.usefulPriceLow)}</span>}{provider.comparisonPrice!==null&&provider.usefulPrice===null&&<span className="cell-detail">No confirmed useful pages yet</span>}</Table.Cell>
       </Table.Row>)}</Table.Body>
     </Table.Content></Table.ScrollContainer></Table>
-    <p className="micro">Subscription rates assume the full included allowance is used. Annual rates use the exact yearly payment ÷ 12, not rounded advertised monthly prices. Rates are rounded to $0.001. Projected useful-page cost = base rate ÷ useful-content rate, assuming one billable base page per attempt; it is not a measured charge.</p>
-    <p className="micro">Changing pricing does not change the measured results or imply they were collected on that plan. Free allowances, promotions and negotiated quotes are excluded. Keenable’s live-fetch price is unverified. Checked September 30, 2026. <a href="#pricing-details">Plans, budgets & billing evidence</a> · <a href="pricing.json" download>Download prices</a></p>
+    <p className="micro">Quality = confirmed useful pages ÷ all selected pages, including failures and unresolved results. This measures content recovery, not independently verified factual accuracy. Projected useful-page cost divides the modeled price by that rate; unresolved pages can improve it. Changing pricing does not change the measured results or imply they were collected on that plan.</p>
+    <p className="micro">Assumes one billable base page per attempt. Free credits, negotiated discounts and special-format charges are excluded. Prices checked September 30, 2026. <a href="#pricing-details">Plans & billing evidence</a> · <a href="pricing.json" download>Download prices</a></p>
   </div>;
 }
 
 export function PricingAppendix({rows,scenario}) {
   const prices=priceRows(rows,scenario);
+  const pages=scenario.monthlyPages??MONTHLY_PAGES;
   return <div id="pricing-details" className="pricing">
     <h3>Pricing methodology</h3>
-    <p className="micro"><a href="https://github.com/keenableai/needle/blob/main/dashboard/index.html">NEEDLE’s pricing catalog</a> stores a price, plan and check date for each engine and describes its comparison as the biggest self-serve tier, excluding enterprise quotes. Trace uses that convention for scraping, with the same billing period across subscriptions. Search prices are not scraping prices. The plan and billing selections in <a href="#pricing">Report pricing</a> also apply below.</p>
-    <h3>Budget for 3,000 pages a day</h3>
-    <p className="micro">{number(MONTHLY_PAGES)} billable base pages in a 31-day month, per provider, on your selected plans. Estimates, not invoices. This includes unused capacity and whole top-up blocks; it differs from the full-allowance unit rate above.</p>
+    <p className="micro"><a href="https://github.com/keenableai/needle/blob/main/dashboard/index.html">NEEDLE’s pricing catalog</a> stores a price, plan and check date for each engine and describes its comparison as the biggest self-serve tier, excluding enterprise quotes. Trace offers that full-allowance comparison alongside the cost of your actual workload, using the same billing period across subscriptions. The default selects the lowest-cost paid plan for 93,000 monthly base pages; this is a cost fit, not a throughput recommendation. Search prices are not scraping prices. The plan and billing selections in <a href="#pricing">Quality vs. cost</a> also apply below.</p>
+    <h3>Budget for {number(pages)} pages a month</h3>
+    <p className="micro">{number(pages)} billable base pages per month, per provider, on your selected plans. Estimates, not invoices. This includes unused capacity and whole top-up blocks. Full-allowance rates instead assume every included credit is used.</p>
     <Table><Table.ScrollContainer><Table.Content aria-label="Selected plan monthly budgets" className="comparison-table pricing-table">
       <Table.Header><Table.Column isRowHeader>Provider & plan</Table.Column><Table.Column>Monthly spend</Table.Column><Table.Column>Blended / 1k pages</Table.Column></Table.Header>
       <Table.Body>{prices.map(provider=><Table.Row key={provider.id}>
         <Table.Cell><span className="provider-name"><ProviderLogo id={provider.id}/>{provider.name}</span><span className="cell-detail">{provider.plan.name}</span></Table.Cell>
         <Table.Cell>{money(provider.quote.monthly)}{provider.quote.commitment!==null&&<span className="cell-detail">{money(provider.quote.commitment)}/year upfront</span>}{provider.quote.extra>0&&<span className="cell-detail">Includes {money(provider.quote.extra)} top-ups</span>}</Table.Cell>
-        <Table.Cell>{rate(provider.quote.monthly===null?null:provider.quote.monthly/MONTHLY_PAGES*1000)}</Table.Cell>
+        <Table.Cell>{rate(provider.quote.monthly===null?null:provider.quote.monthly/pages*1000)}</Table.Cell>
       </Table.Row>)}</Table.Body>
     </Table.Content></Table.ScrollContainer></Table>
     <p className="micro">Annual fees are amortized across 12 months; included credits still renew monthly. Assumes no opening balance, rollover, free credits or promotional discounts, and top-ups enabled. Failure billing and special URL charges can change the invoice. Excludes search, judging, hosting, taxes and extra formats. A plan’s throughput limits may prevent a five-minute run.</p>

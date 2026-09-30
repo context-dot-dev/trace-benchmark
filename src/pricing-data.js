@@ -1,4 +1,4 @@
-export const DEFAULT_PRICING = {billing:'monthly', plans:{context:'Scale', firecrawl:'Scale', exa:'Pay as you go', keenable:'Live fetch'}};
+export const DEFAULT_PRICING = {billing:'monthly', basis:'workload', monthlyPages:93000, plans:{context:'Pro', firecrawl:'Standard', exa:'Pay as you go', keenable:'Live fetch'}};
 export const MONTHLY_PAGES = 3000 * 31;
 export const PRICING = [
   {
@@ -68,14 +68,28 @@ export function planRate(plan,billing) {
   return base*1000/plan.included;
 }
 
+export function recommendPlans(billing,pages=MONTHLY_PAGES) {
+  return Object.fromEntries(PRICING.map(provider=>{
+    const paid={...provider,plans:provider.plans.filter(p=>p.monthly>0||Number.isFinite(p.perThousand))};
+    return [provider.id,bestPlan(paid,billing,pages)?.plan.name||provider.plans[0].name];
+  }));
+}
+
 export function priceRows(rows,scenario) {
+  const pages=scenario.monthlyPages??MONTHLY_PAGES;
+  const basis=scenario.basis??'workload';
+  if(!Number.isSafeInteger(pages)||pages<=0||!['workload','allowance'].includes(basis))throw new Error('Invalid pricing scenario');
   return PRICING.map(provider=>{
     const plan=provider.plans.find(p=>p.name===scenario.plans[provider.id]);
     if (!plan) throw new Error(`Unknown pricing plan for ${provider.id}`);
     const observed=rows.find(row=>row.id===provider.id);
     const unitPrice=planRate(plan,scenario.billing);
-    const resolved=observed?.count>0 && observed.success>0 && observed.unknown===0;
-    return {...provider,plan,unitPrice,quote:quotePlan(plan,scenario.billing),
-      usefulPrice:unitPrice!==null&&resolved?unitPrice/(observed.success/observed.count):null};
+    const quote=quotePlan(plan,scenario.billing,pages);
+    const comparisonPrice=basis==='allowance'?unitPrice:quote.monthly===null?null:quote.monthly/pages*1000;
+    const count=observed?.count||0,success=observed?.success||0,unknown=observed?.unknown||0;
+    const quality=count?success/count:null,qualityUpper=count?(success+unknown)/count:null;
+    return {...provider,plan,unitPrice,quote,comparisonPrice,quality,qualityUpper,count,success,unknown,
+      usefulPrice:comparisonPrice!==null&&quality>0?comparisonPrice/quality:null,
+      usefulPriceLow:comparisonPrice!==null&&qualityUpper>0?comparisonPrice/qualityUpper:null};
   });
 }
