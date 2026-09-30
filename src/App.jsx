@@ -8,6 +8,7 @@ import { human } from "./model";
 import { useBenchmark } from "./use-benchmark";
 import { MetricPanels, PageTypes, HeadToHead, scrapingMetrics } from "./comparisons";
 import { LiveStatus, Freshness, Coverage, Efficiency, Supply, AccountIssues } from "./live-comparisons";
+import { RunSampling } from "./run-sampling";
 import { History } from "./quality-history";
 import {Pricing,PricingAppendix} from "./pricing";
 import {DEFAULT_PRICING} from "./pricing-data";
@@ -111,19 +112,19 @@ export default function App({ initialData = null }) {
           <Freshness rows={rows}/>
           <PricingAppendix rows={rows} scenario={pricing}/>
           <h3 id="methodology">Methodology & data</h3>
-          <p><strong>Fresh pages.</strong> Inspired by <a href="https://keenableai.github.io/needle/">NEEDLE</a>, Trace collects URLs from changing public sources instead of relying on a fixed test set. Independent pages cover news, commerce, jobs, finance, research, government, software, and community sites.</p>
+          <p><strong>Rotating pages.</strong> Inspired by <a href="https://keenableai.github.io/needle/">NEEDLE</a>, Trace collects URLs from changing public sources instead of relying on a fixed test set. Independent pages cover news, commerce, jobs, finance, research, government, software, and community sites.</p>
           <p><strong>Same task.</strong> Every reader receives the same selected URL with a 30-second deadline and a 250,000-character text limit. Their returned text, errors, and timings are saved. Each provider receives its fresh-fetch setting: maxAgeMs=0, maxAgeHours=0, maxAge=0, or live=true. Provider-reported cache evidence is tracked separately; origin freshness is not independently verified.</p>
           <p><strong>Content checks.</strong> The judge checks page identity and substantive content. The v3 protocol first checks a 12,000-character sample. If it finds no useful match, overlapping chunks cover the remaining returned text. A negative requires a completed full-text review; judge errors and ambiguous content remain unresolved. Earlier protocol results remain in the downloads and are excluded from v3 comparisons. If every unresolved result were useful, the score would rise by that count divided by the number of tests.</p>
           <p><strong>Scoring.</strong> A model grades the returned text without seeing the provider’s name. Factual accuracy has not been independently verified. Unresolved results stay in the denominator; timings include failed requests. The collected mix of sites affects the ranking. New runs compare fresh provider outputs directly without rendering a reference browser. Pairwise Jev preferences identify the best observed output, including ties. No useful output means unknown recoverability, not an impossible page. A comparison requires resolved content judgments for every provider, fresh-fetch requests, no reported cache hits and request starts within 120 seconds. Conflicting preferences remain unresolved. Providers with missing observations remain in the denominator. Entire batches invalidated by a collector fault are excluded for every provider, with reasons and raw results retained in the downloads.</p>
           <p><strong>Output comparison.</strong> Each useful output contributes up to 12,000 characters from the beginning, middle and end. Pairwise choices below 0.75 model confidence remain unresolved; this threshold is provisional. A winner must beat or tie every other useful output. This measures sampled preference, not factual accuracy or complete-page recall. Identical text ties without a model call; a sole useful response is reported separately.</p>
           <p><strong>Reproducibility.</strong> Each run freezes its URLs, provider set, configuration and code hashes before requests begin. Raw API responses and comparison receipts are retained privately. Historical browser captures remain in the archive. The public manifests and result hashes let others audit the selection and rerun the same URLs. Live pages can change.</p>
           <p className="micro">Operated by Context, one of the providers being compared. <a href="plan.md">Protocol</a> · <a href="https://github.com/context-dot-dev/trace-benchmark">GitHub (private)</a> · <a href="data/latest.json" download="trace-full-data.json">Download all data</a></p>
-        <div id="runs"><h3>Run receipts</h3><ul className="run-list">{(data?.runs||[]).map(r=><li key={r.id}><a href={r.manifest_url} download>{collectionDates([{started_at:r.started_at}])} · {r.selected_count} pages · {r.cohort}</a><span className="cell-detail">{r.status} · {r.id}</span>{r.exclusion && <span className="cell-detail">Excluded for all providers: {r.exclusion.reason}</span>}</li>)}</ul>
+        <RunSampling data={data} categoryName={categoryName}/>
           <div id="result-browser" ref={resultsAnchor}>
             <h3>Individual results</h3>
             {resultsVisible && data ? <Suspense fallback={<p role="status">Loading result browser…</p>}><ResultsBrowser data={data} cohort={cohort} provider={provider} setProvider={setProvider} refresh={refresh} /></Suspense> : <p className="micro">Individual results load when you reach this section.</p>}
           </div>
-        </div></section>
+        </section>
         <Citation />
       </main>
     </div>

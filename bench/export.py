@@ -28,6 +28,8 @@ def reported_decision(judgment,text_chars):
 
 def make_export(store):
     from .credibility import evidence_card
+    from .sampling import sampling_history,replenishment
+    samples=sampling_history(store)
     runs=[];records=[]
     recent=list(store.db.execute('SELECT * FROM runs ORDER BY started_at DESC LIMIT 12'))
     recent_sql='SELECT id FROM runs ORDER BY started_at DESC LIMIT 12'
@@ -44,6 +46,7 @@ def make_export(store):
         tasks=tasks_by_run.get(run['id'],[])
         run_public={k:run[k] for k in ('id','started_at','finished_at','status','cohort')}
         run_public['selected_count']=len(tasks)
+        run_public['sampling']=samples[run['id']]
         run_public['observed_count']=sum(r['run_id']==run['id'] and r['status']=='completed' for r in observations.values())
         run_public['judged_count']=sum(oid in observations and observations[oid]['run_id']==run['id'] and j['status']=='completed' for oid,j in judgments.items())
         metadata=json.loads(run['metadata'])
@@ -136,6 +139,16 @@ def make_export(store):
                  'day':run['started_at'][:10],'cohort':run['cohort'],'providers':aggregate([r for r in scored if r['run_id']==run['id']])['cohorts'].get(run['cohort'],{})}
         store.meta(key,summary);metadata_values[key]=summary
     history=[v for k,v in metadata_values.items() if k.startswith('run_metrics:') and v['protocol_version']==PROTOCOL and not meta('run_exclusion:'+v['run_id']) and v['day']>=(utc-timedelta(days=89)).date().isoformat()]
+    replaced=set()
+    completed_runs={r['id']:r for r in store.db.execute("SELECT id,started_at,cohort,metadata FROM runs WHERE status='completed'")}
+    for saved_run in completed_runs.values():
+        saved_metadata=json.loads(saved_run['metadata'])
+        if saved_metadata.get('operator_rerun') and saved_metadata.get('protocol_version')==PROTOCOL and not meta('run_exclusion:'+saved_run['id']):
+            parent=saved_metadata.get('parent_run_id')
+            original=completed_runs.get(parent)
+            if original and original['cohort']==saved_run['cohort'] and original['started_at'][:10]==saved_run['started_at'][:10]:
+                replaced.add(parent)
+    history=[item for item in history if item['run_id'] not in replaced]
     daily_days={(v['day'],v['cohort']) for v in history if v['sample_kind']=='daily'}
     totals={}
     for item in history:
@@ -153,13 +166,15 @@ def make_export(store):
     records=[r for r in records if r['run_id'] in detail_ids]
     metrics=aggregate([r for r in scored if r['run_id'] in detail_ids])
     metrics['daily']=[dict(row,success_rate=row['success']/row['pages'] if row['pages'] else None) for _,row in sorted(totals.items())]
-    return {'metrics':metrics,'supply':supply(store),'schema_version':1,'generated_at':now(),'protocol_version':PROTOCOL,'decision_policy':'full-returned-text-review-v2','mode':'live' if profile(store)['name']=='live' else 'shadow','benchmark_card':evidence_card([r for r in records if not r.get('run_exclusion')]),'run':runs[0] if runs else None,'runs':runs,'providers':providers,'categories':categories,'records':records,'discovery':{'sources':len(receipts),'total_candidates':store.db.execute('SELECT COUNT(*) FROM candidates').fetchone()[0],'receipts':receipts,'shortfalls':meta('last_shortfalls') or {}},'operations':operations}
+    return {'sampling_history':samples,'replenishment':replenishment(store),'metrics':metrics,'supply':supply(store),'schema_version':1,'generated_at':now(),'protocol_version':PROTOCOL,'decision_policy':'full-returned-text-review-v2','mode':'live' if profile(store)['name']=='live' else 'shadow','benchmark_card':evidence_card([r for r in records if not r.get('run_exclusion')]),'run':runs[0] if runs else None,'runs':runs,'providers':providers,'categories':categories,'records':records,'discovery':{'sources':len(receipts),'total_candidates':store.db.execute('SELECT COUNT(*) FROM candidates').fetchone()[0],'receipts':receipts,'shortfalls':meta('last_shortfalls') or {}},'operations':operations}
 
 
 def publish(store,path):
     data=make_export(store)
     atomic_json(path,data)
-    for run in store.db.execute('SELECT id,metadata FROM runs ORDER BY started_at DESC LIMIT 12'):
+    atomic_json(Path(path).parent/'run-sampling.json',data['sampling_history'])
+    atomic_json(Path(path).parent/'replenishment.json',data['replenishment'])
+    for run in store.db.execute('SELECT id,metadata FROM runs ORDER BY started_at DESC'):
         target=Path(path).parent/'runs'/(run['id']+'.json')
         if not target.exists() or 'public_tasks_sha256' not in json.loads(target.read_text()):
             metadata=json.loads(run['metadata'])
@@ -169,8 +184,9 @@ def publish(store,path):
         segments=store.meta('execution:'+run['id']) or []
         manifest=json.loads(target.read_text())
         recovery=store.meta('recovery:'+run['id'])
-        if manifest.get('execution_segments')!=segments or manifest.get('recovery')!=recovery:
-            atomic_json(target,dict(manifest,execution_segments=segments,recovery=recovery))
+        sampling=data['sampling_history'][run['id']]
+        if manifest.get('execution_segments')!=segments or manifest.get('recovery')!=recovery or manifest.get('sampling')!=sampling:
+            atomic_json(target,dict(manifest,execution_segments=segments,recovery=recovery,sampling=sampling))
     return data
 
 

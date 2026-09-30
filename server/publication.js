@@ -33,10 +33,10 @@ export function publication(archive) {
   const version=createHash('sha256').update('account-health-v1:pricing-v2:').update(JSON.stringify(archive)).digest('hex').slice(0,24);
   const summary={schema_version:2,version,generated_at:archive.generated_at,protocol_version:archive.protocol_version,
     providers,categories:archive.categories,cohorts,
-    runs:archive.runs.filter(r=>r.protocol_version===archive.protocol_version).slice(0,12).map(({id,started_at,finished_at,status,cohort,selected_count,manifest_url,exclusion})=>({id,started_at,finished_at,status,cohort,selected_count,manifest_url,exclusion})),
+    runs:archive.runs.filter(r=>r.protocol_version===archive.protocol_version).slice(0,12).map(({id,started_at,finished_at,status,cohort,selected_count,manifest_url,exclusion,sampling})=>({id,started_at,finished_at,status,cohort,selected_count,manifest_url,exclusion,sampling})),
     operations:{last_tick:archive.operations?.last_tick,scheduler_status:archive.operations?.scheduler_status,next_run_at:archive.operations?.next_run_at,collection_profile:archive.operations?.collection_profile,capacity_plan:archive.operations?.capacity_plan},
     metrics:{daily:(archive.metrics?.daily||[]).map(({day,cohort,provider,success_rate,pages,sample_kind})=>({day,cohort,provider,success_rate,pages,sample_kind}))},
-    supply:archive.supply,sourceHealth:{healthy:receipts.filter(r=>r.status==='ok').length,total:receipts.length}};
+    replenishment:archive.replenishment,supply:archive.supply,sourceHealth:{healthy:receipts.filter(r=>r.status==='ok').length,total:receipts.length}};
   return {summary,records};
 }
 

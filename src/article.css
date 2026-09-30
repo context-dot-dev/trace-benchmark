@@ -293,3 +293,19 @@ footer{display:flex;justify-content:space-between;align-items:start;gap:24px;fon
   .value-reading span{font-size:10px}
 }
 .value-controls [data-pressed],.value-volume [data-pressed]{color:var(--foreground)}
+
+.run-sample-detail { margin-top: 28px; }
+.run-sample-detail h4 { margin-bottom: 8px; font-size: 16px; }
+.sampling-history-table { table-layout: fixed; width: 100%; font-variant-numeric: tabular-nums; }
+.sampling-history-table thead th:first-child { width: 36%; }
+.sampling-history-table th:not(:first-child), .sampling-history-table td:not(:first-child) { text-align: right; }
+.run-sample-link { padding: 0; height: auto; color: inherit; font-size: inherit; }
+.run-sample-link[data-active="true"] { text-decoration: underline; text-underline-offset: 4px; }
+.replenishment { margin-top: 32px; }
+
+@media(max-width:600px) {
+  .sampling-history-table td { font-size: 12px; padding: 10px 4px; }
+  .sampling-history-table td:not(:first-child) { white-space: nowrap; }
+  .sampling-history-table .cell-detail { font-size: 9px; white-space: normal; }
+  .sampling-history-table .run-sample-link { white-space: normal; text-align: left; line-height: 1.5; }
+}
