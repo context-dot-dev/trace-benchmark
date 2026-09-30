@@ -112,6 +112,10 @@ the denominator; their all-useful upper bound is disclosed. Projected cost per
 1,000 useful pages uses the same rate, with an optimistic bound for unresolved
 results. This projection differs from the stricter provider-reported cost metric
 above. Unknown live-fetch prices are excluded from the plot, never treated as zero.
+Keenable uses the verified production-account live-fetch price: one credit per
+page and $4 per 1,000 purchased credits. Its shared 100,000-credit monthly free
+allowance is excluded from the gross comparison. Historical HTTP receipts remain
+unknown; the account tariff does not turn them into measured charges.
 Changing volume, plan or billing does not change measured quality or latency.
 Neither modeled cost is an invoice. Current rates and sources are in
 [the pricing catalog](pricing.json) and [provider research](research/provider-costs-3000-daily.md).

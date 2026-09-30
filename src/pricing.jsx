@@ -15,7 +15,7 @@ export function PlanTable({provider,billing}) {
   return <div className="pricing-provider">
     <h4 className="provider-name"><ProviderLogo id={provider.id}/>{provider.name}</h4>
     <p className="micro">{provider.endpoint} · <a href={provider.source}>Official pricing</a>{provider.billingSource&&<> · <a href={provider.billingSource}>Billing rules</a></>} · Checked {provider.checked}</p>
-    <Table><Table.ScrollContainer><Table.Content aria-label={`${provider.name} published plans`} className="comparison-table pricing-table">
+    <Table><Table.ScrollContainer><Table.Content aria-label={`${provider.name} plans and rates`} className="comparison-table pricing-table">
       <Table.Header><Table.Column isRowHeader>Plan & commitment</Table.Column><Table.Column>Credits / mo</Table.Column><Table.Column>Base / 1k pages</Table.Column><Table.Column>Extra / 1k credits</Table.Column></Table.Header>
       <Table.Body>{provider.plans.map(plan=>{
         const quote=quotePlan(plan,billing);
@@ -37,9 +37,9 @@ export function PlanTable({provider,billing}) {
 export function Pricing({rows,scenario,onScenarioChange}) {
   const prices=priceRows(rows,scenario);
   const pages=scenario.monthlyPages??MONTHLY_PAGES;
-  return <div id="pricing" className="pricing">
-    <h3>Quality vs. cost</h3>
-    <p className="section-intro">How much useful content do you get for your money? Compare the same measured results at the price you would pay for your workload.</p>
+  return <section id="pricing" className="pricing">
+    <h2>Quality vs. cost</h2>
+    <p className="section-intro">Each point is one scraper. Higher means more useful content; further left means a lower price. The best value is toward the top left.</p>
     <div className="value-controls">
       <ToggleGroup variant="segmented" value={[scenario.billing]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,billing:v[0]})} aria-label="Pricing billing period"><ToggleGroupItem value="monthly">Monthly billing</ToggleGroupItem><ToggleGroupItem value="annual">Annual billing</ToggleGroupItem></ToggleGroup>
       <ToggleGroup variant="segmented" value={[scenario.basis||'workload']} onValueChange={v=>v[0]&&onScenarioChange({...scenario,basis:v[0]})} aria-label="Cost calculation"><ToggleGroupItem value="workload">At your volume</ToggleGroupItem><ToggleGroupItem value="allowance">Full allowance</ToggleGroupItem></ToggleGroup>
@@ -61,8 +61,8 @@ export function Pricing({rows,scenario,onScenarioChange}) {
       </Table.Row>)}</Table.Body>
     </Table.Content></Table.ScrollContainer></Table>
     <p className="micro">Quality = confirmed useful pages ÷ all selected pages, including failures and unresolved results. This measures content recovery, not independently verified factual accuracy. Projected useful-page cost divides the modeled price by that rate; unresolved pages can improve it. Changing pricing does not change the measured results or imply they were collected on that plan.</p>
-    <p className="micro">Assumes one billable base page per attempt. Free credits, negotiated discounts and special-format charges are excluded. Prices checked September 30, 2026. <a href="#pricing-details">Plans & billing evidence</a> · <a href="pricing.json" download>Download prices</a></p>
-  </div>;
+    <p className="micro">Assumes one billable base page per attempt. Free credits, negotiated discounts and special-format charges are excluded. Keenable uses our verified account rate of $4 / 1,000 live fetches. Prices checked September 30, 2026. <a href="#pricing-details">Plans & billing evidence</a> · <a href="pricing.json" download>Download prices</a></p>
+  </section>;
 }
 
 export function PricingAppendix({rows,scenario}) {
@@ -93,7 +93,7 @@ export function PricingAppendix({rows,scenario}) {
       </Table.Row>)}</Table.Body>
     </Table.Content></Table.ScrollContainer></Table>
     <p className="micro">API receipts for the selected page set, not the account invoice. Missing receipts stay unknown, including timed-out requests that may still be billed. Credits are provider-specific; they are not converted to dollars at a hypothetical plan rate. Reported cost per useful page requires USD receipts for every selected page and fully resolved judgments. Subscription fees absent from receipts and operational costs are excluded.</p>
-    <h3 id="published-plans">Published plans</h3>
+    <h3 id="published-plans">Plans & rates</h3>
     <p className="micro">Included-credit rates and overage rates are different. The first assumes full use of the subscription; the second applies only after that allowance runs out. Free tiers are bounded allowances, not sustainable zero-cost tariffs.</p>
     {PRICING.map(provider=><PlanTable key={provider.id} provider={provider} billing={scenario.billing}/>)}
   </div>;

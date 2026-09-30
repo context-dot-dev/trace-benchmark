@@ -3,7 +3,6 @@ import { Table } from "@/components/ui/heroui-table";
 import { ProviderLogo } from "./provider-logo";
 import { pct, secs, date } from "./model";
 import { MetricPanels } from "./comparisons";
-import { Pricing } from "./pricing";
 
 export function LiveStatus({ data, cohort }) {
   const [now,setNow]=useState(()=>Date.parse(data?.rendered_at)||Date.now());
@@ -44,11 +43,11 @@ export function Coverage({ group, rows }) {
     <p className="micro">Best among the observed outputs, not verified ground truth. Ties count for each winning provider. Pages with missing, uncertain, cached or non-contemporaneous evidence do not enter this comparison. The useful-content score above still includes every selected page.</p>
   </section>;
 }
-export function Efficiency({ rows, pricing, setPricing }) {
-  return <section id="efficiency"><h2>Latency & cost</h2><p className="section-intro">Timing starts when the API request begins and ends after the complete response arrives. It includes provider failures, excludes judging and account/configuration errors, and uses the same 30-second deadline. P95 is unstable for small samples.</p><div className="wide-comparison"><MetricPanels label="Latency" rows={rows} metrics={[
+export function Efficiency({ rows }) {
+  return <section id="efficiency"><h2>Latency</h2><p className="section-intro">Timing starts when the API request begins and ends after the complete response arrives. It includes provider failures, excludes judging and account/configuration errors, and uses the same 30-second deadline. P95 is unstable for small samples.</p><div className="wide-comparison"><MetricPanels label="Latency" rows={rows} metrics={[
     {key:"p50",title:"Median latency",short:"P50",detail:"Seconds, all timed requests",lower:true,format:secs},
     {key:"p95",title:"Tail latency",short:"P95",detail:"95th percentile, seconds",lower:true,format:secs},
-  ]}/></div><Pricing rows={rows} scenario={pricing} onScenarioChange={setPricing}/></section>;
+  ]}/></div></section>;
 }
 export function Supply({ data, categoryName }) {
   const healthy=data?.sourceHealth?.healthy||0;

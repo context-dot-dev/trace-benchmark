@@ -37,9 +37,10 @@ export const PRICING = [
   },
   {
     id: 'keenable', name: 'Keenable', checked: '2026-09-30',
-    source: 'https://docs.keenable.ai/credits', endpoint: '/fetch · live=true · fetch.live SKU',
-    notes: 'The docs advertise a shared monthly allowance of 100,000 requests, but live fetch has a distinct SKU and organization-specific credit pricing. A public USD tariff for this mode is not established. Search-tier prices and the ordinary-fetch allowance cannot establish its live-fetch cost. This collector has no verified HTTP billing receipt; an account-specific live-fetch tariff is needed.',
-    plans: [{name:'Live fetch', custom:true}],
+    source: 'https://app.keenable.ai/console/billing', endpoint: '/fetch · live=true · fetch.live SKU · 1 verified credit/page',
+    billingSource: 'https://docs.keenable.ai/credits',
+    notes: 'Account-verified rate, checked against the production key on September 30, 2026. One authenticated MCP live-fetch probe returned fetch.live, amount=1, credits=1, paid=false. The same account’s billing console prices purchased credits at $4 per 1,000, with no subscription and no expiry. It offers $50/12,500, $200/50,000 and $500/125,000 packages plus custom top-ups. The shared 100,000-credit monthly free allowance is excluded from this gross comparison, as are other providers’ free credits. A dedicated 93,000-page month fits that allowance if each call costs one credit and no other use consumes it. Prices can vary by organization; this is not a universal tariff or a measured USD charge for historical HTTP results.',
+    plans: [{name:'Live fetch', perThousand:4}],
   },
 ];
 
