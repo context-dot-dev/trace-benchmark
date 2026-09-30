@@ -55,16 +55,19 @@ def sampling_history(store):
 
 def replenishment(store):
     candidates = [(json.loads(r['data']),r['first_seen'][:10]) for r in store.db.execute('SELECT data,first_seen FROM candidates')]
+    def original_source(candidate):
+        origins=candidate.get('discovery_origins') or []
+        return origins[0]['source_id'] if origins else candidate['source_id']
     first_days = {}
     for candidate, day in candidates:
-        source = candidate['source_id']
+        source = original_source(candidate)
         first_days[source] = min(first_days.get(source,day),day)
     days = {}
     def daily(day):
         return days.setdefault(day,{'day':day,'new_urls':0,'baseline_urls':0,'categories':{c:0 for c in CATEGORIES},'polls':0,'failed_polls':0})
     for candidate, day in candidates:
         row = daily(day)
-        baseline = day==first_days[candidate['source_id']]
+        baseline = day==first_days[original_source(candidate)]
         row['baseline_urls' if baseline else 'new_urls'] += 1
         if not baseline:
             row['categories'][candidate['category']] = row['categories'].get(candidate['category'],0)+1

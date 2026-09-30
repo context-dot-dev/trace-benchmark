@@ -35,6 +35,7 @@ with tempfile.TemporaryDirectory() as tmp:
         t=dict(task,id=ident,url='https://example.org/'+ident,discovered_at=day+'T13:00:00Z')
         store.ingest({'candidates':[t],'receipts':[]})
     store.ingest({'candidates':[task],'receipts':[]})
+    store.ingest({'candidates':[dict(t,source_id='mirror')],'receipts':[]})
     for ident, success in [('original',0),('rerun',1)]:
         store.close_run(ident,'completed')
         store.meta('run_metrics:'+ident,{'run_id':ident,'protocol_version':'trace-live-v3','sample_kind':'daily','day':d1,'cohort':'independent','providers':{'exa':{'pages':1,'success':success,'unknown':0}}})
