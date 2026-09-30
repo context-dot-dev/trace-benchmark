@@ -275,6 +275,7 @@ footer{display:flex;justify-content:space-between;align-items:start;gap:24px;fon
 .value-leader{stroke:var(--muted-foreground);stroke-width:.7;fill:none}
 .value-uncertainty{stroke:var(--foreground);stroke-width:3}
 .value-label-bg{fill:var(--background)}
+.value-label-metrics{fill:var(--muted-foreground);font-size:10px;font-variant-numeric:tabular-nums}
 .value-label{fill:var(--foreground);font-size:12px}
 .value-point[aria-pressed=true] .value-label{font-weight:600}
 .value-point:focus-visible .value-label-bg{stroke:var(--ring);stroke-width:2}

@@ -9,7 +9,7 @@ import { useBenchmark } from "./use-benchmark";
 import { MetricPanels, PageTypes, HeadToHead, scrapingMetrics } from "./comparisons";
 import { LiveStatus, Freshness, Coverage, Efficiency, Supply, AccountIssues } from "./live-comparisons";
 import { History } from "./quality-history";
-import {PricingAppendix} from "./pricing";
+import {Pricing,PricingAppendix} from "./pricing";
 import {DEFAULT_PRICING} from "./pricing-data";
 import { FAQ, Citation } from "./article-end";
 
@@ -71,7 +71,7 @@ export default function App({ initialData = null }) {
         <header id="overview">
           <h1>Which scraper returns useful content?</h1>
           <p className="intro">The same pages. Different scrapers. A comparison of how much content comes back, how long it takes, and where each provider works best.</p>
-          <LiveStatus data={data} cohort={cohort}/><nav className="article-nav" aria-label="In this article"><a href="#quality">Results</a><a href="#coverage">Content</a><a href="#efficiency">Latency & cost</a><a href="#trends">Quality over time</a><a href="#appendix">Appendix</a></nav>
+          <LiveStatus data={data} cohort={cohort}/><nav className="article-nav" aria-label="In this article"><a href="#quality">Results</a><a href="#coverage">Content</a><a href="#pricing">Quality vs. cost</a><a href="#efficiency">Latency</a><a href="#trends">Quality over time</a><a href="#appendix">Appendix</a></nav>
         </header>
         <section id="quality">
           <h2>Which scrapers deliver?</h2>
@@ -89,6 +89,7 @@ export default function App({ initialData = null }) {
           <p className="micro">Useful = pages with matching, substantive content / all selected page tests. Partial content can qualify. Time = median request duration. <a href="#appendix">Scoring details</a></p>
           <div className="wide-comparison"><MetricPanels label="Scraping" rows={rows.map(r => ({...r, unresolvedRate:r.count ? r.unknown/r.count : null}))} metrics={scrapingMetrics} /></div>
         </section>
+        <Pricing rows={rows} scenario={pricing} onScenarioChange={setPricing}/>
         <History data={data} cohort={cohort} providers={providers}/>
         <section id="page-types">
           <h2>Different pages, different results</h2>
@@ -102,7 +103,7 @@ export default function App({ initialData = null }) {
           <div className="wide-comparison"><HeadToHead pairs={group?.pairs || []} /></div>
         </section>
         <Coverage group={group} rows={rows}/>
-        <Efficiency rows={rows} pricing={pricing} setPricing={setPricing}/>
+        <Efficiency rows={rows}/>
         <Supply data={data} categoryName={categoryName}/>
         <FAQ />
         <section id="appendix" className="methodology">

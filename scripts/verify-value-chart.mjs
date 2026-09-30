@@ -9,7 +9,7 @@ assert.ok(summaryResponse.ok,'Live summary is available');
 const summary=await summaryResponse.json();
 const searchCount=summary.cohorts.needle.rows.find(row=>row.id==='exa').count;
 const session=`trace-value-verify-${process.pid}`;
-const folder='artifacts/value-chart';
+const folder=process.env.TRACE_ARTIFACT_DIR||'artifacts/value-chart';
 const checks=[];
 function command(...args){return execFileSync('agent-browser',['--session',session,...args],{encoding:'utf8',timeout:35000});}
 function evaluate(source){return JSON.parse(execFileSync('agent-browser',['--session',session,'--json','eval','--stdin'],{input:source,encoding:'utf8',timeout:35000})).data.result;}
@@ -23,7 +23,10 @@ try {
  command('wait','--text','Quality vs. cost');
  command('snapshot','-i','-s','#pricing');
  const initial=points();
- check('Three priced providers and no invented Keenable price',initial.length===3&&!initial.some(p=>p.id==='keenable'));
+ check('All four verified providers are plotted',initial.length===4&&provider(initial,'keenable').includes('$4.000'));
+ check('Chart is the next section after results',evaluate("document.querySelector('#quality').nextElementSibling.id==='pricing'"));
+ check('Navigation links directly to the plot',evaluate("!!document.querySelector('.article-nav a[href=\"#pricing\"]')"));
+ check('Each point shows quality and price without hovering',evaluate("[...document.querySelectorAll('.value-point')].every(p=>p.querySelector('.value-label-metrics')?.textContent.includes('%'))"));
  check('Default covers the full workload cost',provider(initial,'context').includes('$1.065')&&provider(initial,'context').includes('Pro'));
  command('click','[aria-label="Pricing billing period"] button:nth-child(2)');
  const annual=points();

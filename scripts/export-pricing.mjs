@@ -4,7 +4,7 @@ import {PRICING,DEFAULT_PRICING,MONTHLY_PAGES,planRate,quotePlan,bestPlan} from 
 const money=(value,digits=2)=>value===null?'Unverified':`$${value.toFixed(digits)}`;
 const catalog={schema_version:1,currency:'USD',default_scenario:DEFAULT_PRICING,
   methodology:{reference:'https://github.com/keenableai/needle/blob/main/dashboard/index.html',
-    unit_price:'Base subscription / monthly included credits * 1000; annual subscription / 12 replaces base. One base credit per page. Exa text-only is metered per page.',
+    unit_price:'Base subscription / monthly included credits * 1000; annual subscription / 12 replaces base. One base credit per page. Exa text-only and Keenable account-verified live fetch are metered per page.',
     default_plan:'Lowest monthly spend among public paid plans for 93,000 base pages/month; not a throughput recommendation.',
     comparison_price:'Workload basis: subscription plus whole top-up blocks divided by selected monthly pages, times 1000. Full-allowance basis: unit_price above.',
     exclusions:'Enterprise quotes, free allowances, promotional credits, search, judging, hosting, tax, extra formats and special URL surcharges. These are modeled prices, not invoices.',
@@ -33,9 +33,9 @@ const lines=[
  '|---|---|---:|---:|',
  ...PRICING.map(p=>{const m=bestPlan(p,'monthly'),a=bestPlan(p,'annual');return `| ${p.name} | ${m?.plan.name||'Live fetch — quote needed'} | ${money(m?.monthly??null)} | ${money(a?(a.plan.perThousand?1095*a.plan.perThousand:a.monthly*12):null)} |`;}),
  '',
- 'Context Pro and Firecrawl Standard each cost $990/year on annual billing ($1,188/year paid monthly). Exa text-only adds $1,095/year gross. Their combined annual-commitment scenario is $3,075/year; monthly subscriptions make it $3,471/year. **The four-provider total remains unknown because Keenable live fetch is unpriced.** Neither total includes discovery, judging, hosting, tax or special formats. A 93k-month rate is not multiplied by twelve to price Exa’s 365-day year.',
+ 'Context Pro and Firecrawl Standard each cost $990/year on annual billing ($1,188/year paid monthly). Exa text-only adds $1,095/year gross. Keenable live fetch adds $4,380/year gross at the verified account rate. The four-provider total is $7,455/year with annual subscriptions, or $7,851/year with monthly subscriptions. Neither total includes discovery, judging, hosting, tax or special formats. A 93k-month rate is not multiplied by twelve to price the metered providers’ 365-day year. Free monthly credits are excluded for every provider.',
  '',
- '## All published plans',
+ '## Plans and rates',
 ];
 for(const p of PRICING){
  lines.push('',`### ${p.name}`,'',`${p.endpoint}. [Official pricing](${p.source}).${p.billingSource?` [Billing rules](${p.billingSource}).`:''}`,'',
@@ -45,7 +45,7 @@ for(const p of PRICING){
  '',p.notes);
 }
 lines.push('','## Reported costs and unknowns','','Provider-returned USD and credit receipts remain separate from modeled prices. Credits are not converted into an invented invoice. Reported cost per 1,000 useful pages requires USD receipts on every selected page, no unresolved judgments and at least one useful page. Missing receipts are unknown, including timeouts that may still have been billed. Partial subtotals disclose coverage. Valid zero-dollar receipts remain zero.','',
- 'Exa’s eligible free balance resets to $10 monthly and onboarding can add $10 once. These shared account credits are excluded from gross rates. Context grandfathered accounts may have older prices. Firecrawl annual totals are $190/$990/$3,990/$7,190, not twelve times the rounded monthly marketing labels. Firecrawl enhanced proxies have no surcharge; PDF parsing is disabled in this adapter. Returned error documents can be billed. Keenable Search prices do not price its distinct `fetch.live` SKU.','');
+ 'Exa’s eligible free balance resets to $10 monthly and onboarding can add $10 once. These shared account credits are excluded from gross rates. Context grandfathered accounts may have older prices. Firecrawl annual totals are $190/$990/$3,990/$7,190, not twelve times the rounded monthly marketing labels. Firecrawl enhanced proxies have no surcharge; PDF parsing is disabled in this adapter. Returned error documents can be billed. Keenable’s live-fetch rate was verified with the production account: one credit per live fetch and $4 per 1,000 purchased credits. Its recurring 100,000-credit free allowance is shared with other calls and excluded from the gross graph; the probe itself drew from free credits. Historical HTTP responses did not report billing metadata, so their measured USD receipts remain unknown.','');
 for(const dir of ['docs/research','site/research']){
  await fs.mkdir(dir,{recursive:true});
  await fs.writeFile(`${dir}/provider-costs-3000-daily.md`,lines.join('\n'));
