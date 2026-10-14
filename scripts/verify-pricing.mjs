@@ -45,21 +45,21 @@ try {
  check('Plan and billing drive rate and budget together',revised.find(p=>p.id==='context').unitPrice===0.66&&revised.find(p=>p.id==='context').quote.monthly===82.5);
  check('Unresolved pages remain in quality denominator with explicit upper bound',priceRows(rows.map(p=>({...p,unknown:1})),changed).every(p=>p.quality===.5&&p.qualityUpper===.51));
  check('Unresolved cost projections disclose a range',priceRows(rows.map(p=>({...p,unknown:1})),changed).filter(p=>p.unitPrice!==null).every(p=>p.usefulPriceLow<p.usefulPrice));
- check('Unknown enterprise prices never become zero',priceRows(rows,{...DEFAULT_PRICING,plans:{...DEFAULT_PRICING.plans,context:'Enterprise'}}).find(p=>p.id==='context').comparisonPrice===null);
- check('Unused subscription capacity is included',Math.abs(priceRows(rows,{...DEFAULT_PRICING,plans:{...DEFAULT_PRICING.plans,context:'Scale'}}).find(p=>p.id==='context').comparisonPrice-499/93)<1e-12);
+ check('Unknown enterprise prices never become zero',priceRows(rows,{...DEFAULT_PRICING,selection:'custom',plans:{...DEFAULT_PRICING.plans,context:'Enterprise'}}).find(p=>p.id==='context').comparisonPrice===null);
+ check('Unused subscription capacity is included',Math.abs(priceRows(rows,{...DEFAULT_PRICING,selection:'custom',plans:{...DEFAULT_PRICING.plans,context:'Scale'}}).find(p=>p.id==='context').comparisonPrice-499/93)<1e-12);
  check('Changing price basis preserves quality',priceRows(rows,changed).every((p,i)=>p.quality===scaled[i].quality));
  check('Zero workload is rejected for a per-page comparison',(()=>{try{priceRows(rows,{...DEFAULT_PRICING,monthlyPages:0});return false;}catch{return true;}})());
  check('Zero useful suppresses projection',priceRows(rows.map(p=>({...p,success:0})),changed).every(p=>p.usefulPrice===null));
  check('Missing observed provider stays unknown',priceRows([],changed).every(p=>p.usefulPrice===null));
  check('Invalid volume fails explicitly',(()=>{try{quotePlan(plan('exa','Pay as you go'),'monthly',-1);return false;}catch{return true;}})());
  const html=renderToStaticMarkup(React.createElement(Pricing,{rows,scenario:DEFAULT_PRICING,onScenarioChange:()=>{}}));
- check('Scatter plot has accessible axes and real provider logos',html.includes('Useful content')&&html.includes('Cost per 1,000 pages')&&html.includes('logos/context.png')&&html.includes('data-provider="context"'));
- check('Verified Keenable rate appears in the chart',html.includes('data-provider="keenable"')&&html.includes('$4.000'));
+ check('Scatter plot has accessible axes and real provider logos',html.includes('Useful content')&&html.includes('Estimated cost per 1,000 attempts')&&html.includes('logos/context.png')&&html.includes('data-provider="context"'));
+ check('Verified Keenable rate appears in the chart',html.includes('data-provider="keenable"')&&html.includes('$4.00'));
  check('Keenable evidence distinguishes measured credits from modeled USD',PRICING.find(p=>p.id==='keenable').notes.includes('fetch.live')&&PRICING.find(p=>p.id==='keenable').notes.includes('account'));
  const empty=renderToStaticMarkup(React.createElement(Pricing,{rows:[],scenario:DEFAULT_PRICING,onScenarioChange:()=>{}}));
  check('Empty cohort does not fabricate chart points',empty.includes('No priced results')&&!empty.includes('data-provider="context"'));
  const appendix=renderToStaticMarkup(React.createElement(PricingAppendix,{rows,scenario:changed}));
- check('Report shows named selected plans and unit rates',html.includes('Quality vs. cost')&&html.includes('$1.065')&&html.includes('Pro')&&html.includes('Standard'));
+ check('Report shows named selected plans and unit rates',html.includes('Quality vs. cost')&&html.includes('$1.06')&&html.includes('Pro')&&html.includes('Standard'));
  check('Report explains full allowance and distinguishes measured plan',html.includes('unused capacity')&&html.includes('does not change the measured results'));
  const customHtml=renderToStaticMarkup(React.createElement(Pricing,{rows,scenario:{...changed,selection:'custom'},onScenarioChange:()=>{}}));
  check('Plan controls have accessible names in explicit custom mode',customHtml.includes('Context pricing plan')&&customHtml.includes('Firecrawl pricing plan')&&!customHtml.includes('<select'));
@@ -75,7 +75,7 @@ try {
  const python=JSON.parse(execFileSync('python3',['-c',"import sys,json;from bench.metrics import summarize;print(json.dumps([summarize(r) for r in json.load(sys.stdin)]))"],{input:JSON.stringify(cases),encoding:'utf8'}));
  check('Download aggregates match dashboard missingness rules',python.every((r,i)=>r.usd_per_1000_useful===summarize(cases[i],'exa').costPerUseful));
  const origin=process.env.TRACE_ORIGIN;
- if(origin){const response=await fetch(origin);const live=await response.text();check('Deployed HTML serves pricing',response.ok&&live.includes('Quality vs. cost')&&live.includes('Plans &amp; rates')&&live.includes('$1.065')&&live.includes('value-chart'));check('Deployed HTML has source links',live.includes('https://www.firecrawl.dev/pricing.md')&&live.includes('https://exa.ai/docs/admin/pricing'));}
+ if(origin){const response=await fetch(origin);const live=await response.text();check('Deployed HTML serves pricing',response.ok&&live.includes('Quality vs. cost')&&live.includes('Plans &amp; rates')&&live.includes('$1.06')&&live.includes('value-chart'));check('Deployed HTML has source links',live.includes('https://www.firecrawl.dev/pricing.md')&&live.includes('https://exa.ai/docs/admin/pricing'));}
  await fs.mkdir('artifacts/pricing/recheck',{recursive:true});await fs.writeFile('artifacts/pricing/recheck/verification.json',JSON.stringify({passed:true,at:new Date().toISOString(),checks,origin:origin||null},null,2));
  console.log(JSON.stringify({passed:true,checks:checks.length}));
 }finally{await server.close();}

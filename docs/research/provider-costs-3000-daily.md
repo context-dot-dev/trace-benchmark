@@ -4,9 +4,11 @@ Checked **September 30, 2026** against official sources for all four active benc
 
 ## Comparison basis
 
-[NEEDLE](https://github.com/keenableai/needle/blob/main/dashboard/index.html) maintains a dated price and plan per engine and describes its price table as the biggest self-serve tier, excluding enterprise quotes. Trace offers that full-allowance comparison and defaults to the lowest-cost paid plans for a workload of 93,000 base pages/month. Lowest-cost mode recalculates every provider’s plan when volume or billing changes. Manual plan choices and full-allowance rates require explicit Custom scenario mode. The workload rate includes unused subscription capacity and whole top-up blocks. Plan selection does not establish throughput suitability. Monthly billing is the default; annual rates use exact yearly fees divided by twelve. A selected plan changes price projections, not the recorded quality or latency.
+[NEEDLE](https://github.com/keenableai/needle/blob/main/dashboard/index.html) maintains a dated price and plan per engine and describes its price table as the biggest self-serve tier, excluding enterprise quotes. Trace offers that full-allowance comparison and defaults to the lowest-cost paid plans for 93,000 attempts/month, using the selected sample’s billing evidence. Lowest-cost mode recalculates every provider’s plan when sample, volume or billing changes. Manual plan choices and full-allowance rates require explicit Custom scenario mode. The workload rate includes unused subscription capacity and whole top-up blocks. Plan selection does not establish throughput suitability. Monthly billing is the default; annual rates use exact yearly fees divided by twelve. A selected plan changes price projections, not the recorded quality or latency.
 
-The unit rate assumes the full included allowance is consumed at one base credit per page. It is not the marginal overage rate or the blended rate for an underused subscription. The graph plots confirmed useful-content rate against the selected cost basis. Providers with unknown live-fetch prices are omitted from the plot, not plotted at zero. Projected cost per confirmed useful page retains unresolved pages in the denominator and shows an optimistic bound. Published rates are rounded to three decimals; full-precision values are in the JSON. Free tiers are limited allowances, never an unlimited zero-dollar tariff.
+The static budget tables below assume one billable base page per attempt. The dashboard applies recorded usage and failure-billing rules to the selected sample, so its budget can differ. Billing rules reviewed October 14, 2026.
+
+The unit rate assumes the full included allowance is consumed at one base credit per page. It is not the marginal overage rate or the blended rate for an underused subscription. The graph plots confirmed useful-content rate against the selected cost basis. Providers with unknown live-fetch prices are omitted from the plot, not plotted at zero. Dashboard cost ranges combine missing billing evidence with pending content judgments. Missing charges are modeled at zero to one base charge; these are scenario ranges, not invoice bounds. Context credits and Firecrawl documented no-document failures inform billable volume. Exa costDollars values are estimates; Keenable failures remain unverified. Both cost and quality use matching category weights. Displayed estimates use two decimal places; catalog unit rates below use three. Free tiers are limited allowances, never an unlimited zero-dollar tariff.
 
 ## Budget at 3,000 base pages/day
 
@@ -55,7 +57,7 @@ Annual commitments use the exact published totals, not rounded monthly labels. A
 
 ### Exa
 
-/contents · text only · maxAgeHours=0. [Official pricing](https://exa.ai/docs/admin/pricing).
+/contents · text only · maxAgeHours=0. [Official pricing](https://exa.ai/docs/admin/pricing). [Billing rules](https://exa.ai/docs/reference/get-contents).
 
 | Plan | Monthly fee | Annual upfront | Credits/month | Monthly / 1k pages | Annual / 1k pages | Extra / 1k credits |
 |---|---:|---:|---:|---:|---:|---:|
@@ -76,6 +78,6 @@ Account-verified rate, checked against the production key on September 30, 2026.
 
 ## Reported costs and unknowns
 
-Provider-returned USD and credit receipts remain separate from modeled prices. Credits are not converted into an invented invoice. Reported cost per 1,000 useful pages requires USD receipts on every selected page, no unresolved judgments and at least one useful page. Missing receipts are unknown, including timeouts that may still have been billed. Partial subtotals disclose coverage. Valid zero-dollar receipts remain zero.
+Provider-reported credits and Exa USD estimates remain separate from modeled prices and account invoices. Credits are not converted into an invented invoice. Reported cost per 1,000 useful pages requires USD estimates on every selected page, no unresolved judgments and at least one useful page. Missing receipts are unknown, including timeouts that may still have been billed. Partial subtotals disclose coverage. Valid zero-dollar receipts remain zero.
 
 Exa’s eligible free balance resets to $10 monthly and onboarding can add $10 once. These shared account credits are excluded from gross rates. Context grandfathered accounts may have older prices. Firecrawl annual totals are $190/$990/$3,990/$7,190, not twelve times the rounded monthly marketing labels. Firecrawl enhanced proxies have no surcharge; PDF parsing is disabled in this adapter. Returned error documents can be billed. Keenable’s live-fetch rate was verified with the production account: one credit per live fetch and $4 per 1,000 purchased credits. Its recurring 100,000-credit free allowance is shared with other calls and excluded from the gross graph; the probe itself drew from free credits. Historical HTTP responses did not report billing metadata, so their measured USD receipts remain unknown.

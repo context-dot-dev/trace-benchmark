@@ -30,6 +30,7 @@ export const PRICING = [
   },
   {
     id: 'exa', name: 'Exa', checked: '2026-09-30',
+    billingSource: 'https://exa.ai/docs/reference/get-contents',
     source: 'https://exa.ai/docs/admin/pricing', endpoint: '/contents · text only · maxAgeHours=0',
     notes: 'Text content is $1 per 1,000 pages, with no subscription minimum. Each additional content type is billed separately. Published $10 monthly free credits and the onboarding bonus depend on account eligibility and shared usage; they are not deducted from this gross comparison. Enterprise discounts are custom. These are Contents prices, not Search prices.',
     plans: [{name:'Pay as you go', perThousand:1}, {name:'Enterprise', custom:true}],
@@ -82,17 +83,25 @@ export function priceRows(rows,scenario) {
   const basis=scenario.basis??'workload';
   if(!Number.isSafeInteger(pages)||pages<=0||!['workload','allowance'].includes(basis))throw new Error('Invalid pricing scenario');
   return PRICING.map(provider=>{
-    const plan=provider.plans.find(p=>p.name===scenario.plans[provider.id]);
-    if (!plan) throw new Error(`Unknown pricing plan for ${provider.id}`);
     const observed=rows.find(row=>row.id===provider.id);
+    const usage=observed?.billing;
+    const billableHigh=usage?usage.high:1;
+    const billableLow=usage?usage.low:1;
+    const upperPages=billableHigh===null?pages:Math.ceil(pages*billableHigh);
+    const plan=scenario.selection==='lowest'
+      ?bestPlan({...provider,plans:provider.plans.filter(p=>p.monthly>0||Number.isFinite(p.perThousand))},scenario.billing,upperPages)?.plan
+      :provider.plans.find(p=>p.name===scenario.plans[provider.id]);
+    if (!plan) throw new Error(`Unknown pricing plan for ${provider.id}`);
     const unitPrice=planRate(plan,scenario.billing);
-    const quote=quotePlan(plan,scenario.billing,pages);
-    const comparisonPrice=basis==='allowance'?unitPrice:quote.monthly===null?null:quote.monthly/pages*1000;
+    const quote=quotePlan(plan,scenario.billing,upperPages);
+    const quoteLow=quotePlan(plan,scenario.billing,billableLow===null?pages:Math.ceil(pages*billableLow));
+    const comparisonPrice=basis==='allowance'?(unitPrice===null||billableHigh===null?null:unitPrice*billableHigh):billableHigh===null||quote.monthly===null?null:quote.monthly/pages*1000;
+    const comparisonPriceLow=basis==='allowance'?(unitPrice===null||billableLow===null?null:unitPrice*billableLow):billableLow===null||quoteLow.monthly===null?null:quoteLow.monthly/pages*1000;
     const count=observed?.count||0,success=observed?.success||0,unknown=observed?.unknown||0;
     const quality=observed?.balanced?observed.rate:count?success/count:null;
     const qualityUpper=observed?.balanced?observed.upper:count?(success+unknown)/count:null;
-    return {...provider,plan,unitPrice,quote,comparisonPrice,quality,qualityUpper,count,success,unknown,
+    return {...provider,plan,unitPrice,quote,quoteLow,billing:usage,comparisonPrice,comparisonPriceLow,quality,qualityUpper,count,success,unknown,
       usefulPrice:comparisonPrice!==null&&quality>0?comparisonPrice/quality:null,
-      usefulPriceLow:comparisonPrice!==null&&qualityUpper>0?comparisonPrice/qualityUpper:null};
+      usefulPriceLow:comparisonPriceLow!==null&&qualityUpper>0?comparisonPriceLow/qualityUpper:null};
   });
 }

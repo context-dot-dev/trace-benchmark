@@ -2,7 +2,8 @@ import {useEffect,useRef,useState} from 'react';
 import {ProviderLogo} from './provider-logo';
 import {pct} from './model';
 
-const dollars=value=>`$${value.toFixed(3)}`;
+const dollars=value=>`$${value.toFixed(2)}`;
+const cost=p=>dollars(p.comparisonPriceLow)===dollars(p.comparisonPrice)?dollars(p.comparisonPrice):`${dollars(p.comparisonPriceLow)}–${dollars(p.comparisonPrice)}`;
 
 export function ValueChart({prices}) {
   const container=useRef(null);
@@ -37,24 +38,26 @@ export function ValueChart({prices}) {
           return <g key={i}><line className="value-grid" x1={left} x2={right} y1={y(value)} y2={y(value)}/><text className="value-axis" x={left-9} y={y(value)+4} textAnchor="end">{Number((value*100).toFixed(1))}%</text></g>;
         })}
         {[0,1,2,3,4].map(i=><g key={i}><line className="value-grid" x1={x(xMax*i/4)} x2={x(xMax*i/4)} y1={top} y2={bottom}/><text className="value-axis" x={x(xMax*i/4)} y={bottom+22} textAnchor="middle">${Number((xMax*i/4).toPrecision(3))}</text></g>)}
-        <text className="value-axis-title" x={(left+right)/2} y={height-6} textAnchor="middle">Cost per 1,000 pages · lower is better</text>
+        <text className="value-axis-title" x={(left+right)/2} y={height-6} textAnchor="middle">Estimated cost per 1,000 attempts</text>
         {labels.map(p=>{
           const px=x(p.comparisonPrice),py=y(p.quality),ly=p.labelY-shift;
-          const lx=Math.max(left+4,Math.min(px+16,right-130));
-          return <g key={p.id} data-provider={p.id} className="value-point" tabIndex={0} role="button" aria-pressed={p.id===active?.id} aria-label={`${p.name}: ${pct(p.quality)} useful content, ${dollars(p.comparisonPrice)} per 1,000 pages, ${p.plan.name}`} onFocus={()=>setSelected(p.id)} onClick={()=>setSelected(p.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(p.id);}}}>
-            <title>{`${p.name} · ${p.plan.name} · ${pct(p.quality)} · ${dollars(p.comparisonPrice)} / 1k pages`}</title>
+          const lx=Math.max(left+4,Math.min(px+16,right-180));
+          return <g key={p.id} data-provider={p.id} className="value-point" tabIndex={0} role="button" aria-pressed={p.id===active?.id} aria-label={`${p.name}: ${pct(p.quality)} useful content, ${cost(p)} per 1,000 attempts, ${p.plan.name}`} onFocus={()=>setSelected(p.id)} onClick={()=>setSelected(p.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(p.id);}}}>
+            <title>{`${p.name} · ${p.plan.name} · ${pct(p.quality)} · ${cost(p)} / 1k attempts`}</title>
+            {p.comparisonPriceLow<p.comparisonPrice&&<line className="value-uncertainty" x1={x(p.comparisonPriceLow)} x2={px} y1={py} y2={py}/>}
             {p.qualityUpper>p.quality&&<line className="value-uncertainty" x1={px} x2={px} y1={y(p.qualityUpper)} y2={py}/>}
             <path className="value-leader" d={`M${px},${py} L${lx-4},${ly}`}/>
             <circle className="value-anchor" cx={px} cy={py} r={p.id===active?.id?4:3}/>
-            <rect className="value-label-bg" x={lx-3} y={ly-13} width="136" height="42" rx="4"/>
+            <rect className="value-label-bg" x={lx-3} y={ly-13} width="184" height="42" rx="4"/>
             <image href={`./logos/${p.id}.${p.id==='exa'?'svg':'png'}`} x={lx} y={ly-9} width="18" height="18"/>
             <text className="value-label" x={lx+24} y={ly+4}>{p.name}</text>
-            <text className="value-label-metrics" x={lx+24} y={ly+20}>{pct(p.quality)} · {dollars(p.comparisonPrice)}</text>
+            <text className="value-label-metrics" x={lx+24} y={ly+20}>{pct(p.quality)} · {cost(p)}</text>
           </g>;
         })}
       </svg>
-      <div className="value-reading" aria-live="polite"><ProviderLogo id={active.id}/><div><strong>{active.name}</strong> · {pct(active.quality)} useful · {dollars(active.comparisonPrice)} / 1k pages<span>{active.plan.name} · {active.success.toLocaleString('en-US')} / {active.count.toLocaleString('en-US')} pages{active.unknown>0?` · ${active.unknown} unresolved; up to ${pct(active.qualityUpper)} useful`:''}</span></div></div>
+      <div className="value-reading" aria-live="polite"><ProviderLogo id={active.id}/><div><strong>{active.name}</strong> · {pct(active.quality)} useful · {cost(active)} / 1k attempts<span>{active.plan.name} · {active.success.toLocaleString('en-US')} / {active.count.toLocaleString('en-US')} pages{active.unknown>0?` · ${active.unknown} pending review`:''}</span></div></div>
     </> : <p className="micro">No priced results for this page set yet.</p>}
-    {prices.filter(p=>p.comparisonPrice===null&&p.quality!==null).map(p=><p className="micro" key={p.id}>{p.name} is not plotted: the selected plan has no verified price.</p>)}
+    {prices.filter(p=>p.comparisonPrice===null&&p.quality!==null).map(p=><p className="micro" key={p.id}>{p.name} is not plotted: billing evidence or the selected tariff is incomplete.</p>)}
+  <p className="micro">Points use the upper cost estimate. Horizontal lines show the modeled cost range; vertical lines show pending judgments.</p>
   </figure>;
 }

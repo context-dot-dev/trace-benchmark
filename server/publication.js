@@ -1,3 +1,4 @@
+import {billingSummary} from '../src/billing.js';
 import { createHash } from 'node:crypto';
 import { summarize, paired, taskKey, validatePayload, human } from '../src/model.js';
 
@@ -28,13 +29,13 @@ export function publication(archive) {
       last:dates.length?new Date(Math.max(...dates)).toISOString():null,
       comparisons:Object.fromEntries(['resolved','single_source','no_useful_output','incomplete','unresolved','pending_budget','dispatched','pending'].map(status=>[status,tasks.filter(r=>(r.output_comparison?.status||'pending')===status).length])),
       references:tasks.filter(r=>r.reference?.status==='eligible').length,
-      rows:providers.map(p=>{const own=subset.filter(r=>r.provider===p.id);return {...p,...summarize(subset,p.id),...(role?{rate:roleScores?.[p.id]?.success_rate??null,upper:roleScores?.[p.id]?.success_upper_bound??null,balanced:true,categoriesPresent:roleScores?.[p.id]?.categories_present??0}:{}),unresolvedCauses:Object.fromEntries([...new Set(own.filter(r=>r.success===null).map(r=>r.judgment_status))].map(status=>[status,own.filter(r=>r.success===null&&r.judgment_status===status).length])),freshness:{requested:own.filter(r=>r.freshness?.requested).length,reportedFresh:own.filter(r=>r.freshness?.evidence==='fresh_reported').length,reportedCached:own.filter(r=>r.freshness?.evidence==='cached_reported').length,unreported:own.filter(r=>r.freshness?.evidence==='unreported').length}};}),
+      rows:providers.map(p=>{const own=subset.filter(r=>r.provider===p.id);return {...p,...summarize(subset,p.id),billing:billingSummary(subset,p.id,Boolean(role)),...(role?{rate:roleScores?.[p.id]?.success_rate??null,upper:roleScores?.[p.id]?.success_upper_bound??null,balanced:true,categoriesPresent:roleScores?.[p.id]?.categories_present??0}:{}),unresolvedCauses:Object.fromEntries([...new Set(own.filter(r=>r.success===null).map(r=>r.judgment_status))].map(status=>[status,own.filter(r=>r.success===null&&r.judgment_status===status).length])),freshness:{requested:own.filter(r=>r.freshness?.requested).length,reportedFresh:own.filter(r=>r.freshness?.evidence==='fresh_reported').length,reportedCached:own.filter(r=>r.freshness?.evidence==='cached_reported').length,unreported:own.filter(r=>r.freshness?.evidence==='unreported').length}};}),
       pageTypes:(role?archive.categories.filter(c=>!c.id.startsWith('needle_')).map(c=>c.id):[...new Set(subset.map(r=>r.category))]).map(id=>({id,results:Object.fromEntries(providers.map(p=>{const s=summarize(subset.filter(r=>r.category===id),p.id);return [p.id,{rate:s.rate,success:s.success,count:s.count}];}))})),
       pairs:providers.flatMap((a,i)=>providers.slice(i+1).map(b=>({a,b,...paired(subset,a.id,b.id)}))),
     };
   }
   const receipts=archive.discovery?.receipts||[];
-  const version=createHash('sha256').update('account-health-v1:pricing-v2:').update(JSON.stringify(archive)).digest('hex').slice(0,24);
+  const version=createHash('sha256').update('account-health-v1:pricing-v3:').update(JSON.stringify(archive)).digest('hex').slice(0,24);
   const summary={schema_version:2,version,generated_at:archive.generated_at,protocol_version:archive.protocol_version,
     providers,categories:archive.categories,cohorts,
     runs:archive.runs.filter(r=>r.protocol_version===archive.protocol_version).slice(0,12).map(({id,started_at,finished_at,status,cohort,selected_count,manifest_url,exclusion,sampling})=>({id,started_at,finished_at,status,cohort,selected_count,manifest_url,exclusion,sampling})),

@@ -112,6 +112,9 @@ footer{display:flex;justify-content:space-between;align-items:start;gap:24px;fon
 .dialog-actions{display:flex;flex-wrap:wrap;gap:12px}
 .view-choice{display:flex;justify-content:flex-end;margin:24px 0 20px}
 .view-choice button{min-height:30px;font-size:12px;border-radius:6px}
+.metric-grid:has(> :only-child){grid-template-columns:1fr}
+.billing-method{margin-top:16px}
+.billing-method summary{cursor:pointer;font-weight:500}
 .metric-grid,.pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
 .metric-figure{margin:0;background:var(--muted);border-radius:8px;padding:24px 20px 20px;min-width:0}
 .metric-figure figcaption p{font-size:11px;color:var(--muted-foreground);margin-top:4px}

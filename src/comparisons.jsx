@@ -41,5 +41,4 @@ export function HeadToHead({ pairs }) {
 
 export const scrapingMetrics = [
   { key:"rate", title:"Confirmed useful content", detail:"Share of all page tests, including unresolved", max:1, format:pct },
-  { key:"unresolvedRate", title:"Unresolved results", short:"Unresolved", detail:"Share of all page tests", max:1, lower:true, format:pct },
 ];
