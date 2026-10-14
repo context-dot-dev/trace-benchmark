@@ -11,6 +11,8 @@ const searchCount=summary.cohorts.needle.rows.find(row=>row.id==='exa').count;
 const session=`trace-value-verify-${process.pid}`;
 const folder=process.env.TRACE_ARTIFACT_DIR||'artifacts/value-chart';
 const checks=[];
+const layoutObservations=[];
+let completed=false;
 function command(...args){return execFileSync('agent-browser',['--session',session,...args],{encoding:'utf8',timeout:35000});}
 function evaluate(source){return JSON.parse(execFileSync('agent-browser',['--session',session,'--json','eval','--stdin'],{input:source,encoding:'utf8',timeout:35000})).data.result;}
 function check(name,condition){checks.push({name,passed:Boolean(condition)});assert.ok(condition,name);}
@@ -27,6 +29,8 @@ try {
  check('Chart is the next section after results',evaluate("document.querySelector('#quality').nextElementSibling.id==='pricing'"));
  check('Navigation links directly to the plot',evaluate("!!document.querySelector('.article-nav a[href=\"#pricing\"]')"));
  check('Each point shows quality and price without hovering',evaluate("[...document.querySelectorAll('.value-point')].every(p=>p.querySelector('.value-label-metrics')?.textContent.includes('%'))"));
+ check('Default has no manual provider plans',evaluate("!document.querySelector('[aria-label=\"Context pricing plan\"]')&&!document.querySelector('[aria-label=\"Cost calculation\"]')"));
+ check('Matched comparison is explicit',evaluate("document.querySelector('#pricing').textContent.includes('Lowest-cost plans for the same workload')"));
  check('Default covers the full workload cost',provider(initial,'context').includes('$1.065')&&provider(initial,'context').includes('Pro'));
  command('click','[aria-label="Pricing billing period"] button:nth-child(2)');
  const annual=points();
@@ -36,6 +40,8 @@ try {
  check('Higher volume picks covering paid plans',provider(million,'context').includes('Scale')&&provider(million,'firecrawl').includes('Scale'));
  check('Exact annual totals determine prices',provider(million,'firecrawl').includes('$0.599')&&provider(million,'context').includes('$0.416'));
  command('click','[aria-label="Monthly page volume"] button:nth-child(2)');
+ command('find','role','button','click','--name','Custom scenario','--exact');
+ check('Custom mode is labeled above the chart',evaluate("document.querySelector('#pricing').textContent.includes('Custom scenario: prices reflect your selected plans')"));
  command('click','[aria-label="Cost calculation"] button:nth-child(2)');
  const allowance=points();
  check('Full allowance has a distinct basis',provider(allowance,'context').includes('$0.660'));
@@ -50,13 +56,22 @@ try {
  check('Chart follows the selected page set',evaluate(`document.querySelector('.value-reading').textContent.includes(${JSON.stringify(`/ ${searchCount.toLocaleString('en-US')} pages`)})`));
  command('find','role','button','click','--name','Independent pages');
  command('click','[aria-label="Pricing billing period"] button:nth-child(1)');
- command('click','[aria-label="Cost calculation"] button:nth-child(1)');
- command('find','role','button','click','--name','Use lowest-cost paid plans for this volume');
+ command('find','role','button','click','--name','Lowest-cost plans','--exact');
+ check('Returning to matched mode resets the basis and plans',provider(points(),'context').includes('$1.065')&&provider(points(),'context').includes('Pro')&&evaluate("!document.querySelector('[aria-label=\"Context pricing plan\"]')"));
+ command('click','[aria-label="Monthly page volume"] button:nth-child(1)');
+ check('Small monthly workload includes whole top-up blocks',provider(points(),'context').includes('$2.560')&&provider(points(),'firecrawl').includes('$4.400'));
+ command('click','[aria-label="Pricing billing period"] button:nth-child(2)');
+ check('Small annual workload is recalculated for both subscriptions',provider(points(),'context').includes('$2.243')&&provider(points(),'firecrawl').includes('$4.083'));
+ command('click','[aria-label="Monthly page volume"] button:nth-child(2)');
+ command('click','[aria-label="Pricing billing period"] button:nth-child(1)');
+ check('Appendix agrees with the headline comparison',evaluate("document.querySelector('[aria-label=\"Selected plan monthly budgets\"]').textContent.includes('$1.065')&&!document.querySelector('[aria-label=\"Selected plan monthly budgets\"]').textContent.includes('$299.00')"));
  for(const width of [1280,390,320]){
    command('set','viewport',String(width),width===1280?'1000':'844');
    command('wait','--fn',`Math.abs(document.querySelector('.value-chart svg').viewBox.baseVal.width-document.querySelector('.value-chart').clientWidth)<2`);
    evaluate("document.querySelector('#pricing').scrollIntoView({block:'start'})");
-   check(`No page overflow at ${width}px`,evaluate('document.documentElement.scrollWidth<=innerWidth'));
+   const layout=evaluate("({viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,pricingRight:document.querySelector('#pricing').getBoundingClientRect().right,pricingWidth:document.querySelector('#pricing').clientWidth,pricingScrollWidth:document.querySelector('#pricing').scrollWidth})");
+   layoutObservations.push(layout);
+   check(`Pricing fits at ${width}px`,layout.pricingRight<=layout.viewport&&layout.pricingScrollWidth<=layout.pricingWidth);
    check(`Provider labels fit at ${width}px`,evaluate("[...document.querySelectorAll('.value-label-bg')].every(e=>{const b=e.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth})"));
    command('screenshot',`${folder}/e2e-${width}.png`);
  }
@@ -64,8 +79,9 @@ try {
  evaluate("document.querySelector('#pricing').scrollIntoView({block:'start'})");
  check('Dark appearance keeps chart readable',evaluate("document.documentElement.classList.contains('dark')&&getComputedStyle(document.querySelector('.value-label')).fill!==getComputedStyle(document.querySelector('.value-label-bg')).fill"));
  command('screenshot',`${folder}/dark-mobile.png`);
+ completed=true;
 } finally {
- await fs.writeFile(`${folder}/browser-verification.json`,JSON.stringify({passed:checks.length>0&&checks.every(c=>c.passed),at:new Date().toISOString(),origin,checks},null,2));
+ await fs.writeFile(`${folder}/browser-verification.json`,JSON.stringify({passed:completed&&checks.length>0&&checks.every(c=>c.passed),at:new Date().toISOString(),origin,checks,layoutObservations},null,2));
  command('close');
 }
 console.log(JSON.stringify({passed:true,checks:checks.length,origin}));

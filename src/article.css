@@ -282,7 +282,6 @@ footer{display:flex;justify-content:space-between;align-items:start;gap:24px;fon
 .value-point:hover .value-label-bg{fill:var(--muted)}
 .value-reading{display:flex;align-items:flex-start;gap:9px;min-height:60px;padding-top:12px;color:var(--paragraph);font-size:12px;font-variant-numeric:tabular-nums}
 .value-reading span{display:block;color:var(--muted-foreground);font-size:11px;margin-top:4px}
-.value-best-plans{padding-inline:0!important;white-space:normal!important;text-align:left;height:auto!important}
 @media(max-width:600px){
   .value-controls{gap:12px}
   .value-controls>[data-slot=toggle-group]{width:100%}

@@ -1,4 +1,3 @@
-export const DEFAULT_PRICING = {billing:'monthly', basis:'workload', monthlyPages:93000, plans:{context:'Pro', firecrawl:'Standard', exa:'Pay as you go', keenable:'Live fetch'}};
 export const MONTHLY_PAGES = 3000 * 31;
 export const PRICING = [
   {
@@ -75,6 +74,8 @@ export function recommendPlans(billing,pages=MONTHLY_PAGES) {
     return [provider.id,bestPlan(paid,billing,pages)?.plan.name||provider.plans[0].name];
   }));
 }
+
+export const DEFAULT_PRICING = {selection:'lowest', billing:'monthly', basis:'workload', monthlyPages:MONTHLY_PAGES, plans:recommendPlans('monthly')};
 
 export function priceRows(rows,scenario) {
   const pages=scenario.monthlyPages??MONTHLY_PAGES;

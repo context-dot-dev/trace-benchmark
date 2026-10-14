@@ -61,7 +61,8 @@ try {
  const appendix=renderToStaticMarkup(React.createElement(PricingAppendix,{rows,scenario:changed}));
  check('Report shows named selected plans and unit rates',html.includes('Quality vs. cost')&&html.includes('$1.065')&&html.includes('Pro')&&html.includes('Standard'));
  check('Report explains full allowance and distinguishes measured plan',html.includes('unused capacity')&&html.includes('does not change the measured results'));
- check('Plan controls have accessible names without dropdowns',html.includes('Context pricing plan')&&html.includes('Firecrawl pricing plan')&&!html.includes('<select'));
+ const customHtml=renderToStaticMarkup(React.createElement(Pricing,{rows,scenario:{...changed,selection:'custom'},onScenarioChange:()=>{}}));
+ check('Plan controls have accessible names in explicit custom mode',customHtml.includes('Context pricing plan')&&customHtml.includes('Firecrawl pricing plan')&&!customHtml.includes('<select'));
  check('Appendix holds budgets and reported receipts',appendix.includes('93,000')&&appendix.includes('Reported usage')&&appendix.includes('$82.50')&&appendix.includes('not invoices'));
  const annual=renderToStaticMarkup(React.createElement(PlanTable,{provider:PRICING.find(p=>p.id==='firecrawl'),billing:'annual'}));
  check('Annual UI shows exact commitment',annual.includes('$990.00')&&annual.includes('$7,190.00')&&annual.includes('/year'));

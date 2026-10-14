@@ -2,7 +2,6 @@ import {Table} from '@/components/ui/heroui-table';
 import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
 import {ProviderLogo} from './provider-logo';
 import {finite} from './model';
-import {Button} from '@/components/ui/button';
 import {ValueChart} from './value-chart';
 import {PRICING,MONTHLY_PAGES,quotePlan,planRate,priceRows,recommendPlans} from './pricing-data';
 
@@ -37,22 +36,32 @@ export function PlanTable({provider,billing}) {
 export function Pricing({rows,scenario,onScenarioChange}) {
   const prices=priceRows(rows,scenario);
   const pages=scenario.monthlyPages??MONTHLY_PAGES;
+  const custom=scenario.selection==='custom';
+  const update=changes=>{
+    const next={...scenario,...changes};
+    if(next.selection!=='custom'){
+      next.plans=recommendPlans(next.billing,next.monthlyPages??MONTHLY_PAGES);
+      next.basis='workload';
+    }
+    onScenarioChange(next);
+  };
   return <section id="pricing" className="pricing">
     <h2>Quality vs. cost</h2>
     <p className="section-intro">Each point is one scraper. Higher means more useful content; further left means a lower price. The best value is toward the top left.</p>
     {rows.some(r=>r.balanced)&&<p className="micro">Quality uses the selected new/control view with equal category weights. Cost per useful page projects that balanced workload; raw observed page counts may have a different mix.</p>}
     <div className="value-controls">
-      <ToggleGroup variant="segmented" value={[scenario.billing]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,billing:v[0]})} aria-label="Pricing billing period"><ToggleGroupItem value="monthly">Monthly billing</ToggleGroupItem><ToggleGroupItem value="annual">Annual billing</ToggleGroupItem></ToggleGroup>
-      <ToggleGroup variant="segmented" value={[scenario.basis||'workload']} onValueChange={v=>v[0]&&onScenarioChange({...scenario,basis:v[0]})} aria-label="Cost calculation"><ToggleGroupItem value="workload">At your volume</ToggleGroupItem><ToggleGroupItem value="allowance">Full allowance</ToggleGroupItem></ToggleGroup>
+      <ToggleGroup variant="segmented" value={[custom?'custom':'lowest']} onValueChange={v=>v[0]&&update({selection:v[0]})} aria-label="Pricing comparison"><ToggleGroupItem value="lowest">Lowest-cost plans</ToggleGroupItem><ToggleGroupItem value="custom">Custom scenario</ToggleGroupItem></ToggleGroup>
+      <ToggleGroup variant="segmented" value={[scenario.billing]} onValueChange={v=>v[0]&&update({billing:v[0]})} aria-label="Pricing billing period"><ToggleGroupItem value="monthly">Monthly billing</ToggleGroupItem><ToggleGroupItem value="annual">Annual billing</ToggleGroupItem></ToggleGroup>
+      {custom&&<ToggleGroup variant="segmented" value={[scenario.basis||'workload']} onValueChange={v=>v[0]&&update({basis:v[0]})} aria-label="Cost calculation"><ToggleGroupItem value="workload">At your volume</ToggleGroupItem><ToggleGroupItem value="allowance">Full allowance</ToggleGroupItem></ToggleGroup>}
     </div>
-    <div className="value-volume"><span>Pages / month</span><ToggleGroup value={[String(pages)]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,monthlyPages:Number(v[0]),plans:recommendPlans(scenario.billing,Number(v[0]))})} aria-label="Monthly page volume">{[10000,93000,1000000].map(n=><ToggleGroupItem key={n} value={String(n)}>{number(n)}</ToggleGroupItem>)}</ToggleGroup></div>
+    <div className="value-volume"><span>Pages / month</span><ToggleGroup value={[String(pages)]} onValueChange={v=>v[0]&&update({monthlyPages:Number(v[0])})} aria-label="Monthly page volume">{[10000,93000,1000000].map(n=><ToggleGroupItem key={n} value={String(n)}>{number(n)}</ToggleGroupItem>)}</ToggleGroup></div>
+    <p className="micro">{custom?'Custom scenario: prices reflect your selected plans and may include unused capacity.':'Lowest-cost plans for the same workload. Each provider uses its cheapest published paid plan, including top-ups, for the selected volume and billing period.'}</p>
     <p className="micro">{scenario.basis==='allowance'?'Full-allowance rate: subscription price divided by every included credit.':'Workload rate: subscription + whole top-up blocks, divided by your volume. Includes unused capacity.'} {pages===93000?'93,000 pages = 3,000 a day in a 31-day month.':''}</p>
     <ValueChart prices={prices}/>
-    <div className="pricing-choices">{PRICING.filter(p=>p.plans.some(plan=>plan.annual)).map(provider=><div className="pricing-choice" key={provider.id}>
+    {custom&&<div className="pricing-choices">{PRICING.filter(p=>p.plans.some(plan=>plan.annual)).map(provider=><div className="pricing-choice" key={provider.id}>
       <span className="provider-name"><ProviderLogo id={provider.id}/>{provider.name}</span>
-      <ToggleGroup size="sm" value={[scenario.plans[provider.id]]} onValueChange={v=>v[0]&&onScenarioChange({...scenario,plans:{...scenario.plans,[provider.id]:v[0]}})} aria-label={`${provider.name} pricing plan`}>{provider.plans.filter(plan=>plan.annual).map(plan=><ToggleGroupItem key={plan.name} value={plan.name}>{plan.name}</ToggleGroupItem>)}</ToggleGroup>
-    </div>)}</div>
-    <Button variant="link" className="value-best-plans" onClick={()=>onScenarioChange({...scenario,plans:recommendPlans(scenario.billing,pages)})}>Use lowest-cost paid plans for this volume</Button>
+      <ToggleGroup size="sm" value={[scenario.plans[provider.id]]} onValueChange={v=>v[0]&&update({plans:{...scenario.plans,[provider.id]:v[0]}})} aria-label={`${provider.name} pricing plan`}>{provider.plans.filter(plan=>plan.annual).map(plan=><ToggleGroupItem key={plan.name} value={plan.name}>{plan.name}</ToggleGroupItem>)}</ToggleGroup>
+    </div>)}</div>}
     <Table><Table.ScrollContainer><Table.Content aria-label="Plan-specific scraping prices" className="comparison-table pricing-table">
       <Table.Header><Table.Column isRowHeader>Provider & plan</Table.Column><Table.Column>Cost / 1k pages</Table.Column><Table.Column>Projected / 1k useful</Table.Column></Table.Header>
       <Table.Body>{prices.map(provider=><Table.Row key={provider.id}>
@@ -71,7 +80,7 @@ export function PricingAppendix({rows,scenario}) {
   const pages=scenario.monthlyPages??MONTHLY_PAGES;
   return <div id="pricing-details" className="pricing">
     <h3>Pricing methodology</h3>
-    <p className="micro"><a href="https://github.com/keenableai/needle/blob/main/dashboard/index.html">NEEDLE’s pricing catalog</a> stores a price, plan and check date for each engine and describes its comparison as the biggest self-serve tier, excluding enterprise quotes. Trace offers that full-allowance comparison alongside the cost of your actual workload, using the same billing period across subscriptions. The default selects the lowest-cost paid plan for 93,000 monthly base pages; this is a cost fit, not a throughput recommendation. Search prices are not scraping prices. The plan and billing selections in <a href="#pricing">Quality vs. cost</a> also apply below.</p>
+    <p className="micro"><a href="https://github.com/keenableai/needle/blob/main/dashboard/index.html">NEEDLE’s pricing catalog</a> stores a price, plan and check date for each engine and describes its comparison as the biggest self-serve tier, excluding enterprise quotes. Trace offers that full-allowance comparison alongside the cost of your actual workload, using the same billing period across subscriptions. Lowest-cost mode recalculates every provider’s plan when volume or billing changes. Manual plans and full-allowance rates are available only in Custom scenario. The default compares 93,000 monthly base pages; this is a cost fit, not a throughput recommendation. Search prices are not scraping prices. The plan and billing selections in <a href="#pricing">Quality vs. cost</a> also apply below.</p>
     <h3>Budget for {number(pages)} pages a month</h3>
     <p className="micro">{number(pages)} billable base pages per month, per provider, on your selected plans. Estimates, not invoices. This includes unused capacity and whole top-up blocks. Full-allowance rates instead assume every included credit is used.</p>
     <Table><Table.ScrollContainer><Table.Content aria-label="Selected plan monthly budgets" className="comparison-table pricing-table">
