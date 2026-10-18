@@ -37,19 +37,19 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/api/dashboard"
+      "destination": "/api/dashboard?__trace_route=page"
     },
     {
       "source": "/index.html",
-      "destination": "/api/dashboard"
+      "destination": "/api/dashboard?__trace_route=page"
     },
     {
       "source": "/api/:path(summary|results|result|download)",
-      "destination": "/api/dashboard"
+      "destination": "/api/dashboard?__trace_route=:path"
     },
     {
       "source": "/data/:path*",
-      "destination": "/api/dashboard"
+      "destination": "/api/dashboard?__trace_route=data&__trace_file=:path*"
     }
   ]
 }
