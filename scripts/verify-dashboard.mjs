@@ -18,8 +18,10 @@ try {
  const latestDaily=Object.fromEntries(['independent','needle'].map(cohort=>[cohort,archive.runs.find(r=>r.cohort===cohort&&r.protocol_version===archive.protocol_version&&r.status==='completed'&&!r.exclusion&&r.collection_profile?.cadence==='daily')?.id]));
  const valid=eligible.filter(r=>!latestDaily[r.cohort]||r.run_id===latestDaily[r.cohort]);
  for(const [cohort,group] of Object.entries(summary.cohorts)) {
-  const rows=valid.filter(r=>r.cohort===cohort);
+  const [baseCohort,role]=cohort.split(':');
+  const rows=valid.filter(r=>r.cohort===baseCohort&&(!role||r.sample_role===role));
   for(const p of group.rows)check(cohort+':'+p.id+' exact statistics',isDeepStrictEqual(summarize(rows,p.id),Object.fromEntries(Object.entries(p).filter(([k])=>k in summarize(rows,p.id)))));
+  if(role)continue;
   const page=await (await fetch(origin+'/api/results?'+new URLSearchParams({cohort,version:summary.version}))).json();
   check(cohort+' bounded page',page.records.length<=8&&page.total===rows.length);
   if(page.records.length){

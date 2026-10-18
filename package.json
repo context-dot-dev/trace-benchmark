@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "build": "node scripts/export-pricing.mjs && tsc --noEmit && vite build && vite build --ssr src/entry-server.jsx --outDir server/render",
+    "build": "node scripts/export-pricing.mjs && tsc --noEmit && vite build && vite build --ssr src/entry-server.jsx --outDir server/render && vite build --config vite.functions.config.ts",
     "serve": "tsx server/index.ts",
     "publish:neon": "tsx server/publish.ts",
     "db:generate": "drizzle-kit generate",

@@ -44,16 +44,7 @@ def atomic_json(path, value):
     os.replace(tmp, path)
 
 
-class Store:
-    def __init__(self, root):
-        self.root = Path(root)
-        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        os.chmod(self.root,0o700)
-        self.db = sqlite3.connect(self.root / 'state.sqlite3', timeout=30)
-        os.chmod(self.root / 'state.sqlite3',0o600)
-        self.db.row_factory = sqlite3.Row
-        self.db.executescript('''
-        PRAGMA journal_mode=WAL;
+SCHEMA_SQL = """
         CREATE TABLE IF NOT EXISTS browser_references(id TEXT PRIMARY KEY,run_id TEXT,task_id TEXT,status TEXT,data TEXT,blob TEXT);
         CREATE TABLE IF NOT EXISTS reference_scores(observation_id TEXT PRIMARY KEY,data TEXT);
         CREATE TABLE IF NOT EXISTS candidates(id TEXT PRIMARY KEY,url TEXT UNIQUE,data TEXT NOT NULL,first_seen TEXT NOT NULL,last_seen TEXT NOT NULL);
@@ -65,7 +56,18 @@ class Store:
         CREATE TABLE IF NOT EXISTS budget(day TEXT,bucket TEXT,reservation_id TEXT,amount REAL NOT NULL,PRIMARY KEY(day,bucket,reservation_id));
         CREATE TABLE IF NOT EXISTS budget_settlements(day TEXT,bucket TEXT,reservation_id TEXT,amount REAL NOT NULL CHECK(amount>=0),PRIMARY KEY(day,bucket,reservation_id));
         CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
-        ''')
+"""
+
+
+class Store:
+    def __init__(self, root):
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        os.chmod(self.root,0o700)
+        self.db = sqlite3.connect(self.root / 'state.sqlite3', timeout=30)
+        os.chmod(self.root / 'state.sqlite3',0o600)
+        self.db.row_factory = sqlite3.Row
+        self.db.executescript('PRAGMA journal_mode=WAL;'+SCHEMA_SQL)
         self.db.commit()
 
     def blob(self, value):
@@ -167,7 +169,7 @@ class Store:
             row=self.db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone()
             return json.loads(row[0]) if row else None
         with self.db:
-            self.db.execute('INSERT OR REPLACE INTO metadata VALUES(?,?)',(key,safe_json(value)))
+            self.db.execute('INSERT INTO metadata VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,safe_json(value)))
 
     def ingest(self, result):
         from .discovery import CATEGORIES
@@ -209,7 +211,7 @@ class Store:
         else:
             metadata=dict(metadata,provider_ids=['context','hetzner','exa','keenable'],browser_reference=False)
         manifest={str(p.relative_to(source_root.parent)):digest(p.read_bytes()) for p in sorted(source_root.glob('*.py'))}
-        for name in ['config/sources.json','config/benchmark.json','requirements-lock.txt']:
+        for name in ['config/sources.json','config/benchmark.json','requirements-lock.txt','pyproject.toml','uv.lock']:
             path=source_root.parent/name
             if path.exists():manifest[name]=digest(path.read_bytes())
         metadata=dict(metadata,protocol_version=PROTOCOL if self.meta('collection_profile')=='live' else 'trace-live-v1',code_sha256=digest(safe_json(manifest)),code_manifest=manifest,collector={'hostname':os.environ.get('TRACE_COLLECTOR','local'),'platform':platform.system(),'python':platform.python_version()},selection_sha256=digest(safe_json(selected)))

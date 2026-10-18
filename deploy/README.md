@@ -69,23 +69,71 @@ GitHub pushes do not deploy application changes automatically. Daily data update
 are automatic. Keep deploy credentials outside GitHub until a reviewed CI workflow
 with scoped credentials is installed.
 
-## Vercel and the permanent domain
+## Vercel and Neon migration
 
-The ContextDev Vercel team currently rejects project creation (403). The personal
-`mrmps-projects` team rejects deployment because of a fair-use billing block (402).
-No production Vercel project was created. Do not use an unrelated team's project.
+The `contextdev/trace-benchmark` Vercel project is connected to this repository.
+`vercel.json` uses the existing Vite build and `site` output, serves SSR and the
+paginated API from Neon, and schedules authenticated collector, export and
+publication functions. There is no Hetzner proxy or remote-worker fallback.
 
-`deploy/vercel/vercel.json` contains the optional HTTPS proxy configuration. Once
-ContextDev project-creation access is granted:
+Canonical rows, original JSON strings, binary64 reservations, and private receipt
+files live in `trace_collector`. Large historical backups are chunked to avoid PostgreSQL single-value limits. The `trace_dashboard` schema remains a public
+read model; regenerating it never deletes canonical evidence. Historical legacy
+runs are retained. Only the current live protocol is scheduled on Vercel.
 
-```sh
-vercel project add trace-benchmark --scope contextdev
-vercel link --yes --project trace-benchmark --scope contextdev --cwd deploy/vercel
-vercel deploy --prod --yes --scope contextdev --cwd deploy/vercel
-```
+Collector ticks use a direct Neon connection and a session advisory lock. Never
+use a pooled connection for `TRACE_DATABASE_URL`. Each tick performs one bounded
+lane: one source, up to four NEEDLE searches, or eight pages with bounded judging
+and comparison. Already-dispatched requests are never replayed after a timeout.
+Uncertain completions remain visible for review. Discovery and NEEDLE receive
+reserved turns so a large independent run cannot starve them. Reader HTTP timing
+runs outside the database event loop to exclude PostgreSQL persistence latency.
 
-The current URL relies on sslip.io DNS and this server's address. Next, assign a
-permanent Context-owned domain (for example `trace.context.dev`, after confirming
-its availability), update Caddy and the citation, and add uptime/failure alerts.
-Vercel would serve as the public proxy; the scheduled worker remains on Hetzner.
-This keeps long API runs outside serverless execution limits.
+Set these server-only values in Doppler `trace-benchmark/prd`, then sync them to
+this Vercel project only:
+
+- `TRACE_DATABASE_URL`: direct Neon connection with collector and publication access.
+- `DATABASE_URL`: Neon dashboard connection (pooling is supported here).
+- `TRACE_DASHBOARD_BACKEND=neon` and `TRACE_COLLECTOR=vercel`.
+- The existing five provider/judge credentials.
+- `CRON_SECRET`: cryptographically random value, at least 32 bytes of entropy.
+- `TRACE_WORKER_ENABLED=0` until the migration passes and the old scheduler stops.
+
+Every cron endpoint rejects missing or incorrect bearer authorization, including
+when no secret is configured. Do not expose the secret through a `VITE_` variable,
+URL, source file, or logs. Preview environments keep collection disabled. The
+configured 4 GB Python functions and minute schedule require a suitable Vercel
+plan. Browser-reference dependencies remain available through `uv sync --extra browser` or the full `requirements-lock.txt`; production functions install only the current live collector dependencies. Functions return non-success for failures, and retain tick health in Neon.
+
+### Preserve and verify history before cutover
+
+1. Take an online SQLite backup and copy private `blobs`, `discovery`, screenshots,
+   verification evidence and existing backups. Browser binaries and runtime caches
+   are replaceable, not historical evidence. Keep the source intact.
+2. Once the existing worker is idle, stop its timer, take a final consistent SQLite
+   backup and synchronize any new files. Never interrupt an in-flight paid request.
+3. In the specifically authorized Neon project, run the import against that frozen
+   snapshot using `TRACE_DATABASE_URL`:
+
+   ```sh
+   PYTHONPATH=. python -m bench.migrate /secure/snapshot --report artifacts/migration/verification.json
+   ```
+
+   This refuses conflicting rows/files and is safe to repeat before collection
+   starts. The report compares every table's row count and ordered SHA-256, and
+   verifies every private file's bytes and SHA-256 against PostgreSQL. Retain the
+   report and backup outside Git. Do not enable collection on a failed report.
+4. Apply the existing dashboard migrations with `server/publish.ts`, publish the
+   final allowlisted export, and verify SSR, filters, details, downloads, manifests,
+   and private-path rejection against a Vercel preview.
+5. Only after the full import passes, record `vercel:migration_verified=true` in
+   collector metadata. Confirm the old timer is stopped, enable the production
+   worker, deploy to production, and verify one real authenticated tick plus its
+   persisted receipts. Keep original backups until the new system is verified.
+6. Confirm the Vercel deployment tracks the intended reviewed Git revision. Draft
+   PRs are not merged automatically. Main pushes deploy through the connected
+   Vercel Git integration; CI produces repeatable migration and cron artifacts.
+
+A failed cutover leaves the original state available for rollback. Do not re-enable
+both schedulers or copy an old SQLite snapshot over a Neon database that has begun
+collecting. New Neon receipts must be reconciled before any reverse migration.

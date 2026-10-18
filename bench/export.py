@@ -176,6 +176,7 @@ def make_export(store):
 
 
 def publish(store,path):
+    if getattr(store,'defer_publish',False):return None
     data=make_export(store)
     atomic_json(path,data)
     atomic_json(Path(path).parent/'run-sampling.json',data['sampling_history'])
@@ -209,6 +210,7 @@ def publish_progress(store,path,interval=60):
 
 async def publish_progress_async(store,path,interval=60):
     """Build snapshots outside the measured request event loop."""
+    if getattr(store,'defer_publish',False):return False
     import asyncio,sys
     stamp=time.monotonic()
     previous=getattr(store,'_last_progress_publish',None)

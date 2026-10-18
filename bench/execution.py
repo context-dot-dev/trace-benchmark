@@ -32,7 +32,10 @@ def settings(store,run_id):
 
 
 def record(store,run_id,phase,config):
-    files={name:digest((Path(__file__).parent/name).read_bytes()) for name in ('runner.py','providers.py','comparison.py','references.py','execution.py','export.py','recovery.py')}
+    files={name:digest((Path(__file__).parent/name).read_bytes()) for name in ('runner.py','providers.py','comparison.py','references.py','execution.py','export.py','recovery.py','postgres.py','serverless.py')}
+    root=Path(__file__).resolve().parents[1]
+    for name in ('pyproject.toml','uv.lock'):
+        if (root/name).exists():files[name]=digest((root/name).read_bytes())
     segments=store.meta('execution:'+run_id) or []
     segments.append({'started_at':now(),'phase':phase,'settings':config,'analysis_policy':policy(store,run_id),'code_manifest':files,'code_sha256':digest(safe_json(files))})
     store.meta('execution:'+run_id,segments)
