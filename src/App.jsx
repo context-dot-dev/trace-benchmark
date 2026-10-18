@@ -68,13 +68,15 @@ export default function App({ initialData = null }) {
     <a className="skip" href="#main">Skip to content</a>
     <div className="shell">
       <div className="masthead">
-        <a href="#overview" className="brand" aria-label="Trace overview">Trace</a>
+        <a href="https://www.context.dev" className="brand" aria-label="Context.dev"><img className="wordmark wordmark-light" src="/logos/context-wordmark.svg" alt="Context.dev" width="160" height="28"/><img className="wordmark wordmark-dark" src="/logos/context-wordmark-white.svg" alt="" width="160" height="28"/></a>
+        <a href="#overview" className="project-name">TRACE</a>
+        <nav className="masthead-links" aria-label="Project"><a href="#methodology">Methodology</a><a href="https://github.com/context-dot-dev/trace-benchmark">GitHub ↗</a></nav>
         <Button id="theme" variant="ghost" size="icon" aria-label={dark ? "Light appearance" : "Dark appearance"} aria-pressed={dark} onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</Button>
       </div>
       <main id="main">
         <header id="overview">
-          <h1>Which scraper returns useful content?</h1>
-          <p className="intro">The same pages. Different scrapers. A comparison of how much content comes back, how long it takes, and where each provider works best.</p>
+          <h1>Which scraper returns<br/><span>useful content?</span></h1>
+          <p className="intro">The same pages. Different scrapers. Compare content quality, latency, and cost — with the evidence behind every result.</p>
           <LiveStatus data={data} cohort={cohort}/><nav className="article-nav" aria-label="In this article"><a href="#quality">Results</a><a href="#coverage">Content</a><a href="#pricing">Quality vs. cost</a><a href="#efficiency">Latency</a><a href="#trends">Quality over time</a><a href="#appendix">Appendix</a></nav>
         </header>
         <section id="quality">
@@ -83,8 +85,6 @@ export default function App({ initialData = null }) {
             <ToggleGroupItem value="independent">Independent pages</ToggleGroupItem>
             <ToggleGroupItem value="needle">Search-discovered pages</ToggleGroupItem>
           </ToggleGroup>
-          <p className="micro">{cohort === "needle" ? "Target: up to 400 search result slots per day." : <>Target: {data?.operations?.collection_profile ? (data.operations.collection_profile.daily_per_category*8).toLocaleString("en-US") : "—"} URLs in one daily independent run. 300 new pages + 75 control pages per category. All four providers fetch the same daily sample; shortages remain visible.</>}</p>
-          {cohort==="independent" && <p className="micro">New pages measure breadth. Control pages measure change: the same URLs are fetched daily for 30 days, then replaced with a versioned panel. Their content can still change.</p>}
           {mixedSample && <ToggleGroup value={[sampleRole]} onValueChange={v=>v[0]&&setSampleRole(v[0])} aria-label="Daily sample score"><ToggleGroupItem value="new">New pages · {baseGroup.lastCompleted.sampling.roles.new.selected}</ToggleGroupItem><ToggleGroupItem value="control">Control pages · {baseGroup.lastCompleted.sampling.roles.control.selected}</ToggleGroupItem></ToggleGroup>}
           {mixedSample && <p className="micro">Showing {sampleRole==='new'?'new':'control'} pages throughout the comparisons below. Each of eight categories has 12.5% weight. {baseGroup.lastCompleted.sampling.roles[sampleRole].shortfall} pages short of target.{sampleRole==='control'&&<> Panel {baseGroup.lastCompleted.sampling.control_panel.version}, fixed until {baseGroup.lastCompleted.sampling.control_panel.expires_at.slice(0,10)} UTC.</>}</p>}
           <p className="dataset-description">{cohort === "independent" ? "How often does each scraper return the page’s main content? These URLs come from public feeds and registries." : "URLs found by Context Search using NEEDLE queries. This selection may favor Context, so these results are kept separate."}</p>
@@ -93,6 +93,10 @@ export default function App({ initialData = null }) {
           {error && <Alert variant="destructive"><AlertTitle>{data ? "Could not check for newer results" : "Could not load results"}</AlertTitle><AlertDescription>{data ? "The last loaded results are still shown." : "Check your connection and try again."}<Button variant="outline" disabled={loading} onClick={refresh}>Retry</Button></AlertDescription></Alert>}
           <AccountIssues rows={rows}/>
           <div className="leaderboard"><QualityTable rows={rows} sort={sort} ascending={ascending} onSort={descriptor => { setSort(descriptor.column); setAscending(descriptor.direction === "ascending"); }} onProvider={chooseProvider} loading={loading} /></div>
+          <details className="sampling-explainer"><summary>How daily samples work</summary>
+          <p className="micro">{cohort === "needle" ? "Target: up to 400 search result slots per day." : <>Target: {data?.operations?.collection_profile ? (data.operations.collection_profile.daily_per_category*8).toLocaleString("en-US") : "—"} URLs in one daily independent run. 300 new pages + 75 control pages per category. All four providers fetch the same daily sample; shortages remain visible.</>}</p>
+          {cohort==="independent" && <p className="micro">New pages measure breadth. Control pages measure change: the same URLs are fetched daily for 30 days, then replaced with a versioned panel. Their content can still change.</p>}
+          </details>
           <p className="micro">{mixedSample ? "Useful = the mean of eight category rates, each measuring matching, substantive content / selected pages. Missing categories withhold the score. Page counts below each score are raw totals." : "Useful = pages with matching, substantive content / all selected page tests."} Partial content can qualify. Time = median request duration. <a href="#appendix">Scoring details</a></p>
           <div className="wide-comparison"><MetricPanels label="Scraping" rows={rows.map(r => ({...r, unresolvedRate:r.count ? r.unknown/r.count : null}))} metrics={scrapingMetrics.map(m=>mixedSample&&m.key==="rate"?{...m,detail:"Eight equally weighted category rates, including unresolved"}:m)} /></div>
         </section>
