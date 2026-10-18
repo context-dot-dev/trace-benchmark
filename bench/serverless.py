@@ -8,7 +8,7 @@ import tempfile
 from .postgres import PostgresStore
 from .storage import now
 from .capacity import profile
-from .execution import settings, policy
+from .execution import settings, policy, record
 from .export import PROTOCOL, run_providers, publish
 from .runner import Runner, judge_observations
 from .comparison import compare_run
@@ -45,6 +45,7 @@ async def advance_run(store, run):
     metadata = json.loads(run['metadata'])
     providers = run_providers(metadata)
     config = settings(store, run_id)
+    record(store,run_id,'serverless_slice',config,{'pages':8,'judgments':32,'comparisons':8})
     expected = store.db.execute('SELECT COUNT(*) FROM tasks WHERE run_id=?', (run_id,)).fetchone()[0]*len(providers)
     before = store.db.execute('SELECT COUNT(*) FROM observations WHERE run_id=?', (run_id,)).fetchone()[0]
     if before < expected:
