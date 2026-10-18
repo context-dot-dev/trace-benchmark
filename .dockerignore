@@ -1,0 +1,14 @@
+.git
+.env*
+!.env.example
+.venv
+node_modules
+artifacts
+state
+site/data
+site/assets
+site/index.html
+site/trace-source.zip
+server/render
+.DS_Store
+._*

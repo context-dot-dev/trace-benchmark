@@ -69,6 +69,70 @@ GitHub pushes do not deploy application changes automatically. Daily data update
 are automatic. Keep deploy credentials outside GitHub until a reviewed CI workflow
 with scoped credentials is installed.
 
+## Railway migration
+
+The Railway runtime uses one service and one volume for the dashboard and collector.
+Mount a volume at `/data`; SQLite and receipt blobs live in `/data/private`, and
+only the generated exports in `/data/public` are served. Keep one replica and
+serverless/app sleeping disabled. The existing collector requires at least 10 GB
+of free space before dispatch: provision at least 30 GB for the current 8.6 GB
+archive plus growth. Enable Railway volume backups before cutover.
+
+`Dockerfile` builds the existing Vite client and SSR app, installs the locked Python
+dependencies, and starts `deploy/railway.py` under tini. `railway.json` uses
+`/healthz` to verify that a real publication is readable. A missing imported
+database fails startup instead of silently creating an empty replacement.
+`TRACE_WORKER_ENABLED` defaults to `0`, so preview deployments cannot spend credits.
+
+The supervisor runs the collector at 00:15 UTC with an 18-hour deadline, preserves
+the worker lock and stored dispatch reservations, and stops both processes on
+SIGTERM. A missed daily slot runs on startup once collection is enabled. The slot
+is persisted before dispatch; a failed or interrupted job is logged and is not
+repeated automatically in the same slot. The next daily tick resumes unfinished
+work according to the existing CLI's recovery rules. For an intentional same-day
+resume, run `python -m bench.cli tick --state /data/private --export /data/public/latest.json`
+inside the service after checking that no collector is active.
+
+### Doppler and automatic deployment
+
+The Doppler project is `trace-benchmark`, production config `prd`, in the Context
+workspace. It holds `CONTEXT_API_KEY`, `EXA_API_KEY`, `FIRECRAWL_API_KEY`,
+`KEENABLE_API_KEY`, and `TYPESAFE_API_KEY`. Connect this config through Doppler's
+Railway integration to the TRACE service in **motivated beauty**. Sync variables
+at runtime; never pass API keys as Docker build arguments or commit an env file.
+Keep `TRACE_WORKER_ENABLED=0` in Doppler until the cutover below is complete.
+
+Connect the service to this GitHub repository's `main` branch and enable Railway's
+Wait for CI setting. `.github/workflows/verify.yml` checks the real runtime against
+a temporary volume, builds the container, and retains its verification artifact.
+Once the integration is connected, passing main-branch changes deploy automatically.
+A draft PR does not authorize merging or enabling collection.
+
+### Cutover and rollback
+
+1. Create the service and volume in **motivated beauty**, with collection disabled.
+   Import the data before expecting the health check to pass. The CLI can upload
+   a directory with `railway volume files upload ./trace-import /private` against
+   the linked service. Do not upload credentials or private state into `/public`.
+2. Disable `trace-bench.timer` on Hetzner. If `trace-bench.service` is active, let it
+   finish before the final copy; stopping the timer does not stop that job. Keep
+   `trace-dashboard.service` running during verification.
+3. Make a consistent SQLite backup using Python's `sqlite3.Connection.backup` and
+   copy the receipt `blobs`, discovery data and historical screenshots into the
+   import directory. Preserve the full original state as rollback evidence.
+   Upload that directory to `/private`. Do not carry over the old browser cache,
+   logs, or redundant database backups. The current live protocol does not render
+   browser references; historical screenshot files are retained as evidence.
+4. Deploy, verify `/healthz`, `/api/summary`, a result detail, a manifest and the
+   complete download. Compare run IDs and record counts with Hetzner. Run
+   `TRACE_PRODUCTION_URL=https://YOUR-RAILWAY-DOMAIN node scripts/verify-production.mjs`.
+   Confirm private paths return 404 and verify the volume survives a restart.
+5. Set `TRACE_WORKER_ENABLED=1` in Doppler, sync, and verify exactly one collector.
+   Only then move the public domain/proxy. Retain Hetzner's state for rollback.
+6. To roll back, disable and stop the Railway collector first, reconcile any new
+   Railway runs back to the retained state, then re-enable the Hetzner timer.
+   Never run both collectors against divergent copies of the database.
+
 ## Vercel and the permanent domain
 
 The ContextDev Vercel team currently rejects project creation (403). The personal
