@@ -1,4 +1,4 @@
 -c requirements-lock.txt
 httpx==0.28.1
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 psycopg[binary]==3.2.13
