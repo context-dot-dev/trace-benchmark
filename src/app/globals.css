@@ -1,0 +1,96 @@
+@import "tailwindcss";
+@import "./_context-ds/brand.css";
+@import "./_context-ds/theme.css";
+@import "./theme-dark.css";
+
+/* `dark:` follows the theme switch: a dark choice, or the system's dark setting when "system" is chosen. Light by default. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where([data-theme="system"], [data-theme="system"] *) {
+      @slot;
+    }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--ds-space-24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Scrollbars as on context.dev: the page itself scrolls with no visible bar, and every inner scroller (tables, code,
+   chart tabs) gets a thin rounded thumb at 45% black, 65% on hover, inset 3px into a 10px gutter. */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ds-color-black) 45%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--ds-color-black) 45%, transparent);
+  background-clip: padding-box;
+  border: 0.1875rem solid transparent;
+  border-radius: var(--ds-radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--ds-color-black) 65%, transparent);
+}
+
+:root[data-theme="dark"] *,
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  scrollbar-color: color-mix(in srgb, var(--ds-color-white) 30%, transparent) transparent;
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--ds-color-white) 30%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] * {
+    scrollbar-color: color-mix(in srgb, var(--ds-color-white) 30%, transparent) transparent;
+  }
+
+  :root[data-theme="system"] ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--ds-color-white) 30%, transparent);
+  }
+}
+
+/* Meter dots repeat about two thousand times, so their shared styling lives here as short classes instead of being
+   spelled out on every element. The cell fills its grid track and centres the dot, which sizes itself against the cell;
+   a dot placed straight in the grid would size against the track and collapse or overflow. Tone utilities
+   (border-brand bg-brand, …) override the empty ring. */
+@layer components {
+  .meter-cell {
+    @apply flex items-center justify-center;
+  }
+
+  .meter-dot {
+    @apply aspect-square w-full max-w-2.5 rounded-pill border border-neutral-20 transition-[background-color,border-color] duration-300 ease-out motion-reduce:transition-none;
+  }
+}
