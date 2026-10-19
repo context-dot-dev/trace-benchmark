@@ -1,0 +1,14 @@
+.git
+.venv
+artifacts
+state
+node_modules
+.env*
+site/data
+site/trace-source.zip
+server/render
+**/._*
+**/.DS_Store
+_uv
+.vercel_python_packages
+server/functions

@@ -12,6 +12,11 @@ export class NeonSource {
   pool:Pool;
   db;
   constructor(url:string){this.pool=new Pool({connectionString:url,max:4,connectionTimeoutMillis:15000});this.db=drizzle(this.pool);}
+  async publicFile(path:string){
+    const {rows}=await this.pool.query('SELECT data FROM trace_collector.public_exports WHERE path=$1',[path]);
+    if(!rows.length)throw Object.assign(new Error('Not found'),{status:404});
+    return rows[0].data as string;
+  }
   async summary(){
     const [row]=await this.db.select().from(publications).where(eq(publications.id,'current'));
     if(!row)throw Object.assign(new Error('No benchmark publication is available'),{status:503});
