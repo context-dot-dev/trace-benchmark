@@ -153,7 +153,7 @@ export function TrendChart({
       {hint && (
         <div
           role="tooltip"
-          className="pointer-events-none absolute top-2 z-20 w-[min(11rem,calc(100%-1rem))] -translate-x-1/2 rounded-card bg-surface px-3 py-2 text-left shadow-floating ring-1 ring-hairline"
+          className="pointer-events-none absolute top-2 z-50 box-border w-[min(11rem,calc(100%_-_1rem))] -translate-x-1/2 rounded-card bg-surface px-3 py-2 text-left shadow-floating ring-1 ring-hairline"
           style={{ left: hint.left }}
         >
           <p className="mb-1 font-mono text-caption text-fg-muted">{shortDay(hint.day)}</p>
@@ -162,8 +162,8 @@ export function TrendChart({
               const point = points.find((candidate) => candidate.day === hint.day && candidate.provider === provider.id);
               return (
                 <li key={provider.id} className="flex items-center justify-between gap-2 text-caption">
-                  <span className={provider.id === OURS ? "text-fg-brand" : "text-fg-muted"}>{provider.name}</span>
-                  <span className="font-mono text-body-sm font-medium tabular-nums text-fg">{percent(point?.success_rate)}</span>
+                  <span className={cn("min-w-0 break-words", provider.id === OURS ? "text-fg-brand" : "text-fg-muted")}>{provider.name}</span>
+                  <span className="shrink-0 font-mono text-body-sm font-medium tabular-nums text-fg">{percent(point?.success_rate)}</span>
                 </li>
               );
             })}

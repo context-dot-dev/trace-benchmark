@@ -99,6 +99,7 @@ export function DataTable({
   minWidth = "min-w-0",
   stackOnPhones = !sort,
   framed = true,
+  fixedLayout = false,
   className,
 }: {
   caption: string;
@@ -110,6 +111,7 @@ export function DataTable({
   empty?: React.ReactNode;
   footnote?: React.ReactNode;
   minWidth?: string;
+  fixedLayout?: boolean;
   framed?: boolean;
   /** Below 640px, each row becomes a block of label and value pairs instead of a row that needs a sideways swipe. */
   stackOnPhones?: boolean;
@@ -144,7 +146,7 @@ export function DataTable({
           <ChevronRight className="size-4" />
         </button>
         <div ref={attachScroller} tabIndex={0} role="region" aria-label={caption} className={cn("overflow-x-auto rounded-card bg-surface outline-none focus-visible:ring-2 focus-visible:ring-focus-ring", framed && "ring-1 ring-hairline")}>
-          <table className={cn("w-full border-collapse text-left leading-snug", minWidth)}>
+          <table className={cn("w-full border-collapse text-left leading-snug", fixedLayout && "table-fixed", minWidth)}>
             <caption className="sr-only">{caption}</caption>
             <thead>
               <tr>

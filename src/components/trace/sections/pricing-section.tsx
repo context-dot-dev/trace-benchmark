@@ -68,7 +68,9 @@ export function PricingSection({ prices, scenario, onScenarioChange }: { prices:
             {scenario.basis === "allowance"
               ? "Full-allowance rate: assumes full credit utilization, then applies the sample’s billable usage."
               : "Failed requests follow billing evidence; a charged page can still be unusable."}{" "}
-            {pages === 93_000 ? "93,000 attempts = 3,000 a day in a 31-day month." : ""}
+            <span className={pages === 93_000 ? undefined : "invisible"} aria-hidden={pages !== 93_000}>
+              93,000 attempts = 3,000 a day in a 31-day month.
+            </span>
           </p>
         </Notes>
       </div>
@@ -106,10 +108,11 @@ export function PricingSection({ prices, scenario, onScenarioChange }: { prices:
           caption="Plan-specific scraping prices"
           minWidth="min-w-120"
           framed={false}
+          fixedLayout
           columns={[
-            { key: "provider", label: "Provider & plan" },
-            { key: "attempts", label: "Estimated / 1k attempts", align: "right" },
-            { key: "useful", label: "Estimated / 1k useful", align: "right" },
+            { key: "provider", label: "Provider & plan", className: "w-[42%]" },
+            { key: "attempts", label: "Estimated / 1k attempts", align: "right", className: "w-[29%]" },
+            { key: "useful", label: "Estimated / 1k useful", align: "right", className: "w-[29%]" },
           ]}
           rows={prices.map((price) => ({
             key: price.id,

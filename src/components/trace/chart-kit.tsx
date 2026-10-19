@@ -33,7 +33,7 @@ export function MarkTip({ children, className }: { children: React.ReactNode; cl
     <span
       role="tooltip"
       className={cn(
-        "pointer-events-none absolute z-20 w-max max-w-[min(--spacing(56),calc(100vw-var(--ds-space-20)))] rounded-card bg-inverse px-2 py-1 text-left font-mono text-axis leading-snug text-fg-inverse opacity-0 transition-opacity duration-150 ease-out group-hover/mark:opacity-100 group-focus-visible/mark:opacity-100 motion-reduce:transition-none",
+        "pointer-events-none absolute z-50 box-border w-max max-w-[min(--spacing(56),calc(100vw_-_var(--ds-space-20)))] break-words rounded-card bg-inverse px-2 py-1 text-left font-mono text-axis leading-snug text-fg-inverse opacity-0 transition-opacity duration-150 ease-out group-hover/mark:opacity-100 group-focus-visible/mark:opacity-100 motion-reduce:transition-none",
         className,
       )}
     >
