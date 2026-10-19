@@ -15,7 +15,7 @@ import httpx
 from .freshness import audit
 
 ENDPOINTS = {
-    "context": "https://api.context.dev/v1/web/scrape/markdown",
+    "context": "https://api.context.dev/v1/web/scrape",
     "firecrawl": "https://api.firecrawl.dev/v2/scrape",
     "hetzner": "http://127.0.0.1:18089/scrape",
     "exa": "https://api.exa.ai/contents",
@@ -106,8 +106,10 @@ async def fetch_reader(provider: str, url: str, config: dict | None = None) -> d
             method = "GET"
             if provider == "context":
                 headers = {"Authorization": "Bearer " + os.environ[KEYS[provider]]}
-                params = {"url": url, "maxAgeMs": 0, "timeoutOpts[milliseconds]": 27000,
-                          "timeoutOpts[behavior]": "fail"}
+                method = "POST"
+                body = {"url": url, "formats": {"markdown": True}, "maxAgeMs": 0,
+                        "timeoutOpts": {"milliseconds": 27000, "behavior": "fail"},
+                        "sharedParams": {"mainContentOnly": False}}
             elif provider == "firecrawl":
                 method = "POST"
                 headers = {"Authorization": "Bearer " + os.environ[KEYS[provider]]}
@@ -159,12 +161,19 @@ async def fetch_reader(provider: str, url: str, config: dict | None = None) -> d
             else:
                 receipt["outcome"] = "returned"
                 if provider == "context":
-                    receipt["text"] = data.get("markdown")
-                    receipt["final_url"] = data.get("url")
+                    markdown = data.get("markdown")
+                    receipt["final_url"] = (data.get("metadata") or {}).get("finalUrl") or data.get("url")
+                    if not isinstance(markdown, dict) or markdown.get("requested") is not True:
+                        fail("INVALID_RESPONSE_SCHEMA", "Expected a requested Markdown output")
+                    elif markdown.get("success") is False:
+                        fail(markdown.get("error_code") or "CONTEXT_ERROR",
+                             markdown.get("message") or "Markdown extraction failed", "provider_error")
+                    elif markdown.get("success") is True:
+                        receipt["text"] = markdown.get("data")
+                    else:
+                        fail("INVALID_RESPONSE_SCHEMA", "Markdown output has no success status")
                     receipt["credits"] = _number((data.get("key_metadata") or {}).get("credits_consumed"))
                     receipt["cache"] = data.get("cache_metadata") or {}
-                    if data.get("success") is False:
-                        fail(data.get("error_code", "CONTEXT_ERROR"), data.get("message", "Provider reported failure"), "provider_error")
                 elif provider == "firecrawl":
                     page = data.get("data") or {}
                     meta = page.get("metadata") or {}
