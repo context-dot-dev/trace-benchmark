@@ -38,7 +38,7 @@ async function send(req:IncomingMessage,res:ServerResponse,body:Buffer,type:stri
   res.end(req.method==='HEAD'?undefined:wire);
 }
 
-const server=createServer(async(req,res)=>{
+export async function handler(req:IncomingMessage,res:ServerResponse){
   try{
     if(!['GET','HEAD'].includes(req.method||'')){res.writeHead(405,{'Allow':'GET, HEAD'});res.end();return;}
     const request=new URL(req.url||'/','http://localhost');
@@ -65,6 +65,12 @@ const server=createServer(async(req,res)=>{
       }
       return await send(req,res,html,'text/html; charset=utf-8');
     }
+    if(mode==='neon'&&request.pathname.startsWith('/data/')){
+      const path=decodeURIComponent(request.pathname.slice(6));
+      if(!/^(latest|run-sampling|replenishment)\.json$|^runs\/[A-Za-z0-9._:-]+\.json$/.test(path))throw Object.assign(new Error('Not found'),{status:404});
+      const data=await (source as NeonSource).publicFile(path);
+      return await send(req,res,Buffer.from(data),'application/json; charset=utf-8');
+    }
     const path=await realpath(resolve(site,'.'+decodeURIComponent(request.pathname)));
     if(!path.startsWith(site+sep)||!(await stat(path)).isFile())throw Object.assign(new Error('Not found'),{status:404});
     return await send(req,res,await readFile(path),types[extname(path)]||'application/octet-stream',/^\/assets\/.+-[A-Za-z0-9_-]{8}\.[a-z0-9]+$/.test(request.pathname)?{'Cache-Control':'public, max-age=31536000, immutable'}:{});
@@ -74,5 +80,6 @@ const server=createServer(async(req,res)=>{
     res.end(JSON.stringify({error:status===500?'Dashboard request failed':error instanceof Error?error.message:'Request failed'}));
     if(status===500)console.error('Dashboard request failed:',error instanceof Error?error.name:'Unknown error');
   }
-});
-server.listen(Number(process.env.PORT||8794),'127.0.0.1',()=>{const address=server.address();console.log('TRACE dashboard: http://127.0.0.1:'+(address&&typeof address==='object'?address.port:address)+' ('+mode+')');});
+}
+const server=createServer(handler);
+if(!process.env.VERCEL)server.listen(Number(process.env.PORT||8794),'127.0.0.1',()=>{const address=server.address();console.log('TRACE dashboard: http://127.0.0.1:'+(address&&typeof address==='object'?address.port:address)+' ('+mode+')');});

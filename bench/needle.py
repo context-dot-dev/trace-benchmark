@@ -201,7 +201,7 @@ def _materialize(store):
     return run_id
 
 
-def collect_needle(store, per_family=10):
+def collect_needle(store, per_family=10, max_searches=None):
     """Return one ready reader run, or None. Caller holds the normal worker lock.
 
     Repeated calls can consume remaining fresh queries from an upstream family run.
@@ -226,6 +226,7 @@ def collect_needle(store, per_family=10):
     clock = datetime.fromisoformat(now())
     last_dispatch = 0.0
     family_status = {}
+    total_searches = 0
     for family in FAMILIES:
         family_rows = [r for r in rows if r.get('bench')==family and isinstance(r.get('query_text'),str) and r.get('run_id')]
         if not family_rows:
@@ -245,7 +246,7 @@ def collect_needle(store, per_family=10):
         candidates.sort(key=lambda r:_timestamp(r) or '',reverse=True)
         searched=0
         for row in candidates:
-            if searched>=per_family:
+            if searched>=per_family or (max_searches is not None and total_searches>=max_searches):
                 break
             claim=_claim(store,row,snapshot)
             if not claim:
@@ -258,6 +259,7 @@ def collect_needle(store, per_family=10):
             claim.update(status='completed' if receipt.get('status')==200 and not receipt.get('error') else 'search_failed',receipt_blob=store.blob(receipt))
             store.meta(QUERY_PREFIX+claim['query_hash'],claim)
             searched+=1
+            total_searches+=1
             if receipt.get('status') in (401,402):
                 store.meta('circuit:context',{'error_code':'HTTP_'+str(receipt['status']),'at':now()})
                 break

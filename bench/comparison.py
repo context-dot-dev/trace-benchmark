@@ -45,13 +45,23 @@ def build_request(task,entries):
     return payload,labels,pairs
 
 
-async def compare_run(store,run_id):
+async def compare_run(store,run_id,limit=None):
     metadata=json.loads(store.db.execute('SELECT metadata FROM runs WHERE id=?',(run_id,)).fetchone()[0])
     providers=[p['id'] for p in run_providers(metadata)]
     rows=list(store.db.execute('SELECT o.*,j.data AS judgment,j.status AS judge_status FROM observations o LEFT JOIN judgments j ON j.observation_id=o.id WHERE o.run_id=?',(run_id,)))
     grouped={}
     for row in rows:grouped.setdefault(row['task_id'],{})[row['provider']]=row
     tasks=[json.loads(r[0]) for r in store.db.execute('SELECT data FROM tasks WHERE run_id=?',(run_id,))]
+    if limit is not None:
+        pending=[]
+        saved={r['key']:json.loads(r['value']) for r in store.db.execute('SELECT key,value FROM metadata WHERE key LIKE ?',('output_comparison:'+run_id+':%',))}
+        for task in tasks:
+            previous=saved.get('output_comparison:'+run_id+':'+task['id'])
+            group=grouped.get(task['id'],{})
+            if previous and not (previous['status']=='pending_budget' and previous.get('day')!=now()[:10]):continue
+            if all(p in group and group[p]['blob'] and group[p]['judge_status']=='completed' for p in providers):pending.append(task)
+            if len(pending)>=limit:break
+        tasks=pending
     from .execution import settings
     concurrency=settings(store,run_id)['judge_concurrency']
     semaphore=asyncio.Semaphore(concurrency)

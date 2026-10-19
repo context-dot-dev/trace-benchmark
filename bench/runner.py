@@ -79,7 +79,10 @@ class Runner:
         reservation=oid if attempt==1 else oid+':attempt:'+str(attempt)
         if not self.store.reserve_all(buckets,reservation):return
         with self.store.db:self.store.db.execute('INSERT INTO observations VALUES(?,?,?,?,?,?,?,?)',(oid,run_id,task['id'],provider,'dispatched',None,None,now()))
-        obs=await fetch_reader(provider,task['url'],{'client':self.reader_clients.get(provider)})
+        if getattr(self.store,'serverless',False):
+            obs=await asyncio.to_thread(lambda: asyncio.run(fetch_reader(provider,task['url'])))
+        else:
+            obs=await fetch_reader(provider,task['url'],{'client':self.reader_clients.get(provider)})
         obs['acquisition_attempt']=attempt
         self.save_observation(oid,obs)
         if obs.get('outcome')=='harness_error' and (obs.get('api_status') in (401,402) or obs.get('error_code') in ('MISSING_CREDENTIAL','missing_api_key','missing_key')):
@@ -118,11 +121,11 @@ class Runner:
             if self.score_ready:self.score_ready.set()
         await publish_progress_async(self.store,self.export_path)
 
-    async def run(self,run_id):
+    async def run(self,run_id,task_limit=None):
         self.config=settings(self.store,run_id)
         self.sem=asyncio.Semaphore(self.config['page_concurrency'])
         record(self.store,run_id,'acquisition',self.config)
-        if self.profile['scheduled'] and shutil.disk_usage(self.store.root).free < 10_000_000_000:
+        if not getattr(self.store,'serverless',False) and self.profile['scheduled'] and shutil.disk_usage(self.store.root).free < 10_000_000_000:
             raise RuntimeError('Collection paused: less than10GB free for immutable receipts; expand/archive storage before dispatch.')
         metadata=json.loads(self.store.db.execute('SELECT metadata FROM runs WHERE id=?',(run_id,)).fetchone()[0])
         self.providers=run_providers(metadata)
@@ -135,7 +138,11 @@ class Runner:
                 await self.references.close()
                 raise RuntimeError('Reference browser failed before any reader dispatch: '+error[:180])
         tasks=[json.loads(r[0]) for r in self.store.db.execute('SELECT data FROM tasks WHERE run_id=? ORDER BY id',(run_id,))]
-        pipeline=policy(self.store,run_id,metadata).get('pipeline_scoring') is True
+        all_tasks=tasks
+        if task_limit is not None:
+            counts={r['task_id']:r['n'] for r in self.store.db.execute('SELECT task_id,COUNT(*) AS n FROM observations WHERE run_id=? GROUP BY task_id',(run_id,))}
+            tasks=[t for t in tasks if counts.get(t['id'],0)<len(self.providers)][:task_limit]
+        pipeline=task_limit is None and policy(self.store,run_id,metadata).get('pipeline_scoring') is True
         self.score_ready=asyncio.Event() if pipeline else None
         done=asyncio.Event()
         async def score_loop():
@@ -169,7 +176,9 @@ class Runner:
                     except Exception as exc:print(safe_json({'action':'reference_cleanup_failed','run_id':run_id,'error':type(exc).__name__}),flush=True)
         missing=self.store.db.execute("SELECT COUNT(*) FROM observations WHERE run_id=? AND status='dispatched'",(run_id,)).fetchone()[0]
         count=self.store.db.execute('SELECT COUNT(*) FROM observations WHERE run_id=?',(run_id,)).fetchone()[0]
-        self.store.close_run(run_id,'acquired' if not missing and count==len(tasks)*len(self.providers) else 'incomplete')
+        if task_limit is not None and count<len(all_tasks)*len(self.providers):
+            return
+        self.store.close_run(run_id,'acquired' if not missing and count==len(all_tasks)*len(self.providers) else 'incomplete')
         publish(self.store,self.export_path)
 
 
@@ -188,9 +197,10 @@ async def score_available(store,run_id,export_path,config):
         await compare_run(store,run_id)
 
 
-async def judge_observations(store,run_id,export_path,config):
+async def judge_observations(store,run_id,export_path,config,limit=None):
     semaphore=asyncio.Semaphore(config['judge_concurrency'])
     rows=list(store.db.execute('SELECT o.*,t.data AS task_data FROM observations o JOIN tasks t ON t.run_id=o.run_id AND t.id=o.task_id WHERE o.run_id=? AND o.blob IS NOT NULL AND NOT EXISTS (SELECT 1 FROM judgments j WHERE j.observation_id=o.id)',(run_id,)))
+    if limit is not None: rows=rows[:limit]
     async def one(row):
         oid=row['id']
         if store.db.execute('SELECT 1 FROM judgments WHERE observation_id=?',(oid,)).fetchone():return

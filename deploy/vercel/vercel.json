@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "rewrites": [
-    {"source": "/:path*", "destination": "https://trace.2.28.61.111.sslip.io/:path*"}
-  ]
-}

@@ -10,7 +10,8 @@ POLICIES={
 def audit(provider,request,cache):
     policy=POLICIES.get(provider)
     if not policy:return {'requested':False,'evidence':'unreported'}
-    value=(request.get(policy['location']) or {}).get(policy['parameter'])
+    location='json' if provider=='context' and request.get('method')=='POST' else policy['location']
+    value=(request.get(location) or {}).get(policy['parameter'])
     requested=type(value) is type(policy['value']) and value==policy['value']
     evidence='unreported'
     if provider=='context':
