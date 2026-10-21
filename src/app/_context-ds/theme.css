@@ -1,0 +1,309 @@
+/* Written by context-ds from its brand files. Do not edit; run the CLI again to update. */
+@theme inline {
+	--color-brand: var(--ds-color-brand);
+	--color-black: var(--ds-color-black);
+	--color-white: var(--ds-color-white);
+	--color-primary: var(--ds-color-action-primary);
+	--color-primary-hover: var(--ds-color-action-primary-hover);
+	--color-on-primary: var(--ds-color-action-primary-fg);
+	--color-focus-ring: var(--ds-color-focus-ring);
+	--color-surface: var(--ds-color-bg-default);
+	--color-subtle: var(--ds-color-bg-subtle);
+	--color-frame: var(--ds-color-bg-frame);
+	--color-canvas: var(--ds-color-bg-canvas);
+	--color-tint: var(--ds-color-bg-tint);
+	--color-inverse: var(--ds-color-bg-inverse);
+	--color-dark: var(--ds-color-bg-dark);
+	--color-code: var(--ds-color-bg-code);
+	--color-scrim: var(--ds-color-bg-scrim);
+	--color-announcement: var(--ds-color-bg-announcement);
+	--color-fg: var(--ds-color-text-default);
+	--color-fg-secondary: var(--ds-color-text-secondary);
+	--color-fg-muted: var(--ds-color-text-muted);
+	--color-fg-subtle: var(--ds-color-text-subtle);
+	--color-fg-faint: var(--ds-color-text-faint);
+	--color-fg-nav: var(--ds-color-text-nav);
+	--color-fg-inverse: var(--ds-color-text-inverse);
+	--color-fg-brand: var(--ds-color-text-brand);
+	--color-on-brand: var(--ds-color-text-on-brand);
+	--color-line: var(--ds-color-border-default);
+	--color-line-subtle: var(--ds-color-border-subtle);
+	--color-line-strong: var(--ds-color-border-strong);
+	--color-hairline: var(--ds-color-border-hairline);
+	--color-rule: var(--ds-color-border-rule);
+	--color-node: var(--ds-color-border-node);
+	--color-ring-tint: var(--ds-color-ring-tint);
+	--color-ring-on-brand: var(--ds-color-ring-on-brand);
+	--color-wash-hover: var(--ds-color-wash-hover);
+	--color-wash-announcement: var(--ds-color-wash-announcement);
+	--color-wash-control: var(--ds-color-wash-control);
+	--color-wash-pill: var(--ds-color-wash-pill);
+	--color-wash-selected: var(--ds-color-wash-selected);
+	--color-success: var(--ds-color-status-success);
+	--color-warning: var(--ds-color-status-warning);
+	--color-danger: var(--ds-color-status-danger);
+	--color-window-close: var(--ds-color-window-close);
+	--color-window-minimize: var(--ds-color-window-minimize);
+	--color-window-zoom: var(--ds-color-window-zoom);
+	--color-blue-10: var(--ds-color-blue-10);
+	--color-blue-20: var(--ds-color-blue-20);
+	--color-blue-40: var(--ds-color-blue-40);
+	--color-blue-60: var(--ds-color-blue-60);
+	--color-blue-80: var(--ds-color-blue-80);
+	--color-blue-90: var(--ds-color-blue-90);
+	--color-navy-30: var(--ds-color-navy-30);
+	--color-neutral-5: var(--ds-color-neutral-5);
+	--color-neutral-10: var(--ds-color-neutral-10);
+	--color-neutral-20: var(--ds-color-neutral-20);
+	--color-neutral-40: var(--ds-color-neutral-40);
+	--color-neutral-60: var(--ds-color-neutral-60);
+	--color-neutral-70: var(--ds-color-neutral-70);
+	--color-neutral-80: var(--ds-color-neutral-80);
+	--color-neutral-90: var(--ds-color-neutral-90);
+	--color-series-1: var(--ds-color-chart-series-1);
+	--color-series-2: var(--ds-color-chart-series-2);
+	--color-series-3: var(--ds-color-chart-series-3);
+	--color-series-4: var(--ds-color-chart-series-4);
+	--color-blue-30: var(--ds-color-blue-30);
+	--color-blue-50: var(--ds-color-blue-50);
+	--color-blue-70: var(--ds-color-blue-70);
+	--color-navy-20: var(--ds-color-navy-20);
+	--color-navy-60: var(--ds-color-navy-60);
+	--color-neutral-30: var(--ds-color-neutral-30);
+	--color-neutral-50: var(--ds-color-neutral-50);
+	--color-alert-strong: var(--ds-color-alert-strong);
+	--color-alert: var(--ds-color-alert);
+	--color-alert-soft: var(--ds-color-alert-soft);
+	--color-chart-ok: var(--ds-color-chart-ok);
+	--color-chart-client-error: var(--ds-color-chart-client-error);
+	--color-chart-server-error: var(--ds-color-chart-server-error);
+	--color-chart-200: var(--ds-color-chart-200);
+	--color-chart-202: var(--ds-color-chart-202);
+	--color-chart-400: var(--ds-color-chart-400);
+	--color-chart-401: var(--ds-color-chart-401);
+	--color-chart-402: var(--ds-color-chart-402);
+	--color-chart-404: var(--ds-color-chart-404);
+	--color-chart-409: var(--ds-color-chart-409);
+	--color-chart-rate-limited: var(--ds-color-chart-rate-limited);
+	--color-skeleton-shine: var(--ds-color-skeleton-shine);
+	--font-sans: var(--ds-font-sans);
+	--font-data: var(--ds-font-data);
+	--font-mono: var(--ds-font-mono);
+	--text-hero: var(--ds-text-hero);
+	--text-hero-tablet: var(--ds-text-hero-tablet);
+	--text-hero-desktop: var(--ds-text-hero-desktop);
+	--text-h1: var(--ds-text-h1);
+	--text-h2: var(--ds-text-h2);
+	--text-h3: var(--ds-text-h3);
+	--text-h4: var(--ds-text-h4);
+	--text-h5: var(--ds-text-h5);
+	--text-body-lg: var(--ds-text-body-lg);
+	--text-body: var(--ds-text-body);
+	--text-body-sm: var(--ds-text-body-sm);
+	--text-caption: var(--ds-text-caption);
+	--text-axis: var(--ds-text-axis);
+	--text-counter: var(--ds-text-counter);
+	--text-initial: var(--ds-text-initial);
+	--text-composer: var(--ds-text-composer);
+	--text-stat: var(--ds-text-stat);
+	--text-metric: var(--ds-text-metric);
+	--text-body--line-height: var(--ds-leading-type-body);
+	--text-body-lg--line-height: var(--ds-leading-type-body);
+	--text-body-sm--line-height: var(--ds-leading-type-body);
+	--text-caption--line-height: var(--ds-leading-type-body);
+	--text-h5--line-height: var(--ds-leading-type-body);
+	--text-display--line-height: var(--ds-leading-type-display);
+	--text-h3--line-height: var(--ds-leading-type-h3);
+	--text-h4--line-height: var(--ds-leading-type-h4);
+	--leading-hero: var(--ds-leading-hero);
+	--leading-tight: var(--ds-leading-tight);
+	--leading-heading: var(--ds-leading-heading);
+	--leading-snug: var(--ds-leading-snug);
+	--leading-normal: var(--ds-leading-normal);
+	--leading-relaxed: var(--ds-leading-relaxed);
+	--leading-display: var(--ds-leading-display);
+	--leading-code: var(--ds-leading-code);
+	--leading-title: var(--ds-leading-title);
+	--leading-field: var(--ds-leading-field);
+	--leading-snippet: var(--ds-leading-snippet);
+	--leading-code-card: var(--ds-leading-code-card);
+	--leading-badge: var(--ds-leading-badge);
+	--leading-type-body: var(--ds-leading-type-body);
+	--leading-type-display: var(--ds-leading-type-display);
+	--leading-type-h3: var(--ds-leading-type-h3);
+	--leading-type-h4: var(--ds-leading-type-h4);
+	--tracking-tight: var(--ds-tracking-tight);
+	--tracking-normal: var(--ds-tracking-normal);
+	--tracking-label: var(--ds-tracking-label);
+	--radius-sm: var(--ds-radius-sm);
+	--radius-tag: var(--ds-radius-tag);
+	--radius-icon: var(--ds-radius-icon);
+	--radius-logo: var(--ds-radius-logo);
+	--radius-snippet: var(--ds-radius-snippet);
+	--radius-control: var(--ds-radius-control);
+	--radius-card: var(--ds-radius-card);
+	--radius-shell: var(--ds-radius-shell);
+	--radius-panel: var(--ds-radius-panel);
+	--radius-pill: var(--ds-radius-pill);
+	--shadow-card: var(--ds-shadow-card);
+	--shadow-raised: var(--ds-shadow-raised);
+	--shadow-floating: var(--ds-shadow-floating);
+	--shadow-key: var(--ds-shadow-key);
+	--shadow-tooltip: var(--ds-shadow-tooltip);
+	--shadow-ring-hover: var(--ds-shadow-ring-hover);
+	--shadow-drawer: var(--ds-shadow-drawer);
+	--ease-out: var(--ds-easing-out);
+	--ease-emphasized: var(--ds-easing-out);
+	--ease-in-out: var(--ds-easing-in-out);
+}
+
+@theme {
+	--animate-pop-in: ds-pop-in var(--ds-duration-fast) var(--ds-easing-out);
+	--animate-fade-in: ds-fade-in var(--ds-duration-fast) var(--ds-easing-out);
+	--animate-content-in: ds-content-in var(--ds-duration-base) var(--ds-easing-out);
+	--animate-shimmer: ds-shimmer 1.6s var(--ds-easing-in-out) infinite;
+	--animate-spin-slow: spin 0.8s linear infinite;
+	--animate-accordion-down: ds-accordion-down var(--ds-duration-base) var(--ds-easing-out);
+	--animate-accordion-up: ds-accordion-up var(--ds-duration-fast) var(--ds-easing-out);
+	--animate-chart-line: ds-chart-line 900ms var(--ds-easing-out) backwards;
+	--animate-chart-area: ds-fade-in 600ms var(--ds-easing-out) 250ms backwards;
+	--animate-chart-tip: ds-chart-tip 360ms var(--ds-easing-out) backwards;
+	--animate-chart-bar: ds-chart-bar 420ms var(--ds-easing-out) backwards;
+
+	@keyframes ds-pop-in {
+		from {
+			opacity: 0;
+			transform: scale(0.97);
+		}
+	}
+
+	@keyframes ds-fade-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes ds-content-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+	}
+
+	@keyframes ds-sheet-right {
+		from {
+			opacity: 0;
+			transform: translateX(12px);
+		}
+	}
+
+	@keyframes ds-sheet-left {
+		from {
+			opacity: 0;
+			transform: translateX(-12px);
+		}
+	}
+
+	@keyframes ds-accordion-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--radix-accordion-content-height);
+		}
+	}
+
+	@keyframes ds-accordion-up {
+		from {
+			height: var(--radix-accordion-content-height);
+		}
+		to {
+			height: 0;
+		}
+	}
+
+	@keyframes ds-chart-line {
+		from {
+			stroke-dashoffset: 1;
+		}
+	}
+
+	@keyframes ds-chart-tip {
+		from {
+			opacity: 0;
+			transform: scale(0.4);
+		}
+	}
+
+	@keyframes ds-chart-bar {
+		from {
+			transform: scaleY(0.04);
+		}
+	}
+
+	@keyframes ds-shimmer {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(100%);
+		}
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	@keyframes ds-pop-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes ds-content-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes ds-sheet-right {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes ds-sheet-left {
+		from {
+			opacity: 0;
+		}
+	}
+}
+
+
+@theme {
+  --animate-sheet-right-out: ds-sheet-right-out var(--ds-duration-fast) var(--ds-easing-out) forwards;
+  @keyframes ds-sheet-right-out { to { opacity: 0; translate: var(--ds-space-2) 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes ds-sheet-right-out { to { opacity: 0; } }
+}
+
+@theme {
+  --animate-sheet-left-out: ds-sheet-left-out var(--ds-duration-fast) var(--ds-easing-out) forwards;
+  @keyframes ds-sheet-left-out { to { opacity: 0; translate: calc(-1 * var(--ds-space-2)) 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes ds-sheet-left-out { to { opacity: 0; } }
+}
+
+@theme {
+  --animate-sheet-bottom-out: ds-sheet-bottom-out var(--ds-duration-fast) var(--ds-easing-out) forwards;
+  @keyframes ds-sheet-bottom-out { to { opacity: 0; translate: 0 var(--ds-space-2); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes ds-sheet-bottom-out { to { opacity: 0; } }
+}
+
+.ds-scrollbar { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.ds-scrollbar[data-scrolling] { scrollbar-color: var(--ds-color-neutral-20) transparent; }
+.ds-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+.ds-scrollbar::-webkit-scrollbar-thumb { border-radius: 3px; background: transparent; }
+.ds-scrollbar[data-scrolling]::-webkit-scrollbar-thumb { background: var(--ds-color-neutral-20); }

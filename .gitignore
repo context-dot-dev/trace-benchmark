@@ -24,3 +24,8 @@ site/pricing.json
 .vercel_python_packages/
 _uv/
 server/functions/
+
+# Next.js local development
+.next/
+out/
+tsconfig.tsbuildinfo

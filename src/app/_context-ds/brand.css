@@ -1,0 +1,453 @@
+/* Written by context-ds from its brand files. Do not edit; run the CLI again to update. */
+:root, .ds-site {
+	/* Core */
+	--ds-color-brand: #2563EB;
+	--ds-color-black: #000000;
+	--ds-color-white: #FFFFFF;
+	--ds-color-blue-10: #E9EFFD;
+	--ds-color-blue-20: #D3E0FB;
+	--ds-color-blue-40: #A8C1F7;
+	--ds-color-blue-60: #7CA1F3;
+	--ds-color-blue-80: #5182EF;
+	--ds-color-blue-90: #3B73ED;
+	--ds-color-navy-30: #0B1E46;
+	--ds-color-neutral-5: #F8F8F8;
+	--ds-color-neutral-10: #E6E6E6;
+	--ds-color-neutral-20: #CCCCCC;
+	--ds-color-neutral-40: #999999;
+	--ds-color-neutral-60: #666666;
+	--ds-color-neutral-70: #4D4D4D;
+	--ds-color-neutral-80: #333333;
+	--ds-color-neutral-90: #191919;
+
+	/* Surfaces: white, blue or black, never a gray page */
+	--ds-color-bg-default: #FFFFFF;
+	--ds-color-bg-subtle: #F8F8F8;
+	--ds-color-bg-frame: #F2F2F2;
+	--ds-color-bg-canvas: #FAFAFA;
+	--ds-color-bg-tint: #E9EFFD;
+	--ds-color-bg-brand: #2563EB;
+	--ds-color-bg-inverse: #000000;
+	--ds-color-bg-dark: #1A1A1A;
+	--ds-color-bg-code: #0D1117;
+	--ds-color-bg-scrim: rgb(0 0 0 / 0.1);
+	--ds-color-bg-announcement: #F7F8FA;
+
+	/* Text: black, and black at 65, 60, 55 and 40 percent on white */
+	--ds-color-text-default: #000000;
+	--ds-color-text-secondary: #595959;
+	--ds-color-text-muted: #666666;
+	--ds-color-text-subtle: #737373;
+	--ds-color-text-nav: #4D4D4D;
+	--ds-color-text-faint: #999999;
+	--ds-color-text-inverse: #FFFFFF;
+	--ds-color-text-brand: #2563EB;
+	--ds-color-text-on-brand: #FFFFFF;
+
+	/* Lines */
+	--ds-color-border-default: #E6E6E6;
+	--ds-color-border-subtle: #F0F0F0;
+	--ds-color-border-strong: #CCCCCC;
+	--ds-color-border-hairline: rgb(0 0 0 / 0.08);
+	--ds-color-border-rule: #E5E7EB;
+	--ds-color-border-node: #D1D5DC;
+	--ds-color-border-brand: #2563EB;
+	--ds-color-border-on-brand: #FFFFFF;
+	--ds-color-ring-tint: rgb(37 99 235 / 0.1);
+	--ds-color-ring-on-brand: rgb(255 255 255 / 0.3);
+	--ds-color-wash-hover: rgb(0 0 0 / 0.04);
+	--ds-color-wash-announcement: rgb(0 0 0 / 0.035);
+	--ds-color-wash-control: rgb(0 0 0 / 0.05);
+	--ds-color-wash-pill: rgb(0 0 0 / 0.06);
+	--ds-color-wash-selected: rgb(0 0 0 / 0.07);
+
+	/* Actions and states */
+	--ds-color-action-primary: #000000;
+	--ds-color-action-primary-hover: #333333;
+	--ds-color-action-primary-fg: #FFFFFF;
+	--ds-color-status-success: #15803D;
+	--ds-color-status-warning: #B45309;
+	--ds-color-status-danger: #DC2626;
+	--ds-color-focus-ring: #2563EB;
+	--ds-color-chart-series-1: #3B82F6;
+	--ds-color-chart-series-2: #14B8A6;
+	--ds-color-chart-series-3: #F59E0B;
+	--ds-color-chart-series-4: #8B5CF6;
+	/* The three dots of a code window's title bar. */
+	--ds-color-window-close: #FF5F56;
+	--ds-color-window-minimize: #FFBD2E;
+	--ds-color-window-zoom: #27C93F;
+	/* From the dashboard redesign (brand-dev-webapp PR 1045, dashboard-system.css): the full ramps, alerts, the
+	   HTTP status chart colors and the skeleton sheen. */
+	--ds-color-blue-30: #BED0F9;
+	--ds-color-blue-50: #92B1F5;
+	--ds-color-blue-70: #6692F1;
+	--ds-color-navy-20: #07142F;
+	--ds-color-navy-60: #163B8D;
+	--ds-color-neutral-30: #B2B2B2;
+	--ds-color-neutral-50: #808080;
+	--ds-color-alert-strong: #E5484D;
+	--ds-color-alert: #F0868A;
+	--ds-color-alert-soft: #F7C0C2;
+	--ds-color-chart-ok: #22C55E;
+	--ds-color-chart-client-error: #F59E0B;
+	--ds-color-chart-server-error: #F97316;
+	--ds-color-chart-200: #22C55E;
+	--ds-color-chart-202: #10B981;
+	--ds-color-chart-400: #F59E0B;
+	--ds-color-chart-401: #EF4444;
+	--ds-color-chart-402: #EC4899;
+	--ds-color-chart-404: #F97316;
+	--ds-color-chart-409: #EAB308;
+	--ds-color-chart-rate-limited: #9A7FE0;
+	--ds-color-skeleton-shine: #EDEDED;
+
+	/* Type */
+	--ds-font-sans: var(--font-rethink-sans, "Rethink Sans"), system-ui, sans-serif;
+	--ds-font-data: var(--font-doto, "Doto"), ui-monospace, monospace;
+	--ds-font-mono: var(--ds-font-sans);
+	--ds-font-weight-regular: 400;
+	--ds-font-weight-medium: 500;
+	--ds-text-hero: 2.5rem;
+	--ds-text-hero-tablet: 48px;
+	--ds-text-hero-desktop: 56px;
+	--ds-leading-hero: 1.08;
+	--ds-text-h1: 3.5rem;
+	--ds-text-h2: 2.75rem;
+	--ds-text-h3: 2rem;
+	--ds-text-h4: 1.5rem;
+	--ds-text-h5: 1.25rem;
+	--ds-text-body-lg: 1.125rem;
+	--ds-text-body: 1rem;
+	--ds-text-body-sm: 0.875rem;
+	--ds-text-caption: 0.75rem;
+	/* Chart axis labels (the product's charts). */
+	--ds-text-axis: 11px;
+	--ds-text-counter: 10px;
+	--ds-text-initial: 9px;
+	--ds-text-composer: 13.5px;
+	--ds-text-stat: 22px;
+	--ds-text-metric: 26px;
+	--ds-leading-tight: 1.1;
+	--ds-leading-heading: 1.2;
+	--ds-leading-snug: 1.3;
+	--ds-leading-normal: 1.5;
+	--ds-leading-relaxed: 1.625;
+	/* Section headings on the site, and code in a window. */
+	--ds-leading-display: 1.12;
+	--ds-leading-code: 1.7;
+	--ds-leading-title: 1.4;
+	--ds-leading-field: 1.45;
+	--ds-leading-snippet: 1.6;
+	--ds-leading-code-card: 1.65;
+	--ds-leading-badge: 14px;
+	--ds-leading-type-body: 1.3;
+	--ds-leading-type-display: 1.625;
+	--ds-leading-type-h3: 1.2;
+	--ds-leading-type-h4: 1.2;
+	--ds-tracking-tight: -0.035em;
+	--ds-tracking-normal: 0;
+	--ds-tracking-label: 0.08em;
+
+	/* Space (rem, so it follows the root) */
+	--ds-space-0: 0;
+	--ds-space-px: 1px;
+	--ds-space-frame: 6px;
+	--ds-space-0-5: 0.125rem;
+	--ds-space-1: 0.25rem;
+	--ds-space-1-5: 0.375rem;
+	--ds-space-2: 0.5rem;
+	--ds-space-2-5: 0.625rem;
+	--ds-space-3: 0.75rem;
+	--ds-space-3-5: 0.875rem;
+	--ds-space-4: 1rem;
+	--ds-space-5: 1.25rem;
+	--ds-space-6: 1.5rem;
+	--ds-space-7: 1.75rem;
+	--ds-space-8: 2rem;
+	--ds-space-9: 2.25rem;
+	--ds-space-10: 2.5rem;
+	--ds-space-12: 3rem;
+	--ds-space-14: 3.5rem;
+	--ds-space-16: 4rem;
+	--ds-space-20: 5rem;
+	--ds-space-24: 6rem;
+	--ds-space-32: 8rem;
+
+	/* Layout */
+	--ds-layout-column: 68.75rem;
+	--ds-layout-column-wide: 81.25rem;
+	/* The ruled column's width: full width on phones, 90vw, then min(85vw, column-wide) (site.css). Content containers use it. */
+	--ds-frame-column: calc(100% - 2px);
+	--ds-layout-text: 36rem;
+	--ds-layout-heading: 42rem;
+	--ds-layout-sidebar: 212px;
+	--ds-layout-parameters: 320px;
+	--ds-layout-parameters-header: 32px;
+	--ds-layout-product-column: 880px;
+
+	/* Shape */
+	--ds-radius-sm: 0.25rem;
+	--ds-radius-tag: 0.375rem;
+	--ds-radius-icon: 4px;
+	--ds-radius-logo: 5px;
+	--ds-radius-snippet: 7px;
+	--ds-radius-control: 0.5rem;
+	--ds-radius-card: 0.5rem;
+	--ds-radius-shell: 0.75rem;
+	--ds-radius-panel: 2.5rem;
+	--ds-radius-pill: 9999px;
+	--ds-shadow-card: 0 0 0 1px var(--ds-color-border-hairline);
+	--ds-shadow-raised: 0 0.25rem 0.5rem rgb(41 41 41 / 0.06), 0 0.125rem 0.25rem rgb(41 41 41 / 0.04), 0 0 0 1px rgb(41 41 41 / 0.08);
+	--ds-shadow-floating: 0 0 0 1px rgb(0 0 0 / 0.06), 0 0.5rem 1.5rem -0.5rem rgb(0 0 0 / 0.12);
+	--ds-shadow-key: 0 1px 2px rgb(0 0 0 / 0.16);
+	--ds-shadow-tooltip: 0 0 0 1px var(--ds-color-border-hairline), 0 4px 12px rgb(0 0 0 / 0.08);
+	--ds-shadow-ring-hover: 0 0 0 4px var(--ds-color-ring-tint);
+	--ds-shadow-drawer: 0 0 0 1px var(--ds-color-border-hairline), 0 12px 32px rgb(0 0 0 / 0.16);
+
+	/* Motion: fast UI feedback only, no ease-in */
+	--ds-duration-fast: 150ms;
+	--ds-duration-base: 200ms;
+	--ds-duration-moderate: 250ms;
+	--ds-duration-slow: 300ms;
+	--ds-easing-out: cubic-bezier(0.22, 1, 0.36, 1);
+	--ds-easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ds-product {
+	--ds-color-bg-default: #FFFFFF;
+	--ds-color-text-muted: #4D4D4D;
+	--ds-color-text-subtle: #707070;
+	--ds-color-border-hairline: rgb(0 0 0 / 0.06);
+	--ds-text-display: 56px;
+	--ds-text-h3: 28px;
+	--ds-text-h4: 21px;
+	--ds-text-h5: 18px;
+	--ds-text-body-lg: 16px;
+	--ds-text-body: 15px;
+	--ds-text-body-sm: 12.6px;
+	--ds-text-caption: 12px;
+	--ds-leading-type-body: 1.3;
+	--ds-leading-type-display: 1.15;
+	--ds-leading-type-h3: 1.2;
+	--ds-leading-type-h4: 1.4;
+	--ds-radius-control: 7.5px;
+	--ds-radius-card: 10px;
+	--ds-radius-shell: 12px;
+	--ds-shadow-card: 0 0 0 1px var(--ds-color-border-hairline), 0 1px 1px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.06), 0 4px 14px -4px rgb(0 0 0 / 0.1);
+	--ds-shadow-floating: 0 0 0 1px var(--ds-color-border-hairline), 0 0.5rem 1.5rem -0.5rem rgb(0 0 0 / 0.16);
+}
+
+.dark .ds-product,
+[data-theme="dark"] .ds-product,
+.ds-product:is(.dark, [data-theme="dark"]) {
+	--ds-color-brand: #3B73ED;
+	--ds-color-bg-default: #151517;
+	--ds-color-bg-canvas: #151517;
+	--ds-color-bg-subtle: #1C1C1E;
+	--ds-color-bg-frame: #0C0C0D;
+	--ds-color-bg-tint: #172340;
+	--ds-color-bg-brand: #3B73ED;
+	--ds-color-bg-scrim: rgb(0 0 0 / 0.5);
+	--ds-color-text-default: #F4F4F5;
+	--ds-color-text-secondary: #B8B8BD;
+	--ds-color-text-muted: #B8B8BD;
+	--ds-color-text-subtle: #85858B;
+	--ds-color-text-faint: #66666B;
+	--ds-color-text-nav: #B8B8BD;
+	--ds-color-text-inverse: #000000;
+	--ds-color-text-brand: #7CA1F3;
+	--ds-color-border-default: #2A2A2D;
+	--ds-color-border-subtle: #212124;
+	--ds-color-border-strong: #3A3A3E;
+	--ds-color-border-hairline: rgb(255 255 255 / 0.07);
+	--ds-color-wash-hover: rgb(255 255 255 / 0.04);
+	--ds-color-wash-control: rgb(255 255 255 / 0.05);
+	--ds-color-wash-pill: rgb(255 255 255 / 0.06);
+	--ds-color-wash-selected: rgb(255 255 255 / 0.07);
+	--ds-color-action-primary: #F4F4F5;
+	--ds-color-action-primary-hover: #D4D4D8;
+	--ds-color-action-primary-fg: #000000;
+	--ds-color-status-success: #4ADE80;
+	--ds-color-status-warning: #FBBF24;
+	--ds-color-status-danger: #F87171;
+	--ds-color-focus-ring: #7CA1F3;
+	--ds-color-blue-10: #172340;
+	--ds-color-blue-20: #1C2D55;
+	--ds-color-blue-30: #233A6D;
+	--ds-color-blue-40: #2C4A8A;
+	--ds-color-neutral-5: #1C1C1E;
+	--ds-color-neutral-10: #2A2A2D;
+	--ds-color-neutral-20: #3A3A3E;
+	--ds-color-neutral-30: #4D4D52;
+	--ds-color-neutral-40: #66666B;
+	--ds-color-neutral-50: #808085;
+	--ds-color-neutral-60: #9C9CA1;
+	--ds-color-neutral-70: #B8B8BD;
+	--ds-color-neutral-80: #D4D4D8;
+	--ds-color-neutral-90: #ECECEF;
+	--ds-color-alert-strong: #F0646A;
+	--ds-color-alert: #C9565B;
+	--ds-color-alert-soft: #7A3A3E;
+	--ds-color-chart-rate-limited: #8A70D6;
+	--ds-color-skeleton-shine: #262629;
+}
+
+/* The site layer: what every Context.dev marketing page has before any component is styled, measured from the
+   redesign branch. Defaults use :where() so the site's own rules still win; only the frame lines and the touches are
+   added. */
+
+/* The site renders its rem scale at 90% from 43.2rem up (a 14px token reads 12.6px); phones keep the full size. */
+@media (min-width: 43.2rem) {
+	html {
+		font-size: 90%;
+	}
+}
+
+/* Element defaults sit in the base layer, so a utility class on an element (a library component's text-white) wins
+   over them; their :where() selectors already let an app's own rules win. */
+@layer base {
+	html,
+	body {
+		background-color: var(--ds-color-bg-default);
+		color: var(--ds-color-text-default);
+	}
+
+	body {
+		font-family: var(--ds-font-sans);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+
+	:where(h1, h2, h3, h4, h5, h6) {
+		font-family: var(--ds-font-sans);
+		font-weight: var(--ds-font-weight-regular);
+		color: var(--ds-color-text-default);
+		text-wrap: balance;
+	}
+
+	:where(h1, h2, h3) {
+		letter-spacing: var(--ds-tracking-tight);
+		line-height: var(--ds-leading-heading);
+	}
+
+	:where(p, li, blockquote, figcaption, dd, td) {
+		text-wrap: pretty;
+	}
+
+	:where(code, kbd, pre, samp) {
+		font-family: var(--ds-font-mono);
+	}
+
+	::selection {
+		background-color: var(--ds-color-blue-60);
+		color: var(--ds-color-white);
+	}
+
+	:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+		outline: 2px solid var(--ds-color-focus-ring);
+		outline-offset: 2px;
+	}
+}
+
+/* The ruled column: hairlines down both edges of the content column from below the hero to the end, a full-bleed rule between
+   top-level sections, and a solid node where a rule meets a column edge. The lines sit above section backgrounds (a
+   hero's own fill would hide them) and under anything positioned above them; content keeps inside them. */
+@media (min-width: 43.2rem) {
+	:root {
+		--ds-frame-column: 90vw;
+	}
+}
+
+@media (min-width: 57.6rem) {
+	:root {
+		--ds-frame-column: min(85vw, var(--ds-layout-column-wide));
+	}
+}
+
+body {
+	position: relative;
+	isolation: isolate;
+}
+
+body::after {
+	content: "";
+	position: absolute;
+	inset-block: 0;
+	left: 50%;
+	z-index: 0;
+	width: var(--ds-frame-column);
+	transform: translateX(-50%);
+	border-inline: 1px solid var(--ds-color-border-rule);
+	pointer-events: none;
+}
+
+:where(body, main) > :where(section) + :where(section, footer) {
+	position: relative;
+	border-top: 1px solid var(--ds-color-border-rule);
+}
+
+/* The hero (and the header over it) has no side lines, as on the brand's pages: the opening section sits above them on
+   the page's own white, and the lines begin at the rule under it. */
+:where([data-ds-dots], .hero, main > section:first-child, body > section:first-of-type) {
+	position: relative;
+	z-index: 1;
+	background-color: var(--ds-color-bg-default);
+}
+
+:where(body, body > div, main) > :where(footer) {
+	position: relative;
+	z-index: 1;
+}
+
+:where(body, main) > :where(section) + :where(section, footer)::before {
+	content: "";
+	position: absolute;
+	top: calc(-1 * var(--ds-space-1) - 0.5px);
+	left: 0;
+	z-index: 1;
+	width: 100%;
+	height: var(--ds-space-2);
+	background:
+		radial-gradient(circle closest-side, var(--ds-color-border-node) 92%, transparent) calc(50% - var(--ds-frame-column) / 2) center / var(--ds-space-2) var(--ds-space-2) no-repeat,
+		radial-gradient(circle closest-side, var(--ds-color-border-node) 92%, transparent) calc(50% + var(--ds-frame-column) / 2) center / var(--ds-space-2) var(--ds-space-2) no-repeat;
+	pointer-events: none;
+}
+
+/* Touches. Few and quiet, as on the brand's site. */
+
+/* The key phrase of a headline (its last few words) in blue, same weight. */
+.ds-accent {
+	color: var(--ds-color-text-brand);
+	font-weight: inherit;
+}
+
+/* A large figure (a stat, a step number) in Doto. Never words. */
+.ds-figure {
+	font-family: var(--ds-font-data);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+}
+
+/* The hero's dot streams (dots.js): small dots running in from the hero's edges, the middle bare. */
+[data-ds-dots] {
+	position: relative;
+	isolation: isolate;
+}
+
+[data-ds-dots] > [data-ds-dots-layer] {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	width: 100%;
+	height: 100%;
+	color: color-mix(in srgb, var(--ds-color-brand) 60%, transparent);
+	pointer-events: none;
+	opacity: 0;
+	/* Fades in once measured, so the dots never pop in around the text. */
+	transition: opacity var(--ds-duration-base) var(--ds-easing-out);
+}
+
+[data-ds-dots] > [data-ds-dots-layer][data-ready] {
+	opacity: 1;
+}
