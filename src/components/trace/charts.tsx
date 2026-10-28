@@ -59,9 +59,11 @@ export type GroupDatum = { id: string; label: string; values: Record<string, { r
 export function PageTypeChart({ providers, groups }: { providers: ChartProvider[]; groups: GroupDatum[] }) {
   return (
     <div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
-      {groups.map((group) => (
+      {groups.map((group) => {
+        const pageCount = Math.max(0, ...providers.map(provider => group.values[provider.id]?.count ?? 0));
+        return (
         <div key={group.id}>
-          <h3 className="mb-3 flex items-baseline justify-between gap-3 text-body font-medium">{group.label}<span className="text-caption font-normal text-fg-muted">{Math.max(0, ...providers.map(provider => group.values[provider.id]?.count ?? 0)).toLocaleString("en-US")} pages</span></h3>
+          <h3 className="mb-3 flex items-baseline justify-between gap-3 text-body font-medium">{group.label}<span className="text-caption font-normal text-fg-muted">{pageCount.toLocaleString("en-US")} {pageCount === 1 ? "page" : "pages"}</span></h3>
           {providers.every((provider) => !group.values[provider.id]?.count) && <p className="text-body-sm text-fg-muted">No pages were collected in this category.</p>}
           <ScoreColumns
             data={providers.map((provider) => ({
@@ -72,7 +74,8 @@ export function PageTypeChart({ providers, groups }: { providers: ChartProvider[
             yTitle="Useful content (%)"
           />
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
