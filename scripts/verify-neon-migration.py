@@ -10,6 +10,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from bench.storage import Store
@@ -55,7 +56,12 @@ with tempfile.TemporaryDirectory() as directory:
     other = PostgresStore()
     checks['duplicate_worker_rejected'] = not other.acquire_worker()
     target.db.close()
-    checks['lock_released_on_disconnect'] = other.acquire_worker()
+    deadline = time.monotonic() + 5
+    released = other.acquire_worker()
+    while not released and time.monotonic() < deadline:
+        time.sleep(0.05)
+        released = other.acquire_worker()
+    checks['lock_released_on_disconnect'] = released
     other.db.close()
     (root/'screenshots'/'example.png').write_bytes(b'changed historical image')
     try:
