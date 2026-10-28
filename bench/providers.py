@@ -8,6 +8,7 @@ import hashlib
 import ipaddress
 import math
 import os
+import re
 import time
 from urllib.parse import urlsplit
 
@@ -228,6 +229,9 @@ async def fetch_reader(provider: str, url: str, config: dict | None = None) -> d
                                  "local_applied": len(receipt["text"]) > limit,
                                  "at_provider_cap": provider in ("exa", "keenable") and len(receipt["text"]) >= limit}
         receipt["text"] = receipt["text"][:limit]
+        receipt["text"], replacements = re.subn(r'[\ud800-\udfff]', '\ufffd', receipt["text"])
+        if replacements:
+            receipt["text_unicode_replacements"] = replacements
     receipt = _redact(receipt, secrets)
     receipt["freshness"] = audit(provider,receipt["request_config"],receipt["cache"])
     receipt["finished_at"] = _now()
