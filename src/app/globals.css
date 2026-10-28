@@ -97,3 +97,24 @@ html::-webkit-scrollbar {
 
 body::after, main > section + section::before { display: none; }
 main > section + section { border-top: 0; }
+
+@theme {
+  --color-provider-context: oklch(0.52 0.19 260);
+  --color-provider-exa: oklch(0.52 0.19 310);
+  --color-provider-keenable: oklch(0.52 0.12 165);
+  --color-provider-firecrawl: oklch(0.55 0.16 45);
+}
+:root[data-theme="dark"] {
+  --color-provider-context: oklch(0.75 0.13 260);
+  --color-provider-exa: oklch(0.75 0.13 310);
+  --color-provider-keenable: oklch(0.75 0.12 165);
+  --color-provider-firecrawl: oklch(0.75 0.13 45);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --color-provider-context: oklch(0.75 0.13 260);
+    --color-provider-exa: oklch(0.75 0.13 310);
+    --color-provider-keenable: oklch(0.75 0.12 165);
+    --color-provider-firecrawl: oklch(0.75 0.13 45);
+  }
+}

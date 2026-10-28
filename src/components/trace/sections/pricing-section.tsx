@@ -30,8 +30,7 @@ export function PricingSection({
   return (
     <ReportSection
       id="pricing"
-      title="Quality vs."
-      accent="cost"
+      title="Useful content and estimated cost"
       description="Compare useful-content scores with estimated cost for the same workload; providers toward the top left return more useful content at a lower price."
     >
       <div className="flex flex-col gap-5">

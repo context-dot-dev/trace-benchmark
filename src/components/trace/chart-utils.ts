@@ -4,8 +4,6 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-import { OURS } from "./provider-logo";
-
 export const MONO = "font-mono uppercase tracking-wide";
 export const AXIS = cn(MONO, "text-axis tabular-nums text-fg-muted");
 export const AXIS_TITLE = cn(MONO, "text-axis text-fg-muted");
@@ -66,10 +64,14 @@ export function useElementWidth<T extends HTMLElement>(fallback: number) {
   return { ref, width: measured ?? fallback, measured: measured !== null };
 }
 
-export const toneFor = (providerId: string): Tone =>
-  providerId === OURS
-    ? { solid: "border-brand bg-brand", label: "text-fg-brand", stroke: "text-brand" }
-    : { solid: "border-neutral-40 bg-neutral-40", label: "text-fg-secondary", stroke: "text-neutral-40" };
+const PROVIDER_TONES: Record<string, Tone> = {
+  context: { solid: "border-provider-context bg-provider-context", label: "text-provider-context", stroke: "text-provider-context" },
+  exa: { solid: "border-provider-exa bg-provider-exa", label: "text-provider-exa", stroke: "text-provider-exa" },
+  keenable: { solid: "border-provider-keenable bg-provider-keenable", label: "text-provider-keenable", stroke: "text-provider-keenable" },
+  firecrawl: { solid: "border-provider-firecrawl bg-provider-firecrawl", label: "text-provider-firecrawl", stroke: "text-provider-firecrawl" },
+};
+export const toneFor = (providerId: string): Tone => PROVIDER_TONES[providerId] ?? { solid: "border-neutral-40 bg-neutral-40", label: "text-fg", stroke: "text-fg-secondary" };
+export const providerColor = (providerId: string) => providerId in PROVIDER_TONES ? `var(--color-provider-${providerId})` : "var(--ds-color-text-secondary)";
 
 export function spreadLabels(positions: number[], gap: number, min: number, max: number) {
   const order = positions.map((value, index) => ({ value, index })).sort((a, b) => a.value - b.value);

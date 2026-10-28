@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { MeterDot } from "./chart-kit";
 import { MONO, toneFor } from "./chart-utils";
-import { OURS, ProviderLogo } from "./provider-logo";
+import { ProviderLogo } from "./provider-logo";
 
 export type ChartProvider = { id: string; name: string };
 export type ScoreDatum = ChartProvider & { value: number | null; note?: string };
@@ -38,12 +38,12 @@ export function ScoreColumns({ data, xTitle = "Provider", yTitle = "Useful conte
             >
               {isNumber(row.value) && (
                 <div
-                  className={cn("h-full rounded-control", row.id === OURS ? "bg-brand" : "bg-neutral-40")}
+                  className={cn("h-full rounded-control", toneFor(row.id).solid)}
                   style={{ width: `${Math.max(0, Math.min(100, row.value * 100))}%` }}
                 />
               )}
             </div>
-            <span className={cn("self-center text-right font-mono text-body-sm tabular-nums", row.id === OURS ? "text-fg-brand" : "text-fg")}>
+            <span className="self-center text-right font-mono text-body-sm tabular-nums text-fg">
               {isNumber(row.value) ? percent(row.value) : "—"}
             </span>
           </React.Fragment>
@@ -61,7 +61,7 @@ export function PageTypeChart({ providers, groups }: { providers: ChartProvider[
     <div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
       {groups.map((group) => (
         <div key={group.id}>
-          <h3 className="mb-3 text-body font-medium">{group.label}</h3>
+          <h3 className="mb-3 flex items-baseline justify-between gap-3 text-body font-medium">{group.label}<span className="text-caption font-normal text-fg-muted">{Math.max(0, ...providers.map(provider => group.values[provider.id]?.count ?? 0)).toLocaleString("en-US")} pages</span></h3>
           {providers.every((provider) => !group.values[provider.id]?.count) && <p className="text-body-sm text-fg-muted">No pages were collected in this category.</p>}
           <ScoreColumns
             data={providers.map((provider) => ({
@@ -106,7 +106,7 @@ export function MeterChart({
             className="h-7 overflow-hidden rounded-control bg-subtle"
           >
             {isNumber(row.value) && (
-              <div className={cn("h-full rounded-control", row.id === OURS ? "bg-brand" : "bg-neutral-40")} style={{ width: `${(row.value / max) * 100}%` }} />
+              <div className={cn("h-full rounded-control", toneFor(row.id).solid)} style={{ width: `${(row.value / max) * 100}%` }} />
             )}
           </div>
           <span className="text-right text-body-sm tabular-nums">{isNumber(row.value) ? format(row.value) : "—"}</span>
@@ -135,7 +135,7 @@ export function ChartLegend({ providers }: { providers: ChartProvider[] }) {
   return (
     <ul aria-label="Legend" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
       {providers.map((provider) => (
-        <li key={provider.id} className={cn("flex items-center gap-1.5 text-axis", MONO, provider.id === OURS ? "text-fg-brand" : "text-fg-secondary")}>
+        <li key={provider.id} className={cn("flex items-center gap-1.5 text-axis", MONO, "text-fg-secondary")}>
           <span aria-hidden="true" className={cn("size-2 rounded-pill border", toneFor(provider.id).solid)} />
           <ProviderLogo id={provider.id} className="size-3.5" />
           {provider.name}

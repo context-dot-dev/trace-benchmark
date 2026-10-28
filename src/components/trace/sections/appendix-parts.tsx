@@ -148,7 +148,7 @@ export function PricingDetails({ rows, prices, scenario }: { rows: ProviderRow[]
             <TextLink href="https://github.com/keenableai/needle/blob/main/dashboard/index.html">NEEDLE’s pricing catalog</TextLink> stores a price, plan and check date for each engine and describes its comparison as the biggest self-serve tier,
             excluding enterprise quotes. Scraping Bench offers that full-allowance comparison alongside the cost of your actual workload, using the same billing period across subscriptions. Lowest-cost mode recalculates every provider’s plan from
             estimated billable volume when the sample, volume or billing changes. Manual plans and full-allowance rates are available only in Custom scenario. The default compares 93,000 monthly attempts; this is a cost fit, not a throughput
-            recommendation. Search prices are not scraping prices. The plan and billing selections in <TextLink href="#pricing">Quality vs. cost</TextLink> also apply below.
+            recommendation. Search prices are not scraping prices. The plan and billing selections in <TextLink href="#pricing">Useful content and estimated cost</TextLink> also apply below.
           </p>
         </Notes>
       </div>
@@ -293,7 +293,7 @@ export function Methodology() {
       <Fine>
         Operated by Context, one of the providers being compared. <TextLink href="/plan.md">Protocol</TextLink> · <TextLink href="https://github.com/context-dot-dev/trace-benchmark">GitHub (private)</TextLink> ·{" "}
         <TextLink href="/data/latest.json" download="trace-full-data.json">
-          Download all data
+          Download recent results
         </TextLink>
       </Fine>
     </div>

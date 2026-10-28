@@ -1,12 +1,11 @@
 "use client";
 
 import { count, seconds } from "@/lib/trace/format";
-import { cn } from "@/lib/utils";
 
 import { TabbedPanel } from "../panel";
 import { MeterChart } from "../charts";
 import { CellDetail, DataTable } from "../data-table";
-import { OURS, ProviderName } from "../provider-logo";
+import { ProviderName } from "../provider-logo";
 import type { ReportModel } from "../report-model";
 import { Fine, Notes, ReportSection, SubHeading, TextLink } from "../report-section";
 
@@ -64,8 +63,8 @@ export function LatencySection({ model }: { model: ReportModel }) {
                       cells: {
                         timed: count(row.timed),
                         provider: <ProviderName id={row.id} name={row.name} />,
-                        p50: <span className={cn(row.id === OURS && "text-fg-brand")}>{seconds(row.p50)}</span>,
-                        p95: <span className={cn(row.id === OURS && "text-fg-brand")}>{seconds(row.p95)}</span>,
+                        p50: <span className="text-fg">{seconds(row.p50)}</span>,
+                        p95: <span className="text-fg">{seconds(row.p95)}</span>,
                       },
                     }))}
                 />

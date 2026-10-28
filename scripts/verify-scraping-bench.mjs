@@ -30,6 +30,14 @@ await check('Best-output rankings disclose their subset and zero-score meaning',
   assert.match(section, /extraction settings differ/);
   assert.match(section, /best or tied out of/);
 });
+await check('Charts identify every provider equally and use plain headings', async () => {
+  const html = await (await fetch(origin)).text();
+  const chart = html.split('aria-label="Useful content (%) by provider"')[1]?.split('</section>')[0] || '';
+  for (const id of ['context', 'exa', 'keenable', 'firecrawl']) assert.ok(chart.includes(`bg-provider-${id}`), id);
+  assert.match(html, /Results by page category/);
+  assert.match(html, /Provider coverage overlap/);
+  assert.doesNotMatch(html, /Different pages,|What does one|scraper miss\?/);
+});
 for (const cohort of ['independent', 'needle']) {
   await check(`${cohort} results and detail share the publication version`, async () => {
     const response = await fetch(`${origin}/api/results?cohort=${cohort}&version=${summary.version}`);

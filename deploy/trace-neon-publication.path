@@ -1,0 +1,9 @@
+[Unit]
+Description=Publish changed Scraping Bench exports to Neon
+
+[Path]
+PathChanged=/opt/trace-bench/site/data/latest.json
+Unit=trace-neon-publication.service
+
+[Install]
+WantedBy=multi-user.target

@@ -73,6 +73,15 @@ with scoped credentials is installed.
 
 ## Vercel and Neon migration
 
+The dashboard can move before the collector. Set `DATABASE_URL` on Vercel and
+keep `TRACE_WORKER_ENABLED=0` until the canonical archive has been migrated.
+On the existing collector, `trace-neon-publication.path` watches completed public
+exports and invokes `server/publish.ts --sync-public-files`. Supply `DATABASE_URL`
+in the root-owned `/etc/trace-bench-neon.env` file (mode 0600). The publisher updates
+allowlisted downloads and the dashboard in one transaction, rejects older
+snapshots, and never uploads private receipt files. Disable this path unit when
+the Vercel collector takes ownership to avoid competing publishers.
+
 The `contextdev/trace-benchmark` Vercel project is connected to this repository.
 `vercel.json` builds the Next.js application with Turbopack. Native route handlers
 serve the summary, paginated results, details and allowlisted downloads directly

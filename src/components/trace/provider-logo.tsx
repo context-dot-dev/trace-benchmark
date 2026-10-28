@@ -8,8 +8,6 @@ const LOGO_FILES: Record<string, string> = {
   firecrawl: "/logos/firecrawl.png",
 };
 
-export const OURS = "context";
-
 export function ContextMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 772.32 531.2" aria-hidden="true" className={cn("h-6 w-auto text-fg-brand", className)}>
@@ -25,7 +23,7 @@ export function ContextMark({ className }: { className?: string }) {
 
 /** Every provider is named by its own logo beside its name, never by color alone. */
 export function ProviderLogo({ id, className = "size-4" }: { id: string; className?: string }) {
-  if (id === OURS) {
+  if (id === "context") {
     return (
       <span aria-hidden="true" className={cn("inline-flex shrink-0 items-center justify-center", className)}>
         <ContextMark className="h-auto w-full" />
@@ -43,7 +41,7 @@ export function ProviderLogo({ id, className = "size-4" }: { id: string; classNa
 
 export function ProviderName({ id, name, className, logoClassName, logoOnlyOnPhones = false }: { id: string; name: string; className?: string; logoClassName?: string; logoOnlyOnPhones?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-2", id === OURS ? "text-fg-brand" : "text-fg", className)}>
+    <span className={cn("inline-flex items-center gap-2 text-fg", className)}>
       <ProviderLogo id={id} className={logoClassName} />
       <span className={cn(logoOnlyOnPhones && "max-sm:sr-only")}>{name}</span>
     </span>

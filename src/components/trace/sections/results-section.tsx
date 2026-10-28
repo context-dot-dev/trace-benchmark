@@ -11,7 +11,7 @@ import { TabbedPanel } from "../panel";
 import { Choice } from "../choice";
 import { CellDetail, DataTable, type SortState } from "../data-table";
 import { ScoreColumns } from "../charts";
-import { OURS, ProviderName } from "../provider-logo";
+import { ProviderName } from "../provider-logo";
 import { missingCategories, type ReportModel } from "../report-model";
 import { Controls, Notes, ReportSection, SubHeading, TextLink } from "../report-section";
 
@@ -212,7 +212,7 @@ export function ResultsSection({
                       ),
                       rate: (
                         <>
-                          <span className={cn("text-body-lg leading-none", row.id === OURS ? "text-fg-brand" : "text-fg")}>
+                          <span className="text-body-lg leading-none text-fg">
                             {row.accountAffected > 0 ? "Incomplete" : row.rate === null && row.count > 0 ? "Withheld" : percent(row.rate)}
                           </span>
                           {row.accountAffected > 0 && <CellDetail>{percent(row.rate)} confirmed coverage</CellDetail>}

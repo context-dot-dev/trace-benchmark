@@ -8,9 +8,10 @@ import type { Pair } from "@/lib/trace/types";
 import { cn } from "@/lib/utils";
 
 import { TabbedPanel } from "../panel";
+import { providerColor } from "../chart-utils";
 import { PageTypeChart, ScoreColumns } from "../charts";
 import { CellDetail, DataTable } from "../data-table";
-import { OURS, ProviderName } from "../provider-logo";
+import { ProviderName } from "../provider-logo";
 import type { ReportModel } from "../report-model";
 import { Fine, ReportSection } from "../report-section";
 
@@ -19,8 +20,7 @@ export function PageTypesSection({ model }: { model: ReportModel }) {
   return (
     <ReportSection
       id="page-types"
-      title="Different pages,"
-      accent="different results"
+      title="Results by page category"
       description="Compare useful-content rates across all eight page types to understand which providers fit your workload and where the sample is incomplete."
     >
       <TabbedPanel
@@ -49,7 +49,6 @@ export function PageTypesSection({ model }: { model: ReportModel }) {
                       key: provider.id,
                       label: <ProviderName id={provider.id} name={provider.name} className="text-body-sm" logoClassName="size-4 max-sm:size-5" />,
                       align: "right" as const,
-                      highlight: provider.id === OURS,
                     })),
                   ]}
                   rows={(model.group?.pageTypes ?? []).map((type) => ({
@@ -64,7 +63,7 @@ export function PageTypesSection({ model }: { model: ReportModel }) {
                             <span
                               key={provider.id}
                               title={result ? `${result.success} useful pages out of ${result.count}` : undefined}
-                              className={cn("inline-block text-right", provider.id === OURS ? "text-fg-brand" : "text-fg", !isNumber(result?.rate) && "text-fg-subtle")}
+                              className={cn("inline-block text-right text-fg", !isNumber(result?.rate) && "text-fg-subtle")}
                             >
                               {isNumber(result?.rate) ? `${Math.round(result.rate * 100)}%` : "No pages"}
                               <CellDetail>
@@ -89,8 +88,6 @@ export function PageTypesSection({ model }: { model: ReportModel }) {
 
 function PairCard({ pair }: { pair: Pair }) {
   const [hoveredSegment, setHoveredSegment] = React.useState<{ label: string; value: number; x: number; y: number; leftSide: boolean } | null>(null);
-  const aOurs = pair.a.id === OURS;
-  const bOurs = pair.b.id === OURS;
   const segments = [
     { key: "both", label: "Both", value: pair.both },
     { key: "first", label: `${pair.a.name} only`, value: pair.first_only },
@@ -100,10 +97,11 @@ function PairCard({ pair }: { pair: Pair }) {
   ];
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
   const segmentColor: Record<string, string> = {
-    both: "var(--ds-color-bg-brand)",
-    first: "#60a5fa",
-    second: "#64748b",
-    neither: "#cbd5e1",
+    both: "var(--ds-color-text-secondary)",
+    first: providerColor(pair.a.id),
+    second: providerColor(pair.b.id),
+    neither: "var(--ds-color-border-default)",
+    unknown: "repeating-linear-gradient(135deg, var(--ds-color-border-default), var(--ds-color-border-default) 2px, var(--ds-color-bg-default) 2px, var(--ds-color-bg-default) 4px)",
   };
   return (
     <Card variant="ring" className="gap-5 p-5 md:p-6">
@@ -168,7 +166,7 @@ function PairCard({ pair }: { pair: Pair }) {
                 <span aria-hidden="true" className="size-3 shrink-0 rounded-sm border border-line" style={{ background: segmentColor[segment.key] }} />
                 {segment.label}
               </dt>
-              <dd className={cn("shrink-0 text-body-sm tabular-nums", (segment.key === "first" && aOurs) || (segment.key === "second" && bOurs) ? "text-fg-brand" : "text-fg")}>
+              <dd className="shrink-0 text-body-sm tabular-nums text-fg">
                 {count(segment.value)}
               </dd>
             </div>
@@ -185,8 +183,7 @@ export function OverlapSection({ model }: { model: ReportModel }) {
   return (
     <ReportSection
       id="head-to-head"
-      title="What does one"
-      accent="scraper miss?"
+      title="Provider coverage overlap"
       description="Two providers can have the same score and recover different pages. These pairs show where their coverage overlaps."
     >
       <TabbedPanel
@@ -250,8 +247,7 @@ export function BestOutputSection({ model }: { model: ReportModel }) {
   return (
     <ReportSection
       id="coverage"
-      title="Observed output"
-      accent="preferences"
+      title="Output comparison"
       description="Jev compares fresh, anonymous responses for useful detail, coverage and cleanliness, with identical text counted as a tie and no advantage for extra length alone."
     >
       <p className="text-body text-fg">
@@ -297,7 +293,7 @@ export function BestOutputSection({ model }: { model: ReportModel }) {
                             <CellDetail>of {row.compared || 0} compared</CellDetail>
                           </>
                         ),
-                        share: <span className={cn(row.id === OURS && "text-fg-brand")}>{percent(row.bestRate)}</span>,
+                        share: <span className="text-fg">{percent(row.bestRate)}</span>,
                         only: row.soleUseful || 0,
                       },
                     }))}
