@@ -7,11 +7,11 @@ import { dsFontVariables } from "@/lib/ds-fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Trace · Live scraper benchmark",
-  description: "TRACE: observed page-reading results, collection receipts and preliminary content judgments.",
+  title: "Scraping Bench · Context.dev",
+  description: "Compare daily web scraping quality, latency and cost using shared pages and transparent collection receipts.",
   openGraph: {
-    title: "Trace · Live scraper benchmark",
-    description: "The same pages. Different scrapers. How much content comes back, how long it takes, and where each provider works best.",
+    title: "Scraping Bench · Context.dev",
+    description: "Compare how reliably web scrapers return useful content from the same pages, with daily measurements of quality, speed and cost.",
     type: "website",
   },
 };

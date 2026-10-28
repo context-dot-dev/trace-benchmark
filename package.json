@@ -4,19 +4,20 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "build": "next build",
+    "build": "node scripts/export-pricing.mjs --public-only && next build",
     "serve": "tsx server/index.ts",
     "publish:neon": "tsx server/publish.ts",
     "db:generate": "drizzle-kit generate",
     "watch": "vite build --watch",
-    "dev": "next dev",
+    "dev": "node scripts/export-pricing.mjs --public-only && next dev",
     "build:next": "next build",
     "start:next": "next start",
     "dev:vite": "vite --host 0.0.0.0",
     "build:vite": "node scripts/export-pricing.mjs && tsc --noEmit && vite build && vite build --ssr src/entry-server.jsx --outDir server/render && vite build --config vite.functions.config.ts",
     "start": "next start",
     "lint": "eslint src/app src/components/trace src/lib",
-    "doctor": "npx react-doctor@latest"
+    "doctor": "npx react-doctor@latest",
+    "verify:scraping-bench": "node scripts/verify-scraping-bench.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

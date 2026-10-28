@@ -29,3 +29,6 @@ server/functions/
 .next/
 out/
 tsconfig.tsbuildinfo
+
+public/pricing.json
+public/plan.md

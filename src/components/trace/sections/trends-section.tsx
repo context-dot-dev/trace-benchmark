@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Choice } from "../choice";
 import { CellDetail, DataTable } from "../data-table";
 import { TabbedPanel } from "../panel";
-import { OURS, ProviderLogo, ProviderName } from "../provider-logo";
+import { ProviderLogo, ProviderName } from "../provider-logo";
 import { Controls, Fine, ReportSection, TextLink } from "../report-section";
 import { LineSwatch, TrendChart } from "../trend-chart";
 
@@ -37,8 +37,9 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
   }
   const daySet = new Set(days);
   const hiddenSet = hidden;
-  const scoredDays = days.filter((day) => [...(pointsByDay.get(day)?.values() ?? [])].some((point) => point.success_rate !== null));
-  const activeDay = hoveredDay && daySet.has(hoveredDay) ? hoveredDay : (scoredDays.at(-1) ?? days.at(-1));
+  const activeDay = hoveredDay && daySet.has(hoveredDay) ? hoveredDay : days.at(-1);
+  const incompleteDays = days.filter((day) => [...(pointsByDay.get(day)?.values() ?? [])].every((point) => point.success_rate === null && point.pages > 0));
+  const activePoint = activeDay ? pointsByDay.get(activeDay)?.values().next().value : undefined;
   const providers = summary.providers;
   const visible = providers.filter((provider) => !hiddenSet.has(provider.id));
 
@@ -61,7 +62,6 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
               className={cn(
                 "inline-flex h-8 items-center gap-2 rounded-pill border px-3 text-caption max-[43.2rem]:h-11 max-[43.2rem]:px-3.5 transition-[border-color,color,opacity] duration-150 ease-out outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
                 shown ? "border-line-strong text-fg" : "border-line text-fg-faint opacity-60",
-                shown && provider.id === OURS && "border-brand text-fg-brand",
               )}
             >
               <ProviderLogo id={provider.id} className="size-3.5" />
@@ -71,7 +71,9 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
           );
         })}
       </div>
+      {incompleteDays.length > 0 && <p className="text-body-sm leading-relaxed text-fg-muted">{incompleteDays.length} recorded {incompleteDays.length === 1 ? "day has" : "days have"} pages but no balanced score because at least one category was missing. Shaded columns mark these collections without assigning them a score.</p>}
       <TrendChart points={inPeriod} days={days} providers={visible} activeDay={activeDay} onActiveDay={setHoveredDay} breakOnPanel={role === "control"} />
+      {activePoint && <p role="status" className="text-body-sm text-fg-muted">On {shortDay(activePoint.day)}, each provider received {activePoint.pages.toLocaleString("en-US")} pages{role ? ` across ${activePoint.categories_present ?? 0} of eight categories` : ""}.{activePoint.success_rate === null ? " The balanced score is withheld because the category sample is incomplete." : ""}</p>}
     </div>
   ) : (
     <p className="py-10 text-center text-body-sm text-fg-muted">No completed day yet.</p>
@@ -84,7 +86,7 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
           caption="Daily useful-content rates"
           minWidth="min-w-136"
           framed={false}
-          columns={[{ key: "day", label: "UTC date" }, ...providers.map((provider) => ({ key: provider.id, label: <ProviderName id={provider.id} name={provider.name} className="text-body-sm" />, align: "right" as const, highlight: provider.id === OURS }))]}
+          columns={[{ key: "day", label: "UTC date" }, ...providers.map((provider) => ({ key: provider.id, label: <ProviderName id={provider.id} name={provider.name} className="text-body-sm" />, align: "right" as const }))]}
           rows={[...days].reverse().map((day) => {
             const byProvider = pointsByDay.get(day);
             const first = byProvider?.values().next().value as DailyPoint | undefined;
@@ -103,8 +105,8 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
                     return [
                       provider.id,
                       <React.Fragment key={provider.id}>
-                        {percent(point?.success_rate)}
-                        <CellDetail>{point?.pages.toLocaleString("en-US") ?? 0} URLs</CellDetail>
+                        {point && point.success_rate === null && point.pages > 0 ? "Withheld" : percent(point?.success_rate)}
+                        <CellDetail>{point?.pages.toLocaleString("en-US") ?? 0} URLs{role && point ? ` · ${point.categories_present ?? 0}/8 categories` : ""}</CellDetail>
                       </React.Fragment>,
                     ];
                   }),
@@ -120,9 +122,8 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
   return (
     <ReportSection
       id="trends"
-      title="Quality"
-      accent="over time"
-      description={`One point per provider, per UTC day. ${cohort === "independent" ? "One daily sample targets 2,400 new pages and 600 controls, shared by every scraper." : "The separate search cohort samples up to 400 result slots each day."} The leaderboard above shows the latest completed daily run.`}
+      title="Daily useful-content rates"
+      description={`Each point shows a provider’s daily score for the same selected pages. ${cohort === "independent" ? "The daily target is 2,400 new pages and 600 controls; missing categories leave gaps in the balanced score." : "The search cohort samples up to 400 result slots each day."}`}
     >
       <div className="flex flex-col gap-4">
         <Controls>

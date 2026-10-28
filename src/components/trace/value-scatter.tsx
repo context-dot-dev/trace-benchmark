@@ -6,9 +6,9 @@ import { count, percent } from "@/lib/trace/format";
 import type { ProviderPrice } from "@/lib/trace/pricing";
 import { cn } from "@/lib/utils";
 
-import { AxisFrame, ChartRings } from "./chart-kit";
-import { AXIS, MONO, spreadLabels, useElementWidth, useGrowIn } from "./chart-utils";
-import { OURS, ProviderLogo } from "./provider-logo";
+import { AxisFrame } from "./chart-kit";
+import { AXIS, MONO, toneFor, providerColor, spreadLabels, useElementWidth, useGrowIn } from "./chart-utils";
+import { ProviderLogo } from "./provider-logo";
 
 const PLOT_HEIGHT = 320;
 const LABEL_GAP = 40;
@@ -37,7 +37,7 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
   if (!plotted.length) {
     return (
       <div ref={ref} className="flex flex-col items-center justify-center gap-2 px-4 py-2 text-center">
-        <p className="text-body text-fg">No priced results for this page set yet.</p>
+        <p className="text-body text-fg">{prices.some(price => price.quality !== null) ? "Pricing evidence is incomplete for this page set; inspect the table for the available values." : "A quality–cost comparison needs a complete useful-content score."}</p>
       </div>
     );
   }
@@ -99,7 +99,6 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
       <AxisFrame y="Useful content (%)" x="Estimated cost per 1,000 attempts (USD)" xInset="ml-10">
         <div className="flex flex-col gap-2">
           <div className="relative ml-10" style={{ height: PLOT_HEIGHT }}>
-            <ChartRings />
             {yTicks.map((tick) => (
               <span key={tick} className={cn("absolute -left-10 -translate-y-1/2", AXIS)} style={{ top: toY(tick) }}>
                 {Number((tick * 100).toFixed(1))}%
@@ -114,9 +113,8 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
                   const x = toX(price.comparisonPrice!);
                   const y = toY(price.quality!);
                   const { anchor, edge } = placeLabel(price);
-                  const isOurs = price.id === OURS;
                   return (
-                    <g key={price.id} className={cn("transition-opacity duration-300 ease-out motion-reduce:transition-none", isOurs ? "text-brand" : "text-neutral-40")} style={{ opacity: shown ? 1 : 0, transitionDelay: `${index * 90}ms` }}>
+                    <g key={price.id} className={cn("transition-opacity duration-300 ease-out motion-reduce:transition-none", toneFor(price.id).stroke)} style={{ opacity: shown ? 1 : 0, transitionDelay: `${index * 90}ms` }}>
                       {/* On narrow plots the cost range is a stub beside the tile that reads as a glitch; the card below gives the range. */}
                       {!compact && price.comparisonPriceLow! < price.comparisonPrice! && <line x1={toX(price.comparisonPriceLow!)} x2={x} y1={y} y2={y} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />}
                       {price.qualityUpper! > price.quality! && <line x1={x} x2={x} y1={toY(price.qualityUpper!)} y2={y} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />}
@@ -129,7 +127,6 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
                 const x = toX(price.comparisonPrice!);
                 const y = toY(price.quality!);
                 const label = placeLabel(price);
-                const isOurs = price.id === OURS;
                 const isSelected = price.id === selected?.id;
                 // A label fades in with its tile, so a name never shows without the point it names.
                 const reveal = { opacity: shown ? 1 : 0, transitionDelay: `${index * 90}ms` };
@@ -144,17 +141,16 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
                       onPointerEnter={() => onSelect(price.id)}
                       className={cn(
                         "absolute z-20 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-card bg-surface shadow-key outline-none transition-[opacity,scale,box-shadow] duration-300 ease-out focus-visible:ring-2 focus-visible:ring-focus-ring motion-reduce:transition-none",
-                        isOurs ? "ring-2 ring-brand" : "ring-1 ring-neutral-60",
-                        isSelected && !isOurs && "ring-2 ring-neutral-60",
+                        isSelected ? "ring-2" : "ring-1",
                       )}
-                      style={{ left: x, top: y, opacity: shown ? 1 : 0, scale: shown ? "1" : "0.9", transitionDelay: `${index * 90}ms` }}
+                      style={{ "--tw-ring-color": providerColor(price.id), left: x, top: y, opacity: shown ? 1 : 0, scale: shown ? "1" : "0.9", transitionDelay: `${index * 90}ms` } as React.CSSProperties}
                     >
                       <ProviderLogo id={price.id} className="size-4.5" />
                     </button>
                     {compact ? (
                       <span
                         aria-hidden="true"
-                        className={cn("absolute z-10 flex justify-center text-axis leading-tight whitespace-nowrap transition-opacity duration-300 ease-out motion-reduce:transition-none", MONO, isOurs ? "text-fg-brand" : "text-fg")}
+                        className={cn("absolute z-10 flex justify-center text-axis leading-tight whitespace-nowrap transition-opacity duration-300 ease-out motion-reduce:transition-none", MONO, "text-fg")}
                         style={{ ...compactLabel(price), width: COMPACT_LABEL_WIDTH, ...reveal }}
                       >
                         <span className="bg-surface/90 px-1 py-0.5">{price.name}</span>
@@ -162,7 +158,7 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
                     ) : (
                       <span
                         aria-hidden="true"
-                        className={cn("absolute z-10 flex -translate-y-1/2 flex-col bg-surface/90 px-1.5 py-0.5 text-axis leading-tight whitespace-nowrap transition-opacity duration-300 ease-out motion-reduce:transition-none", MONO, label.left ? "items-end" : "items-start", isOurs ? "text-fg-brand" : "text-fg")}
+                        className={cn("absolute z-10 flex -translate-y-1/2 flex-col bg-surface/90 px-1.5 py-0.5 text-axis leading-tight whitespace-nowrap transition-opacity duration-300 ease-out motion-reduce:transition-none", MONO, label.left ? "items-end" : "items-start", "text-fg")}
                         style={{ ...(label.left ? { right: width - label.edge } : { left: label.edge }), top: labelYs[index], ...reveal }}
                       >
                         <span>{price.name}</span>
@@ -189,7 +185,7 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
         <div aria-live="polite" className="flex items-start gap-3 rounded-card bg-subtle px-4 py-3">
           <ProviderLogo id={selected.id} className="mt-0.5 size-5" />
           <p className="text-body-sm leading-relaxed text-fg-muted">
-            <span className={selected.id === OURS ? "text-fg-brand" : "text-fg"}>{selected.name}</span> · {percent(selected.quality)} useful · {priceLabel(selected)} / 1k attempts
+            <span className="text-fg">{selected.name}</span> · {percent(selected.quality)} useful · {priceLabel(selected)} / 1k attempts
             <span className="block text-caption text-fg-subtle">
               {selected.plan.name} · {count(selected.success)} / {count(selected.count)} pages
               {selected.unknown > 0 ? ` · ${selected.unknown} pending review` : ""}

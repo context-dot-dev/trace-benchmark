@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { Hero } from "@/components/site/hero";
-import { HeroDotField } from "@/components/visuals/hero-dot-field";
 import { DEFAULT_SCENARIO, priceProviders, updateScenario, type PricingScenario } from "@/lib/trace/pricing";
 import type { CohortId, SampleRole, Summary } from "@/lib/trace/types";
 
@@ -100,11 +99,11 @@ export function TraceReport({ initialSummary }: { initialSummary: Summary }) {
     <>
       <Hero
         id="overview"
-        title="Which scraper returns useful content?"
-        accent="useful content"
-        description="The same pages. Different scrapers. A comparison of how much content comes back, how long it takes, and where each provider works best."
-        background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
-        contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
+        title="Scraping Bench"
+        accent="Bench"
+        description="Compare how reliably web scrapers return useful content from the same pages, with daily measurements of quality, speed and cost."
+        className="shadow-none"
+        contentClassName="min-h-0 gap-4 py-6 sm:py-8 lg:py-8"
         media={<StatusLine summary={summary} cohort={cohort} />}
       />
       <ResultsSection
@@ -125,9 +124,9 @@ export function TraceReport({ initialSummary }: { initialSummary: Summary }) {
         loading={loading}
         onRetry={onStale}
       />
-      <PricingSection prices={prices} scenario={scenario} onScenarioChange={(change) => setScenario((current) => updateScenario(current, change, priceProviders(model.rows, current)))} />
       <TrendsSection summary={summary} cohort={cohort} sampleRole={model.hasRoles ? role : null} />
       <PageTypesSection model={model} />
+      <PricingSection prices={prices} scenario={scenario} onScenarioChange={(change) => setScenario((current) => updateScenario(current, change, priceProviders(model.rows, current)))} />
       <OverlapSection model={model} />
       <BestOutputSection model={model} />
       <LatencySection model={model} />

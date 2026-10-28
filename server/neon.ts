@@ -45,13 +45,14 @@ export class NeonSource {
     if(!row)throw Object.assign(new Error('Result not found'),{status:404});
     return row.record;
   });}
-  async publish(archive:Archive){
+  async publish(archive:Archive,publicFiles:Record<string,string>={}){
     const {summary,records}=publication(archive);
     return this.db.transaction(async tx=>{
       await tx.execute(sql`select pg_advisory_xact_lock(74012491)`);
       const [existing]=await tx.select().from(publications).where(eq(publications.id,'current'));
-      if(existing?.version===summary.version)return;
       if(existing&&Date.parse(existing.summary.generated_at)>Date.parse(summary.generated_at))throw new Error('Refusing an older publication');
+      for(const [path,data] of Object.entries(publicFiles))await tx.execute(sql`INSERT INTO trace_collector.public_exports(path,data) VALUES(${path},${data}) ON CONFLICT(path) DO UPDATE SET data=excluded.data,updated_at=now() WHERE public_exports.data IS DISTINCT FROM excluded.data`);
+      if(existing?.version===summary.version)return;
       const before=new Map((await tx.select({id:results.id,fingerprint:results.fingerprint}).from(results)).map(row=>[row.id,row.fingerprint]));
       const updates=records.map(record=>({id:record.id,fingerprint:createHash('sha256').update(JSON.stringify(record)).digest('hex'),cohort:record.cohort,provider:record.provider,startedMs:Date.parse(record.started_at||'')||0,searchText:searchable(record,summary),record})).filter(row=>before.get(row.id)!==row.fingerprint);
       for(let i=0;i<updates.length;i+=100){await tx.insert(results).values(updates.slice(i,i+100)).onConflictDoUpdate({target:results.id,set:{fingerprint:sql`excluded.fingerprint`,cohort:sql`excluded.cohort`,provider:sql`excluded.provider`,searchText:sql`excluded.search_text`,startedMs:sql`excluded.started_ms`,record:sql`excluded.record`}});}

@@ -1,8 +1,6 @@
-# TRACE
+# Scraping Bench
 
-A live scraping benchmark. The source repository is currently private. Fresh URLs, matched API calls, useful-content
-judgments, best-observed-output comparisons, P50/P95 latency, reported costs and
-inspectable run manifests. The website is a mobile-friendly article with real
+Scraping Bench compares useful content, latency and cost across web scraping providers using shared URLs and inspectable run manifests. The source repository is currently private. The website is a mobile-friendly article with real
 comparisons; it contains no synthetic rankings.
 
 Live site: https://trace.2.28.61.111.sslip.io/
@@ -27,7 +25,7 @@ cp .env.example .env
 .venv/bin/python -m bench.cli set-profile --profile live --state state/live
 .venv/bin/python -m bench.cli discover --state state/live
 .venv/bin/python -m bench.cli run --per-category 1 --state state/live
-npm run build
+npm run build:vite
 npm run serve
 ```
 
@@ -85,9 +83,12 @@ small batches remain labeled until that first daily run finishes. A 90-day daily
 quality series is retained independently of the detailed result archive.
 Registry changes and protocol changes must be recorded, not mixed silently.
 
-React, HeroUI tables, shadcn Base UI, TypeScript and Tailwind power the UI.
-Vite builds browser assets into `site/` and server rendering into `server/render/`.
-Run `npm run build && npm run serve`; rebuild and restart after source changes.
+Next.js, React, TypeScript and Context’s design system power the dashboard.
+`npm run build && npm start` runs the database-backed application on port 3000.
+Set `DATABASE_URL` to the Neon dashboard database and apply migrations with
+`npm run publish:neon -- /path/to/latest.json` first. The legacy Vite commands
+remain available for the existing Hetzner deployment until the verified cutover.
+See `deploy/README.md` for the migration gate and current provisioning blocker.
 The Node server embeds precomputed comparisons in the first HTML response. It
 serves eight result rows at a time, with evidence fetched only when inspected.
 The browser checks the small summary every minute using conditional requests. Components are in `src/components/ui`
