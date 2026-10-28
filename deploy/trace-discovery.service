@@ -1,0 +1,21 @@
+[Unit]
+Description=Scraping Bench free source discovery
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=trace-bench
+Group=trace-bench
+WorkingDirectory=/opt/trace-bench
+Environment=TRACE_STATE=/var/lib/trace-bench-v2
+ExecStart=/opt/trace-bench/.venv/bin/python -m bench.cli discover --due-only
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/trace-bench-v2 /opt/trace-bench/site/data
+MemoryMax=2G
+CPUQuota=200%
+TimeoutStartSec=10min

@@ -1,0 +1,11 @@
+[Unit]
+Description=Replenish Scraping Bench sources every ten minutes
+
+[Timer]
+OnCalendar=*-*-* *:0/10:00 UTC
+Persistent=true
+AccuracySec=10s
+Unit=trace-discovery.service
+
+[Install]
+WantedBy=timers.target
