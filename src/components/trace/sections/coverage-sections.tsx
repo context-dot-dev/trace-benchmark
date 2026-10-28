@@ -245,14 +245,19 @@ export function OverlapSection({ model }: { model: ReportModel }) {
 export function BestOutputSection({ model }: { model: ReportModel }) {
   const comparisons = model.group?.comparisons;
   const resolved = comparisons?.resolved ?? 0;
+  const selected = model.group?.uniqueUrls ?? 0;
   const pending = (comparisons?.pending ?? 0) + (comparisons?.pending_budget ?? 0) + (comparisons?.dispatched ?? 0);
   return (
     <ReportSection
       id="coverage"
-      title="Who returns the"
-      accent="best output?"
+      title="Observed output"
+      accent="preferences"
       description="Jev compares fresh, anonymous responses for useful detail, coverage and cleanliness, with identical text counted as a tie and no advantage for extra length alone."
     >
+      <p className="text-body text-fg">
+        {count(resolved)} of {count(selected)} selected pages ({percent(selected ? resolved / selected : null)}) have a resolved comparison.
+        {" "}These rankings describe that subset; unresolved pages may change the ordering. A 0% share means no wins in this subset, not that the provider returned no useful content.
+      </p>
       <p className="text-body-sm text-fg-muted">
         {resolved} comparable pages · {comparisons?.single_source ?? 0} with only one useful response · {comparisons?.no_useful_output ?? 0} with none ·{" "}
         {(comparisons?.incomplete ?? 0) + (comparisons?.unresolved ?? 0)} unresolved · {pending} pending
@@ -264,7 +269,10 @@ export function BestOutputSection({ model }: { model: ReportModel }) {
             {
               id: "chart",
               label: "Chart",
-              content: <ScoreColumns data={model.rows.map((row) => ({ id: row.id, name: row.name, value: row.bestRate }))} yTitle="Best or tied share of compared pages (%)" />,
+              content: <>
+                <ScoreColumns data={model.rows.map((row) => ({ id: row.id, name: row.name, value: row.bestRate, note: `${row.bestObserved} best or tied out of ${row.compared} compared pages` }))} yTitle="Best or tied share of compared pages (%)" />
+                <p className="text-body-sm text-fg-muted">{model.rows.map(row => `${row.name}: ${count(row.bestObserved)} / ${count(row.compared)}`).join(" · ")} best or tied.</p>
+              </>,
             },
             {
               id: "table",
@@ -303,6 +311,8 @@ export function BestOutputSection({ model }: { model: ReportModel }) {
         <p className="text-body text-fg-muted">Output comparisons are not available for these results yet.</p>
       )}
       <Fine>
+        The extraction settings differ: Context requests whole-page text while Firecrawl requests main content, and the judge considers cleanliness as well as coverage.
+        {" "}
         Best among the observed outputs, not verified ground truth. Ties count for each winning provider. Pages with missing, uncertain, cached or non-contemporaneous evidence do
         not enter this comparison. The useful-content score above still includes every selected page.
       </Fine>

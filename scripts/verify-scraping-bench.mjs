@@ -22,6 +22,14 @@ await check('The page identifies Scraping Bench and retains collected independen
   assert.doesNotMatch(html, /Showing the saved run/);
   assert.ok(summary.cohorts['independent:new'].rows.every(row => row.count > 0));
 });
+await check('Best-output rankings disclose their subset and zero-score meaning', async () => {
+  const html = await (await fetch(origin)).text();
+  const section = html.split('id="coverage"')[1]?.split('</section>')[0] || '';
+  assert.match(section, /have a resolved comparison/);
+  assert.match(section, /A 0% share means no wins in this subset/);
+  assert.match(section, /extraction settings differ/);
+  assert.match(section, /best or tied out of/);
+});
 for (const cohort of ['independent', 'needle']) {
   await check(`${cohort} results and detail share the publication version`, async () => {
     const response = await fetch(`${origin}/api/results?cohort=${cohort}&version=${summary.version}`);
