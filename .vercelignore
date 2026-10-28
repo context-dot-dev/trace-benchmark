@@ -12,3 +12,5 @@ server/render
 _uv
 .vercel_python_packages
 server/functions
+
+.next

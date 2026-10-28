@@ -37,8 +37,9 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
   }
   const daySet = new Set(days);
   const hiddenSet = hidden;
-  const scoredDays = days.filter((day) => [...(pointsByDay.get(day)?.values() ?? [])].some((point) => point.success_rate !== null));
-  const activeDay = hoveredDay && daySet.has(hoveredDay) ? hoveredDay : (scoredDays.at(-1) ?? days.at(-1));
+  const activeDay = hoveredDay && daySet.has(hoveredDay) ? hoveredDay : days.at(-1);
+  const incompleteDays = days.filter((day) => [...(pointsByDay.get(day)?.values() ?? [])].every((point) => point.success_rate === null && point.pages > 0));
+  const activePoint = activeDay ? pointsByDay.get(activeDay)?.values().next().value : undefined;
   const providers = summary.providers;
   const visible = providers.filter((provider) => !hiddenSet.has(provider.id));
 
@@ -71,7 +72,9 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
           );
         })}
       </div>
+      {incompleteDays.length > 0 && <p className="text-body-sm leading-relaxed text-fg-muted">{incompleteDays.length} recorded {incompleteDays.length === 1 ? "day has" : "days have"} pages but no balanced score because at least one category was missing. Shaded columns mark these collections without assigning them a score.</p>}
       <TrendChart points={inPeriod} days={days} providers={visible} activeDay={activeDay} onActiveDay={setHoveredDay} breakOnPanel={role === "control"} />
+      {activePoint && <p role="status" className="text-body-sm text-fg-muted">On {shortDay(activePoint.day)}, each provider received {activePoint.pages.toLocaleString("en-US")} pages{role ? ` across ${activePoint.categories_present ?? 0} of eight categories` : ""}.{activePoint.success_rate === null ? " The balanced score is withheld because the category sample is incomplete." : ""}</p>}
     </div>
   ) : (
     <p className="py-10 text-center text-body-sm text-fg-muted">No completed day yet.</p>
@@ -103,8 +106,8 @@ export function TrendsSection({ summary, cohort, sampleRole }: { summary: Summar
                     return [
                       provider.id,
                       <React.Fragment key={provider.id}>
-                        {percent(point?.success_rate)}
-                        <CellDetail>{point?.pages.toLocaleString("en-US") ?? 0} URLs</CellDetail>
+                        {point && point.success_rate === null && point.pages > 0 ? "Withheld" : percent(point?.success_rate)}
+                        <CellDetail>{point?.pages.toLocaleString("en-US") ?? 0} URLs{role && point ? ` · ${point.categories_present ?? 0}/8 categories` : ""}</CellDetail>
                       </React.Fragment>,
                     ];
                   }),

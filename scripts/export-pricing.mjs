@@ -13,7 +13,13 @@ const catalog={schema_version:1,currency:'USD',default_scenario:DEFAULT_PRICING,
   providers:PRICING.map(provider=>({...provider,plans:provider.plans.map(plan=>({...plan,
     monthly_unit_usd_per_1000:planRate(plan,'monthly'),annual_unit_usd_per_1000:planRate(plan,'annual'),
     monthly_budget:quotePlan(plan,'monthly'),annual_budget:quotePlan(plan,'annual')}))}))};
-await fs.writeFile('site/pricing.json',JSON.stringify(catalog,null,2)+'\n');
+const publicOnly = process.argv.includes('--public-only');
+if (publicOnly) await fs.mkdir('public', {recursive:true});
+await fs.writeFile(publicOnly ? 'public/pricing.json' : 'site/pricing.json',JSON.stringify(catalog,null,2)+'\n');
+if (publicOnly) {
+ await fs.copyFile('site/plan.md','public/plan.md');
+ process.exit(0);
+}
 const lines=[
  '# Scraping provider pricing',
  '',

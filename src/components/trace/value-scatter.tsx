@@ -37,7 +37,7 @@ export function ValueScatter({ prices, selectedId, onSelect }: { prices: Provide
   if (!plotted.length) {
     return (
       <div ref={ref} className="flex flex-col items-center justify-center gap-2 px-4 py-2 text-center">
-        <p className="text-body text-fg">No priced results for this page set yet.</p>
+        <p className="text-body text-fg">{prices.some(price => price.quality !== null) ? "Pricing evidence is incomplete for this page set; inspect the table for the available values." : "A quality–cost comparison needs a complete useful-content score."}</p>
       </div>
     );
   }

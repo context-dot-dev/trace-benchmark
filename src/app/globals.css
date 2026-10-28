@@ -94,3 +94,6 @@ html::-webkit-scrollbar {
     @apply aspect-square w-full max-w-2.5 rounded-pill border border-neutral-20 transition-[background-color,border-color] duration-300 ease-out motion-reduce:transition-none;
   }
 }
+
+body::after, main > section + section::before { display: none; }
+main > section + section { border-top: 0; }

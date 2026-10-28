@@ -102,6 +102,17 @@ export function TrendChart({
             </text>
           </g>
         ))}
+        {days.filter((day) => {
+          const collected = points.filter((point) => point.day === day);
+          return collected.length > 0 && collected.every((point) => point.success_rate === null && point.pages > 0);
+        }).map((day) => (
+          <rect key={`withheld:${day}`} x={Math.max(LEFT, x(day) - 6)} y={TOP} width={Math.min(12, right - Math.max(LEFT, x(day) - 6))} height={HEIGHT - TOP - BOTTOM}
+            className="fill-fg-faint/15 outline-none focus-visible:stroke-focus-ring" tabIndex={0} role="button"
+            aria-label={`${shortDay(day)}: pages collected; balanced score withheld because categories are missing`}
+            onFocus={() => showDayHint(day)} onClick={() => showDayHint(day)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); showDayHint(day); } }}>
+            <title>{`${shortDay(day)}: pages collected; score withheld`}</title>
+          </rect>
+        ))}
         {dayLabels.map((day) => (
           <text key={day} x={x(day)} y={HEIGHT - 12} textAnchor="middle" className={cn("fill-fg-muted text-axis", MONO)}>
             {shortDay(day)}
@@ -112,14 +123,14 @@ export function TrendChart({
           const ours = provider.id === OURS;
           const series = points.filter((point) => point.provider === provider.id && point.success_rate !== null).sort((a, b) => a.day.localeCompare(b.day));
           return (
-            <g key={provider.id} className={ours ? "text-brand" : "text-neutral-40"}>
+            <g key={provider.id} className={ours ? "text-brand" : "text-fg-secondary"}>
               {segments(series, breakOnPanel).map((run, index) => (
                 <polyline
                   key={index}
                   points={run.map((point) => `${x(point.day)},${y(point.success_rate!)}`).join(" ")}
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={ours ? 2 : 1.5}
+                  strokeWidth={2}
                   strokeDasharray={ours ? undefined : LINE_DASH[provider.id]}
                   strokeLinejoin="round"
                   strokeLinecap="round"
@@ -139,7 +150,7 @@ export function TrendChart({
                     onFocus={() => showDayHint(point.day)}
                     onPointerEnter={() => showDayHint(point.day)}
                     onClick={() => showDayHint(point.day)}
-                    className={cn("cursor-pointer outline-none focus-visible:stroke-focus-ring focus-visible:stroke-2", ours ? "fill-brand" : "fill-surface stroke-neutral-40")}
+                    className={cn("cursor-pointer outline-none focus-visible:stroke-focus-ring focus-visible:stroke-2", ours ? "fill-brand" : "fill-surface stroke-fg-secondary")}
                     strokeWidth={ours ? 0 : 1.5}
                   >
                     <title>{`${provider.name}: ${percent(point.success_rate)} · ${point.pages.toLocaleString("en-US")} URLs · ${point.day}`}</title>
@@ -163,7 +174,7 @@ export function TrendChart({
               return (
                 <li key={provider.id} className="flex items-center justify-between gap-2 text-caption">
                   <span className={cn("min-w-0 break-words", provider.id === OURS ? "text-fg-brand" : "text-fg-muted")}>{provider.name}</span>
-                  <span className="shrink-0 font-mono text-body-sm font-medium tabular-nums text-fg">{percent(point?.success_rate)}</span>
+                  <span className="shrink-0 font-mono text-body-sm font-medium tabular-nums text-fg">{point && point.success_rate === null && point.pages > 0 ? "Withheld" : percent(point?.success_rate)}</span>
                 </li>
               );
             })}
@@ -178,8 +189,8 @@ export function TrendChart({
 export function LineSwatch({ providerId }: { providerId: string }) {
   const ours = providerId === OURS;
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 8" className={cn("h-2 w-6 shrink-0", ours ? "text-brand" : "text-neutral-40")}>
-      <line x1="1" x2="23" y1="4" y2="4" stroke="currentColor" strokeWidth={ours ? 2 : 1.5} strokeDasharray={ours ? undefined : LINE_DASH[providerId]} strokeLinecap="round" />
+    <svg aria-hidden="true" viewBox="0 0 24 8" className={cn("h-2 w-6 shrink-0", ours ? "text-brand" : "text-fg-secondary")}>
+      <line x1="1" x2="23" y1="4" y2="4" stroke="currentColor" strokeWidth={2} strokeDasharray={ours ? undefined : LINE_DASH[providerId]} strokeLinecap="round" />
     </svg>
   );
 }

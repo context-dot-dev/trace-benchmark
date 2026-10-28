@@ -1,9 +1,9 @@
 import * as React from "react";
 
-import { SectionHeaderRule, SectionHeading, SiteSection } from "@/components/site/section";
+import { SectionHeading, SiteSection } from "@/components/site/section";
 import { cn } from "@/lib/utils";
 
-/** A report section: the site's heading with its blue closing phrase, the rule under it, then the content. */
+/** A report section with the site's heading and blue closing phrase. */
 export function ReportSection({
   id,
   title,
@@ -27,8 +27,7 @@ export function ReportSection({
         <SectionHeading title={<span id={`${id}-title`}>{title}</span>} accent={accent} description={description} />
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <SectionHeaderRule />
-      <div className="flex flex-col gap-8">{children}</div>
+      <div className="mt-6 flex flex-col gap-8">{children}</div>
     </SiteSection>
   );
 }
