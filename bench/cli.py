@@ -156,7 +156,9 @@ def main():
             store.meta('collection_profile',args.profile)
             store.meta('capacity_plan',plan(store,args.profile))
             print(json.dumps({'active_profile':profile(store),'capacity':store.meta('capacity_plan')},indent=2))
-        elif args.command=='discover':discover_into(store,due_only=args.due_only)
+        elif args.command=='discover':
+            discover_into(store,due_only=args.due_only)
+            if args.due_only:return
         elif args.command=='run':
             if not store.candidates():discover_into(store)
             run=select_run(store,args.per_category)
