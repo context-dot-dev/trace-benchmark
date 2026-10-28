@@ -40,6 +40,7 @@ checks = {
     'no_historical_page_reused': all(not identity_keys(t) & seen for t in after['selected']),
     'no_duplicate_urls': len({t['url'] for t in after['selected']}) == len(after['selected']),
     'receipts_retained': all(Path(r['raw_path']).exists() for r in result['receipts'] if r.get('raw_path')),
+    'english_docs_scope': all(t['url'].startswith('https://kubernetes.io/docs/') for t in after['selected'] if t['source_id']=='kubernetes-docs'),
     'registry_ids_unique': len({s['source_id'] for s in sources}) == len(sources),
 }
 report = {'checked_at': now(), 'passed': all(checks.values()), 'checks': checks,

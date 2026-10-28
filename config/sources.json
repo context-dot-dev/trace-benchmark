@@ -3166,7 +3166,7 @@
     "source_id": "kubernetes-docs",
     "organization": "Kubernetes",
     "kind": "sitemap",
-    "url": "https://kubernetes.io/sitemap.xml",
+    "url": "https://kubernetes.io/en/sitemap.xml",
     "registry_version": "continuous-supply-v1-20261028",
     "parser_version": "independent-discovery-v1",
     "poll_interval_hours": 1,
@@ -3174,7 +3174,8 @@
     "language_policy": "preserve_metadata_else_unknown",
     "target_type": "primary_document",
     "language": "en",
-    "max_sitemaps": 4
+    "max_sitemaps": 4,
+    "url_contains": "https://kubernetes.io/docs/"
   },
   {
     "category": "software_docs",
