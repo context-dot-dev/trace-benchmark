@@ -166,7 +166,7 @@ class _Collector:
                 rec.update(status="error", error=f"Parse error: {exc}")
                 return None, rec
 
-        def add(rec, url, document_id, title=None, published=None, updated=None, semantics="publisher_publication", metadata=None, language=None):
+        def add(rec, url, document_id, title=None, published=None, updated=None, semantics="publisher_publication", metadata=None, language=None, organization=None):
             extra = dict(metadata or {})
             try:
                 clean = canonical_url(url)
@@ -190,7 +190,7 @@ class _Collector:
                          target_host=parse.urlsplit(clean).hostname,
                          language_basis="item_metadata" if language else "unknown")
             candidates.append(dict(id=candidate_id(clean), url=clean, title=title,
-                category=source["category"], source_id=source["source_id"], organization=source["organization"],
+                category=source["category"], source_id=source["source_id"], organization=organization or source["organization"],
                 published_at=(pub.date().isoformat() if precision == "date" else pub.isoformat()) if pub else None,
                 updated_at=(upd.date().isoformat() if upd_precision == "date" else upd.isoformat()) if upd else None,
                 discovered_at=rec["received_at"], document_id=str(document_id or clean),
@@ -199,7 +199,7 @@ class _Collector:
         adapter_error = None
         try:
             kind = source["kind"]
-            v, rec = get(source["url"], kind in {"feed", "sitemap"})
+            v, rec = get(source["url"].replace("{utc_date}", _now().date().isoformat()), kind in {"feed", "sitemap", "sec_xbrl"})
             if v is not None and kind == "feed":
                 feed_language = next((x.text for x in v.iter() if _local(x.tag) == "language"), None)
                 feed_language = feed_language or v.get("{http://www.w3.org/XML/1998/namespace}lang")
@@ -214,17 +214,67 @@ class _Collector:
                         _text(item, "published") or _text(item, "pubDate") or _text(item, "date"),
                         _text(item, "updated"), language=language)
             elif v is not None and kind == "sitemap":
+                documents = [(v, rec)]
                 if _local(v.tag) == "sitemapindex":
-                    children = [x.text for x in v.iter() if _local(x.tag) == "loc"]
-                    child = next((u for u in children if u and "product" in u.lower()), None)
-                    if not child:
-                        raise ValueError("No product sitemap in index")
-                    v, rec = get(child, True)
-                if v is not None:
-                    for item in (x for x in v if _local(x.tag) == "url"):
+                    match = source.get("sitemap_filter", "product" if source["category"] == "commerce" else "")
+                    children = [x.text for x in v.iter() if _local(x.tag) == "loc" and x.text and match.lower() in x.text.lower()]
+                    if not children:
+                        raise ValueError("No matching sitemap in index")
+                    limit = min(4, max(1, source.get("max_sitemaps", 1)))
+                    slot = int(_now().timestamp() // (source.get("poll_interval_hours", 1) * 3600))
+                    offset = slot * limit % len(children)
+                    selected = (children[offset:] + children[:offset])[:limit]
+                    documents = [get(child, True) for child in selected]
+                for document, receipt in documents:
+                    if document is None:
+                        continue
+                    if _local(document.tag) != "urlset":
+                        raise ValueError("Expected a URL sitemap; register nested indexes separately")
+                    for item in document:
+                        if _local(item.tag) != "url":
+                            continue
                         url = _text(item, "loc")
-                        add(rec, url, url, updated=_text(item, "lastmod"), semantics="no_publication_field",
-                            metadata={"first_product_sitemap_only": True, "lastmod_not_publication": True})
+                        if source.get("url_contains") and source["url_contains"] not in (url or ""):
+                            continue
+                        add(receipt, url, url, updated=_text(item, "lastmod"), semantics="no_publication_field",
+                            metadata={"lastmod_not_publication": True}, language=source.get("language"))
+            elif v is not None and kind == "sec_xbrl":
+                for item in (x for x in v.iter() if _local(x.tag) == "item"):
+                    filing = next((x for x in item if _local(x.tag) == "xbrlFiling"), None)
+                    if filing is None:
+                        continue
+                    form = _text(filing, "formType")
+                    cik = _text(filing, "cikNumber")
+                    accession = _text(filing, "accessionNumber")
+                    if not cik or not accession or not form:
+                        continue
+                    files = [{_local(k): value for k, value in x.attrib.items()} for x in filing.iter() if _local(x.tag) == "xbrlFile"]
+                    primary = next((x for x in files if x.get("type") == form and x.get("url", "").lower().endswith((".htm", ".html"))), None)
+                    if not primary:
+                        continue
+                    add(rec, primary["url"], accession, _text(item, "title"), _text(item, "pubDate"),
+                        semantics="sec_acceptance_time", organization=source.get("issuer_organizations", {}).get(str(int(cik)), "SEC issuer " + str(int(cik))), language="en",
+                        metadata={"derived_from_official_fields": True, "form": form, "cik": cik, "company_name": _text(filing, "companyName")})
+            elif v is not None and kind == "crossref":
+                for work in v.get("message", {}).get("items", []):
+                    if work.get("type") != "journal-article":
+                        continue
+                    doi_url = work.get("URL")
+                    url = work.get("resource", {}).get("primary", {}).get("URL") or doi_url
+                    parts = (work.get("published", {}).get("date-parts") or [[]])[0]
+                    published = "-".join(str(x).zfill(2) for x in parts) if len(parts) == 3 else None
+                    publisher = work.get("publisher")
+                    if not publisher or not work.get("DOI"):
+                        continue
+                    previous_count = len(candidates)
+                    add(rec, url, work["DOI"], (work.get("title") or [None])[0], published,
+                        organization=source.get("publisher_aliases", {}).get(publisher, publisher), language=work.get("language"),
+                        metadata={"doi": work["DOI"], "publication_date_parts": parts, "publisher": publisher})
+                    if len(candidates) > previous_count and doi_url:
+                        try:
+                            candidates[-1]["metadata"]["aliases"].append(canonical_url(doi_url))
+                        except ValueError:
+                            pass
             elif v is not None and kind == "greenhouse":
                 for x in v.get("jobs", []):
                     add(rec, x["absolute_url"], x["id"], x.get("title"), x.get("first_published"), x.get("updated_at"))
@@ -275,7 +325,7 @@ class _Collector:
                     if x and not x.get("deleted") and not x.get("dead"):
                         add(ir, f"https://news.ycombinator.com/item?id={x['id']}", x["id"], x.get("title"), _epoch(x.get("time")),
                             metadata={"outgoing_url": x.get("url"), "discussion_page": True})
-            elif kind not in {"feed", "sitemap", "greenhouse", "lever", "sec", "fr", "github", "bluesky", "stack", "hn"}:
+            elif kind not in {"feed", "sitemap", "sec_xbrl", "crossref", "greenhouse", "lever", "sec", "fr", "github", "bluesky", "stack", "hn"}:
                 raise ValueError(f"Unsupported source adapter: {kind}")
         except Exception as exc:
             adapter_error = f"{type(exc).__name__}: {exc}"

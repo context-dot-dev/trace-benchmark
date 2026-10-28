@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from collections import Counter
+from urllib.parse import urlsplit
 from .postgres import PostgresStore
 from .storage import now
 from .capacity import profile
@@ -16,7 +18,7 @@ from .comparison import compare_run
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def discover_one(store):
+def discover_due(store):
     from .discovery import discover
     sources = json.loads((ROOT/'config/sources.json').read_text())
     if isinstance(sources, dict): sources = sources.get('sources', sources.get('registry', []))
@@ -24,13 +26,32 @@ def discover_one(store):
     due = [source for source in sources if not store.meta('source_poll:'+source['source_id']) or
            (clock-datetime.fromisoformat(store.meta('source_poll:'+source['source_id']))).total_seconds() >= source.get('poll_interval_hours', 1)*3600]
     if not due: return False
-    due.sort(key=lambda source: store.meta('source_poll:'+source['source_id']) or '')
+    due.sort(key=lambda source: (clock-datetime.fromisoformat(store.meta('source_poll:'+source['source_id']))).total_seconds() / (source.get('poll_interval_hours', 1)*3600) if store.meta('source_poll:'+source['source_id']) else float('inf'), reverse=True)
+    chosen, hosts = [], Counter()
+    for source in due:
+        host = urlsplit(source['url']).hostname
+        if hosts[host] >= 2:
+            continue
+        chosen.append(source); hosts[host] += 1
+        if len(chosen) == 16:
+            break
     with tempfile.TemporaryDirectory(dir=store.root) as directory:
-        result = discover(due[:1], Path(directory))
+        result = discover(chosen, Path(directory))
         prefix = 'discovery/vercel/'+Path(directory).name+'/'
+        paths = {}
         for path in Path(directory).rglob('*'):
-            if path.is_file(): store.put_file(prefix+str(path.relative_to(directory)), path.read_bytes())
-        result['registry_path'] = prefix+Path(result['registry_path']).name
+            if path.is_file():
+                saved = prefix+str(path.relative_to(directory))
+                store.put_file(saved, path.read_bytes())
+                paths[str(path.resolve())] = saved
+        result['registry_path'] = paths[result['registry_path']]
+        for candidate in result['candidates']:
+            metadata = candidate['metadata']
+            metadata['raw_path'] = paths[metadata['raw_path']]
+        for receipt in result['receipts']:
+            for request in [receipt, *receipt['requests']]:
+                if request.get('raw_path'):
+                    request['raw_path'] = paths[request['raw_path']]
         latest = store.meta('latest_receipts') or {}
         for receipt in result['receipts']:
             latest[receipt['source_id']] = receipt
@@ -89,8 +110,8 @@ def tick():
             # from starving free discovery or the independent NEEDLE cohort.
             lane = (store.meta('vercel:lane') or 0) % 10
             store.meta('vercel:lane', lane+1)
-            if lane == 0:
-                status = 'discovered' if discover_one(store) else 'discovery_current'
+            if lane in (0, 5):
+                status = 'discovered' if discover_due(store) else 'discovery_current'
             elif lane == 1:
                 from .needle import collect_needle
                 status = 'needle'; collect_needle(store, max_searches=4)
