@@ -57,7 +57,7 @@
     "drizzle-kit": "^0.31.11",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vite": "^8.3.0",
+    "vite": "^8.3.5",
     "@tailwindcss/turbopack": "^4",
     "context-ds": "github:anwarlemu/context-dev-brand-cli#release",
     "eslint": "^9",
