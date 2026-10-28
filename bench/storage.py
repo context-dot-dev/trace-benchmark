@@ -33,7 +33,7 @@ def safe_json(value):
     for key, secret in os.environ.items():
         if any(k in key for k in ('API_KEY', 'TOKEN', 'SECRET')) and len(secret) > 8:
             data = data.replace(secret, '[REDACTED]')
-    return data
+    return data.encode('utf-8', errors='backslashreplace').decode('utf-8')
 
 
 def atomic_json(path, value):

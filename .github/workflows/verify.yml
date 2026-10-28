@@ -33,6 +33,7 @@ jobs:
       - run: npm ci
       - run: pip install -r requirements-lock.txt
       - run: npm run build
+      - run: python scripts/verify-unicode-receipts.py
       - run: python scripts/verify-neon-migration.py
       - run: python scripts/verify-vercel-cron.py
       - uses: actions/upload-artifact@v4
@@ -40,5 +41,6 @@ jobs:
         with:
           name: serverless-verification
           path: |
+            artifacts/unicode-receipts/**/verification.json
             artifacts/neon-migration/verification.json
             artifacts/vercel/cron.json
