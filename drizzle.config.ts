@@ -1,2 +1,2 @@
 import { defineConfig } from 'drizzle-kit';
-export default defineConfig({dialect:'postgresql',schema:'./server/schema.ts',out:'./server/migrations'});
+export default defineConfig({dialect:'postgresql',schema:'./src/lib/benchmark/schema.ts',out:'./drizzle'});

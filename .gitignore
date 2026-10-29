@@ -32,3 +32,8 @@ tsconfig.tsbuildinfo
 
 public/pricing.json
 public/plan.md
+
+.ds/review/
+
+.ds/hooks.log
+.ds/session.json
