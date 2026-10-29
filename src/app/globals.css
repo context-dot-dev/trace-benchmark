@@ -281,7 +281,7 @@ html {
   margin: var(--ds-space-4) 0;
 }
 .bench-legend:has(button) {
-  margin-inline: calc(-1 * var(--ds-space-2));
+  margin-left: calc(-1 * var(--ds-space-2));
 }
 .bench-legend > span,
 .bench-legend > button {
@@ -318,8 +318,9 @@ html {
 }
 .bench-radar .bench-radar-scale {
   fill: var(--ds-color-text-muted);
-  font-family: var(--ds-font-mono);
-  font-size: var(--ds-text-caption);
+  font-family: var(--ds-font-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ds-text-body-sm);
   paint-order: stroke;
   stroke: var(--ds-color-bg-default);
   stroke-width: 4;
