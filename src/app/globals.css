@@ -513,7 +513,7 @@ body::after,
   .bench-scroll tr {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: var(--ds-space-4) 0;
+    padding: var(--ds-space-4);
     gap: var(--ds-space-3);
   }
   .bench-scroll th {
@@ -549,4 +549,20 @@ body::after,
 
 .bench-shell main > section {
   border-top: 0;
+}
+
+.bench-primary .bench-scroll th,
+.bench-primary .bench-scroll td {
+  padding: var(--ds-space-2);
+}
+.bench-primary .bench-scroll td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 580px) {
+  .bench-primary .bench-scroll th,
+  .bench-primary .bench-scroll td {
+    padding: 0;
+    text-align: left;
+  }
 }

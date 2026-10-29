@@ -446,7 +446,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
               />
               <Section
                 title="Response time"
-                note="Shorter bars indicate faster median responses; grading time and authentication, credit, and rate-limit errors are excluded."
+                note="Lower median response times indicate faster responses; grading time and authentication, credit, and rate-limit errors are excluded."
                 chart={
                   <Bars
                     rows={rows}
@@ -667,13 +667,16 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
           <details>
             <summary>Collection, grading, and data retention</summary>
             <p>
-              The current protocol is {PROTOCOL}. Context and Firecrawl request
-              main content; all outputs are limited to 250,000 characters. Jev
-              1.13.0 grades up to 12,000 characters from the beginning, middle,
-              and end. A positive match can establish useful content, while a
-              negative judgment from an incomplete excerpt remains unresolved.
-              Failed, unresolved, and pending results stay in the score
-              denominator, with equal weight for each of the eight categories.
+              {run && run.protocol !== PROTOCOL
+                ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
+                : `Collection uses ${PROTOCOL}.`}{" "}
+              Context and Firecrawl request main content; all outputs are
+              limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
+              characters from the beginning, middle, and end. A positive match
+              can establish useful content, while a negative judgment from an
+              incomplete excerpt remains unresolved. Failed, unresolved, and
+              pending results stay in the score denominator, with equal weight
+              for each of the eight categories.
             </p>
             <p>
               Vercel Cron checks for work every fifteen minutes. Drizzle stores
