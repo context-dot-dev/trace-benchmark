@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { CalendarDays, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Surface } from "@/lib/surface";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProviderName } from "@/components/trace/provider-logo";
 import { ThemeToggle } from "@/components/trace/theme-toggle";
@@ -441,7 +448,24 @@ const citation = `@misc{scrapingbench2026,
   year = {2026},
   url = {https://trace-benchmark-contextdev.vercel.app/}
 }`;
+const WikipediaBenchmark = dynamic(() => import("./wikipedia"), {
+  loading: () => (
+    <p role="status" className="bench-note">
+      Loading Wikipedia sample…
+    </p>
+  ),
+});
+function subscribeToTab(callback: () => void) {
+  window.addEventListener("hashchange", callback);
+  return () => window.removeEventListener("hashchange", callback);
+}
+function currentTab() {
+  return window.location.hash.startsWith("#wikipedia") ? "wikipedia" : "daily";
+}
 export function BenchmarkReport({ initial }: { initial: Report }) {
+  const tab = useSyncExternalStore(subscribeToTab, currentTab, () => "daily");
+  const methodology =
+    tab === "wikipedia" ? "#wikipedia-methodology" : "#methodology";
   const [data, setData] = useState(initial);
   const [selection, setSelection] = useState("latest");
   const [error, setError] = useState("");
@@ -506,8 +530,10 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
           Scraping Bench
         </Link>
         <nav aria-label="Main navigation">
-          <a href="#methodology">Methodology</a>
-          <a href="#citation">Citation</a>
+          <a href={methodology}>Methodology</a>
+          <a href={tab === "wikipedia" ? "#wikipedia-citation" : "#citation"}>
+            Citation
+          </a>
           <a href="https://github.com/context-dot-dev/trace-benchmark">
             GitHub ↗
           </a>
@@ -517,222 +543,259 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       <main id="main">
         <div className="bench-intro">
           <h1>Measuring web scraping quality</h1>
-          <p>
-            Scraping Bench evaluates whether four providers return useful
-            content from the same daily sample of pages across eight categories.
-            Responses are assessed without provider names, and each category
-            contributes equally to the score. Context operates the benchmark and
-            is one of the providers evaluated.
-          </p>
-          <a href="#methodology">Read the methodology</a>
+          {tab === "wikipedia" ? (
+            <p>
+              Four providers, 1,041 external URLs discovered through English
+              Wikipedia citations. This fixed study tests the linked websites,
+              not Wikipedia itself. Context operates the benchmark and is one of
+              the providers evaluated.
+            </p>
+          ) : (
+            <p>
+              Scraping Bench evaluates whether four providers return useful
+              content from the same daily sample of pages across eight
+              categories. Responses are assessed without provider names, and
+              each category contributes equally to the score. Context operates
+              the benchmark and is one of the providers evaluated.
+            </p>
+          )}
+          <a href={methodology}>Read the methodology</a>
         </div>
-        <div className="bench-sample">
-          <p aria-live="polite">
-            {run ? (
-              <>
-                Showing <strong>{run.day}</strong> UTC · {integer(run.pages)}{" "}
-                pages
-              </>
-            ) : (
-              "Awaiting the first sample"
+        <Tabs
+          value={tab}
+          onValueChange={(value) => {
+            window.location.hash = value;
+          }}
+        >
+          <TabsList aria-label="Benchmark sample">
+            <TabsTrigger value="daily">Daily benchmark</TabsTrigger>
+            <TabsTrigger value="wikipedia">Wikipedia</TabsTrigger>
+          </TabsList>
+          <TabsContent value="daily">
+            <div className="bench-sample">
+              <p aria-live="polite">
+                {run ? (
+                  <>
+                    Showing <strong>{run.day}</strong> UTC ·{" "}
+                    {integer(run.pages)} pages
+                  </>
+                ) : (
+                  "Awaiting the first sample"
+                )}
+                {loading && " · Updating…"}
+              </p>
+              <Select value={selection} onValueChange={setSelection}>
+                <SelectTrigger aria-label="Sample date (UTC)">
+                  <CalendarDays aria-hidden="true" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest">
+                    Latest completed sample
+                  </SelectItem>
+                  {data.history.map((r) => (
+                    <SelectItem
+                      key={r.id}
+                      value={r.id}
+                      description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
+                    >
+                      {r.day}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {error && (
+              <p role="alert" className="bench-notice">
+                {error}
+              </p>
             )}
-            {loading && " · Updating…"}
-          </p>
-          <Select value={selection} onValueChange={setSelection}>
-            <SelectTrigger aria-label="Sample date (UTC)">
-              <CalendarDays aria-hidden="true" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="latest">Latest completed sample</SelectItem>
-              {data.history.map((r) => (
-                <SelectItem
-                  key={r.id}
-                  value={r.id}
-                  description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
-                >
-                  {r.day}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {error && (
-          <p role="alert" className="bench-notice">
-            {error}
-          </p>
-        )}
-        {!run ? (
-          <p className="bench-notice">
-            The first sample has not been collected yet. Results appear here as
-            scheduled collection progresses.
-          </p>
-        ) : (
-          <div id="results" aria-busy={loading}>
-            <Section
-              title="Quality over time"
-              note={`Daily useful-content scores for ${run.protocol}. Gaps indicate missing measurements; results from different protocols are kept separate.`}
-              chart={<Trend history={history} />}
-              table={
-                <Table
-                  label="Daily quality history"
-                  headers={[
-                    "Date (UTC)",
-                    "Pages",
-                    ...providers.map((p) => p.name),
-                  ]}
-                  rows={[...history]
-                    .reverse()
-                    .map((r) => [
-                      r.day,
-                      integer(r.pages),
-                      ...providers.map((p) =>
-                        percent(r.providers.find((m) => m.id === p.id)?.rate),
-                      ),
-                    ])}
-                />
-              }
-            />
-            <Section
-              title="Useful content"
-              note={`Share of sampled pages returning substantive content from the requested page, averaged equally across categories.${pending ? " Collection is in progress, so scores are provisional lower bounds." : " Unresolved results remain in the denominator."}`}
-              chart={<Bars rows={rows} />}
-              table={
-                <Table
-                  label="Useful content results"
-                  headers={[
-                    "Provider",
-                    "Useful",
-                    "Not useful",
-                    "Unresolved",
-                    "Pending",
-                    "Score",
-                  ]}
-                  rows={rows.map((r) => [
-                    <Name key={r.id} id={r.id} />,
-                    integer(r.useful),
-                    integer(r.failed),
-                    integer(r.unknown),
-                    integer(r.pending),
-                    percent(r.rate),
-                  ])}
-                />
-              }
-            />
-            <Section
-              title="Results by category"
-              note="Compare useful-content rates across eight categories on the same pages for every provider. The radar uses a 0–100% scale and supports provider highlighting; the table gives exact scores and page counts, with an em dash for missing measurements."
-              chart={<Radar rows={rows} />}
-              table={
-                <Table
-                  label="Category results"
-                  headers={[
-                    "Category",
-                    "Pages",
-                    ...providers.map((p) => p.name),
-                  ]}
-                  rows={categories.map((c) => [
-                    c.name,
-                    integer(run.categories[c.id] ?? 0),
-                    ...providers.map((p) =>
-                      percent(
-                        categoryRate(
-                          rows.find((r) => r.id === p.id),
-                          c.id,
-                        ),
-                      ),
-                    ),
-                  ])}
-                />
-              }
-            />
-            {run.pages < run.target && (
+            {!run ? (
               <p className="bench-notice">
-                This sample includes {integer(run.pages)} of{" "}
-                {integer(run.target)} targeted pages. Missing categories appear
-                as gaps and withhold the overall score; they are never scored as
-                zero.
+                The first sample has not been collected yet. Results appear here
+                as scheduled collection progresses.
               </p>
+            ) : (
+              <div id="results" aria-busy={loading}>
+                <Section
+                  title="Quality over time"
+                  note={`Daily useful-content scores for ${run.protocol}. Gaps indicate missing measurements; results from different protocols are kept separate.`}
+                  chart={<Trend history={history} />}
+                  table={
+                    <Table
+                      label="Daily quality history"
+                      headers={[
+                        "Date (UTC)",
+                        "Pages",
+                        ...providers.map((p) => p.name),
+                      ]}
+                      rows={[...history]
+                        .reverse()
+                        .map((r) => [
+                          r.day,
+                          integer(r.pages),
+                          ...providers.map((p) =>
+                            percent(
+                              r.providers.find((m) => m.id === p.id)?.rate,
+                            ),
+                          ),
+                        ])}
+                    />
+                  }
+                />
+                <Section
+                  title="Useful content"
+                  note={`Share of sampled pages returning substantive content from the requested page, averaged equally across categories.${pending ? " Collection is in progress, so scores are provisional lower bounds." : " Unresolved results remain in the denominator."}`}
+                  chart={<Bars rows={rows} />}
+                  table={
+                    <Table
+                      label="Useful content results"
+                      headers={[
+                        "Provider",
+                        "Useful",
+                        "Not useful",
+                        "Unresolved",
+                        "Pending",
+                        "Score",
+                      ]}
+                      rows={rows.map((r) => [
+                        <Name key={r.id} id={r.id} />,
+                        integer(r.useful),
+                        integer(r.failed),
+                        integer(r.unknown),
+                        integer(r.pending),
+                        percent(r.rate),
+                      ])}
+                    />
+                  }
+                />
+                <Section
+                  title="Results by category"
+                  note="Compare useful-content rates across eight categories on the same pages for every provider. The radar uses a 0–100% scale and supports provider highlighting; the table gives exact scores and page counts, with an em dash for missing measurements."
+                  chart={<Radar rows={rows} />}
+                  table={
+                    <Table
+                      label="Category results"
+                      headers={[
+                        "Category",
+                        "Pages",
+                        ...providers.map((p) => p.name),
+                      ]}
+                      rows={categories.map((c) => [
+                        c.name,
+                        integer(run.categories[c.id] ?? 0),
+                        ...providers.map((p) =>
+                          percent(
+                            categoryRate(
+                              rows.find((r) => r.id === p.id),
+                              c.id,
+                            ),
+                          ),
+                        ),
+                      ])}
+                    />
+                  }
+                />
+                {run.pages < run.target && (
+                  <p className="bench-notice">
+                    This sample includes {integer(run.pages)} of{" "}
+                    {integer(run.target)} targeted pages. Missing categories
+                    appear as gaps and withhold the overall score; they are
+                    never scored as zero.
+                  </p>
+                )}
+                <p className="bench-note">
+                  The selected sample has {integer(unknown)} unresolved results
+                  {pending
+                    ? ` and ${integer(pending)} pending results`
+                    : ""}.{" "}
+                  <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>
+                    Download the results ↓
+                  </a>
+                </p>
+              </div>
             )}
-            <p className="bench-note">
-              The selected sample has {integer(unknown)} unresolved results
-              {pending ? ` and ${integer(pending)} pending results` : ""}.{" "}
-              <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>
-                Download the results ↓
-              </a>
-            </p>
-          </div>
-        )}
-        <section id="methodology" className="bench-method">
-          <h2>Methodology</h2>
-          <p>
-            Public feeds, registries, and sitemaps supply up to 300 previously
-            unseen pages per category each day. All four providers receive the
-            same frozen sample with fresh content requested and a 30-second
-            request deadline. An automated judge evaluates whether returned
-            content is substantive and belongs to the requested page, without
-            seeing the provider name. The score measures useful content rather
-            than factual accuracy or complete recall.
-          </p>
-          <details>
-            <summary>Collection, grading, and limitations</summary>
-            <p>
-              {run && run.protocol !== PROTOCOL
-                ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
-                : `Collection uses ${PROTOCOL}.`}{" "}
-              Context and Firecrawl request main content; all outputs are
-              limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
-              characters from the beginning, middle, and end. A positive match
-              can establish useful content, while a negative judgment from an
-              incomplete excerpt remains unresolved. Failed, unresolved, and
-              pending results stay in the denominator, with equal weight for
-              each of the eight categories.
-            </p>
-            <p>
-              Fresh-fetch settings do not guarantee an uncached response.
-              Response time is therefore not compared. Source availability,
-              provider rate limits, and request budgets can reduce the daily
-              sample.
-            </p>
-            <p>
-              Vercel Cron checks for work every fifteen minutes, and results are
-              stored in Neon through Drizzle. Interrupted provider requests are
-              not automatically repeated. Each provider is limited to 4,000
-              requests per UTC day, and grading has a separate input budget.
-            </p>
-            <p>
-              Individual results are retained for 30 days. Private grading
-              excerpts are compressed and retained for up to seven days within a
-              256 MB budget; daily summaries remain available. Historical
-              records retain their original protocol and grading decisions.
-            </p>
-            {data.collecting && data.collecting.id !== run?.id && (
+            <section id="methodology" className="bench-method">
+              <h2>Methodology</h2>
               <p>
-                Collection for {data.collecting.day} is in progress, with{" "}
-                {integer(
-                  data.collecting.providers.reduce(
-                    (n, p) => n + p.total - p.pending,
-                    0,
-                  ),
-                )}{" "}
-                of {integer(data.collecting.pages * providers.length)} results
-                ready.
+                Public feeds, registries, and sitemaps supply up to 300
+                previously unseen pages per category each day. All four
+                providers receive the same frozen sample with fresh content
+                requested and a 30-second request deadline. An automated judge
+                evaluates whether returned content is substantive and belongs to
+                the requested page, without seeing the provider name. The score
+                measures useful content rather than factual accuracy or complete
+                recall.
               </p>
-            )}
-            <p>
-              {data.health.healthySources} of {data.health.sources} sources last
-              fetched successfully. Last collector update:{" "}
-              {data.health.lastTick
-                ? new Date(data.health.lastTick)
-                    .toISOString()
-                    .replace("T", " ")
-                    .slice(0, 19) + " UTC"
-                : "not yet recorded"}
-              .{data.health.error && ` ${data.health.error}`}
-            </p>
-          </details>
-        </section>
-        <section id="citation" className="bench-citation">
+              <details>
+                <summary>Collection, grading, and limitations</summary>
+                <p>
+                  {run && run.protocol !== PROTOCOL
+                    ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
+                    : `Collection uses ${PROTOCOL}.`}{" "}
+                  Context and Firecrawl request main content; all outputs are
+                  limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
+                  characters from the beginning, middle, and end. A positive
+                  match can establish useful content, while a negative judgment
+                  from an incomplete excerpt remains unresolved. Failed,
+                  unresolved, and pending results stay in the denominator, with
+                  equal weight for each of the eight categories.
+                </p>
+                <p>
+                  Fresh-fetch settings do not guarantee an uncached response.
+                  Response time is therefore not compared. Source availability,
+                  provider rate limits, and request budgets can reduce the daily
+                  sample.
+                </p>
+                <p>
+                  Vercel Cron checks for work every fifteen minutes, and results
+                  are stored in Neon through Drizzle. Interrupted provider
+                  requests are not automatically repeated. Each provider is
+                  limited to 4,000 requests per UTC day, and grading has a
+                  separate input budget.
+                </p>
+                <p>
+                  Individual results are retained for 30 days. Private grading
+                  excerpts are compressed and retained for up to seven days
+                  within a 256 MB budget; daily summaries remain available.
+                  Historical records retain their original protocol and grading
+                  decisions.
+                </p>
+                {data.collecting && data.collecting.id !== run?.id && (
+                  <p>
+                    Collection for {data.collecting.day} is in progress, with{" "}
+                    {integer(
+                      data.collecting.providers.reduce(
+                        (n, p) => n + p.total - p.pending,
+                        0,
+                      ),
+                    )}{" "}
+                    of {integer(data.collecting.pages * providers.length)}{" "}
+                    results ready.
+                  </p>
+                )}
+                <p>
+                  {data.health.healthySources} of {data.health.sources} sources
+                  last fetched successfully. Last collector update:{" "}
+                  {data.health.lastTick
+                    ? new Date(data.health.lastTick)
+                        .toISOString()
+                        .replace("T", " ")
+                        .slice(0, 19) + " UTC"
+                    : "not yet recorded"}
+                  .{data.health.error && ` ${data.health.error}`}
+                </p>
+              </details>
+            </section>
+          </TabsContent>
+          <TabsContent value="wikipedia">
+            <WikipediaBenchmark />
+          </TabsContent>
+        </Tabs>
+        <section
+          id={tab === "wikipedia" ? "wikipedia-citation" : "citation"}
+          className="bench-citation"
+        >
           <h2>Citation</h2>
           <p>
             Scraping Bench is maintained by{" "}
