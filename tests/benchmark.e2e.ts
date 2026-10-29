@@ -1,6 +1,7 @@
 /** Failure cases: unauthorized cron, preview billing, duplicate ticks, worker death,
  * stale writes, an unfinished prior day, rate limits, bad Unicode, invalid grading,
- * private URL redirects, category starvation, budget exhaustion and evidence leaks.
+ * private URL redirects, category starvation, budget exhaustion, evidence leaks,
+ * and repeated retention writes bloating already-cleared historical rows.
  * Uses a real PostgreSQL database and real HTTP fixture provider endpoints. */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -243,6 +244,23 @@ try {
   await runTick(store, { ...options, now: () => capped });
   assert.equal(requests.length, before);
   checks.push("Durable daily request caps prevent external calls");
+  await store.db.execute(
+    sql`update scraping_bench.attempts set day='2026-10-20' where state='done'`,
+  );
+  await runTick(store, { ...options, now: () => capped, maxPages: 0 });
+  const retained = await store.db.execute(
+    sql`select id,xmin::text as version,evidence_bytes from scraping_bench.attempts where day='2026-10-20' order by id`,
+  );
+  assert.ok(retained.rows.length > 0);
+  assert.ok(retained.rows.every((r) => r.evidence_bytes === 0));
+  await runTick(store, { ...options, now: () => capped, maxPages: 0 });
+  const repeated = await store.db.execute(
+    sql`select id,xmin::text as version,evidence_bytes from scraping_bench.attempts where day='2026-10-20' order by id`,
+  );
+  assert.deepEqual(repeated.rows, retained.rows);
+  checks.push(
+    "Expired evidence is cleared once without rewriting historical rows on later ticks",
+  );
   await mkdir("artifacts/rebuild", { recursive: true });
   await writeFile(
     "artifacts/rebuild/e2e.json",

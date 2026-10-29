@@ -1,6 +1,17 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { gzipSync, gunzipSync } from "node:zlib";
-import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+} from "drizzle-orm";
 import registry from "../../../config/sources.json";
 import {
   attempts,
@@ -578,7 +589,13 @@ async function retainEvidence(store: Store, clock: Date) {
   await store.db
     .update(attempts)
     .set({ evidence: null, evidenceBytes: 0 })
-    .where(and(eq(attempts.state, "done"), lt(attempts.day, cutoff)));
+    .where(
+      and(
+        eq(attempts.state, "done"),
+        isNotNull(attempts.evidence),
+        lt(attempts.day, cutoff),
+      ),
+    );
   const [{ bytes }] = await store.db
     .select({
       bytes: sql<number>`coalesce(sum(${attempts.evidenceBytes}),0)::int`,
