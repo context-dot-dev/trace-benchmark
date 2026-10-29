@@ -8,10 +8,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Scraping Bench · Context.dev",
-  description: "Compare daily web scraping quality, latency and cost using shared pages and transparent collection receipts.",
+  description: "Compare daily web scraping quality and latency using shared pages and inspectable results.",
   openGraph: {
     title: "Scraping Bench · Context.dev",
-    description: "Compare how reliably web scrapers return useful content from the same pages, with daily measurements of quality, speed and cost.",
+    description: "Compare how reliably web scrapers return useful content from the same pages, with daily measurements of useful content and response time.",
     type: "website",
   },
 };

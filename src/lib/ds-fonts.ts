@@ -1,6 +1,4 @@
-import { Doto, Rethink_Sans } from 'next/font/google';
-
-const rethinkSans = Rethink_Sans({ subsets: ['latin'], variable: '--font-rethink-sans' });
-const doto = Doto({ subsets: ['latin'], weight: ['800'], variable: '--font-doto' });
-
-export const dsFontVariables = `${rethinkSans.variable} ${doto.variable}`;
+import localFont from 'next/font/local';
+const rethink = localFont({ src: '../../fonts/rethink-sans.woff2', variable: '--font-rethink-sans', display: 'swap' });
+const mono = localFont({ src: '../../fonts/ibm-plex-mono-400.woff2', variable: '--font-ibm-plex-mono', display: 'swap' });
+export const dsFontVariables = `${rethink.variable} ${mono.variable}`;

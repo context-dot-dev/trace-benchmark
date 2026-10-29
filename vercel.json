@@ -5,25 +5,10 @@
   "regions": [
     "iad1"
   ],
-  "functions": {
-    "api/*.py": {
-      "maxDuration": 300,
-      "excludeFiles": "{node_modules/**,.venv/**,.env*,.vercel_python_packages/**,_uv/**,artifacts/**,state/**,site/**,server/**,src/**,**/._*}",
-      "memory": 4096
-    }
-  },
   "crons": [
     {
       "path": "/api/cron",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/export",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/publish",
-      "schedule": "2-59/5 * * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }

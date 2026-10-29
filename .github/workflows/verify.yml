@@ -1,4 +1,4 @@
-name: Verify TRACE
+name: Verify Scraping Bench
 on:
   pull_request:
   push:
@@ -6,41 +6,32 @@ on:
 permissions:
   contents: read
 jobs:
-  serverless:
+  benchmark:
     runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: trace
-          POSTGRES_PASSWORD: trace
-          POSTGRES_DB: trace_verify
+          POSTGRES_USER: bench
+          POSTGRES_PASSWORD: bench
+          POSTGRES_DB: benchmark_verify
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      TRACE_DATABASE_URL: postgresql://trace:trace@127.0.0.1:5432/trace_verify
-      PYTHONPATH: .
+      DATABASE_URL: postgresql://bench:bench@127.0.0.1:5432/benchmark_verify
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - run: npm ci
-      - run: pip install -r requirements-lock.txt
+      - run: npm run lint
+      - run: npm run test:e2e
       - run: npm run build
-      - run: python scripts/verify-unicode-receipts.py
-      - run: python scripts/verify-neon-migration.py
-      - run: python scripts/verify-vercel-cron.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: serverless-verification
-          path: |
-            artifacts/unicode-receipts/**/verification.json
-            artifacts/neon-migration/verification.json
-            artifacts/vercel/cron.json
+          name: benchmark-e2e
+          path: artifacts/rebuild/e2e.json

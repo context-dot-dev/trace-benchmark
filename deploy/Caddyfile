@@ -1,5 +1,0 @@
-trace.2.28.61.111.sslip.io {
-    @private path /trace-source.zip /.env /.git/*
-    respond @private 404
-    reverse_proxy 127.0.0.1:18090
-}
