@@ -394,7 +394,7 @@ async function discoverDue(store: Store, clock: Date) {
     .from(sources)
     .where(lt(sources.nextPoll, clock))
     .orderBy(sources.nextPoll)
-    .limit(8);
+    .limit(48);
   await Promise.all(
     due.map(async (due) => {
       const source = registry.find((s) => s.source_id === due.id) as

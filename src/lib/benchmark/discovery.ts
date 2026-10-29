@@ -17,6 +17,7 @@ export type Source = {
   actor?: string;
 };
 const dispatcher = new Agent({
+  connections: 2,
   connect: {
     lookup(hostname, options, callback) {
       lookup(hostname, { all: true }, (error, addresses) => {
@@ -56,8 +57,11 @@ export function canonical(url: string) {
       u.searchParams.delete(key);
   return u.href;
 }
-export async function fetchPublic(url: string) {
-  const signal = AbortSignal.timeout(20000);
+export async function fetchPublic(url: string, deadline?: AbortSignal) {
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(20000),
+    ...(deadline ? [deadline] : []),
+  ]);
   for (let redirects = 0; redirects < 4; redirects++) {
     const response = await publicFetch(canonical(url), {
       dispatcher,
@@ -105,6 +109,8 @@ const text = (v: unknown): string =>
     ? String((v as Record<string, unknown> | null)?.["#text"] ?? "")
     : String(v ?? "");
 export async function discoverSource(source: Source): Promise<Candidate[]> {
+  const deadline = AbortSignal.timeout(40000);
+  const read = (url: string) => fetchPublic(url, deadline);
   const found: Candidate[] = [];
   const now = new Date();
   const add = (
@@ -137,7 +143,7 @@ export async function discoverSource(source: Source): Promise<Candidate[]> {
       /* Invalid upstream links do not invalidate the rest of the feed. */
     }
   };
-  const raw = await fetchPublic(
+  const raw = await read(
     source.url.replace("{utc_date}", now.toISOString().slice(0, 10)),
   );
   const v = ["feed", "sitemap", "sec_xbrl"].includes(source.kind)
@@ -173,7 +179,7 @@ export async function discoverSource(source: Source): Promise<Candidate[]> {
       docs = await Promise.all(
         [...children.slice(offset), ...children.slice(0, offset)]
           .slice(0, limit)
-          .map(async (u) => xml.parse(await fetchPublic(u))),
+          .map(async (u) => xml.parse(await read(u))),
       );
     }
     for (const doc of docs)
@@ -254,9 +260,7 @@ export async function discoverSource(source: Source): Promise<Candidate[]> {
   else if (source.kind === "hn")
     for (const id of v.slice(0, 5)) {
       const item = JSON.parse(
-        await fetchPublic(
-          `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
-        ),
+        await read(`https://hacker-news.firebaseio.com/v0/item/${id}.json`),
       );
       if (item && !item.dead && !item.deleted)
         add(`https://news.ycombinator.com/item?id=${id}`, item.title, id);

@@ -1,14 +1,18 @@
+import { config } from "dotenv";
 import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { openStore, migrateStore } from "../src/lib/benchmark/store";
 import { attempts, budgets, runs, seen } from "../src/lib/benchmark/schema";
 import { summarize } from "../src/lib/benchmark/report";
 import { canonical } from "../src/lib/benchmark/discovery";
 import { categories } from "../src/lib/benchmark/types";
 
-const store = openStore(process.env.DATABASE_URL!);
+config({ path: ".env.local", quiet: true });
+if (!process.env.DATABASE_URL)
+  throw new Error("DATABASE_URL is required for migration");
+const store = openStore(process.env.DATABASE_URL);
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 try {
   await migrateStore(store);
@@ -123,7 +127,9 @@ try {
     console.log({
       importedCandidates: candidates.length,
       seenIdentities: ids.length,
-      historicalRuns: archive.runs.length,
+      historicalRuns: new Set(
+        archive.records.map((r: { runId: string }) => r.runId),
+      ).size,
       historicalResults: archive.records.length,
     });
   }

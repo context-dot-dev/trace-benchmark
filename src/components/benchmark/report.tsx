@@ -37,12 +37,7 @@ function Table({
   label: string;
 }) {
   return (
-    <div
-      className={`bench-scroll ${label === "Individual page results" ? "bench-records" : ""}`}
-      tabIndex={0}
-      role="region"
-      aria-label={label}
-    >
+    <div className="bench-scroll" tabIndex={0} role="region" aria-label={label}>
       <table>
         <caption className="sr-only">{label}</caption>
         <thead>
@@ -122,7 +117,7 @@ function Bars({
     >
       <div className="bench-axis">
         <span>0{metric === "rate" ? "%" : " s"}</span>
-        <span>{format(max)}</span>
+        <span>{metric === "rate" ? "100%" : format(max)}</span>
       </div>
       {providers.map((p) => {
         const row = rows.find((r) => r.id === p.id);
@@ -159,8 +154,26 @@ function Trend({ history }: { history: RunSummary[] }) {
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const x = (i: number) =>
-    45 + (i * (width - 60)) / Math.max(1, history.length - 1);
+  const firstDay = Date.parse(history[0]?.day ?? "1970-01-01");
+  const lastDay = Date.parse(history.at(-1)?.day ?? "1970-01-01");
+  const span = Math.max(86400000, lastDay - firstDay);
+  const position = (time: number) =>
+    45 + ((time - firstDay) * (width - 60)) / span;
+  const x = (i: number) => position(Date.parse(history[i].day));
+  const tickCount = lastDay === firstDay ? 1 : width < 500 ? 3 : 6;
+  const ticks = [
+    ...new Set(
+      Array.from(
+        { length: tickCount },
+        (_, i) =>
+          firstDay +
+          Math.round(
+            (i * (lastDay - firstDay)) / Math.max(1, tickCount - 1) / 86400000,
+          ) *
+            86400000,
+      ),
+    ),
+  ];
   return (
     <>
       <div className="bench-legend">
@@ -235,12 +248,18 @@ function Trend({ history }: { history: RunSummary[] }) {
               })}
             </g>
           ))}
-          <text x="45" y="255">
-            {history[0]?.day.slice(5)}
-          </text>
-          <text x={width - 15} y="255" textAnchor="end">
-            {history.at(-1)?.day.slice(5)}
-          </text>
+          {ticks.map((time, i) => (
+            <text
+              key={time}
+              x={position(time)}
+              y="255"
+              textAnchor={
+                i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"
+              }
+            >
+              {new Date(time).toISOString().slice(5, 10)}
+            </text>
+          ))}
         </svg>
       </div>
     </>
@@ -284,7 +303,9 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       }
     }
     void refresh();
-    const timer = setInterval(refresh, 60000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 900000);
     return () => {
       active = false;
       controller.abort();
@@ -297,6 +318,9 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
   const unknown = rows.reduce((sum, r) => sum + r.unknown, 0);
   const history = data.history
     .filter((r) => r.protocol === run?.protocol && r.status === "completed")
+    .filter(
+      (r, i, rows) => rows.findIndex((other) => other.day === r.day) === i,
+    )
     .slice(0, 30)
     .reverse();
   const latencyMax = Math.max(1000, ...rows.map((r) => r.p50 ?? 0));
@@ -355,9 +379,8 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
                 0,
               ),
             )}{" "}
-            of {integer(data.collecting.pages * 4)} results are ready. The
-            charts show the latest completed sample; select the new date to
-            inspect progress.
+            of {integer(data.collecting.pages * 4)} results are ready. Select
+            its date to inspect progress.
           </p>
         )}
         {!run ? (
@@ -385,13 +408,6 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
                 Download results ↓
               </a>
             </div>
-            {run.protocol !== PROTOCOL && (
-              <p className="bench-notice">
-                This historical sample uses {run.protocol}. Its scores are
-                preserved, and its trend is shown separately from the current
-                protocol.
-              </p>
-            )}
             {run.pages < run.target && (
               <p className="bench-notice">
                 This sample contains {integer(run.target - run.pages)} fewer
@@ -430,7 +446,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
               />
               <Section
                 title="Response time"
-                note="Median time to receive the provider response, before grading. Authentication failures, credit errors, and rate limits are excluded."
+                note="Shorter bars indicate faster median responses; grading time and authentication, credit, and rate-limit errors are excluded."
                 chart={
                   <Bars
                     rows={rows}

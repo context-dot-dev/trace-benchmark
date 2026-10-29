@@ -170,6 +170,22 @@ try {
   await runTick(store, options);
   assert.equal(requests.filter((r) => r.path != "/judge").length, 32);
   checks.push("Repeated ticks do not repeat billed requests");
+  for (const request of requests.filter((r) => r.path === "/judge")) {
+    assert.deepEqual(Object.keys(request.body.state.target).sort(), [
+      "category",
+      "title",
+      "url",
+    ]);
+    assert.ok(!JSON.stringify(request.body.state).includes("fixture-key"));
+  }
+  const settled = await store.db.execute(
+    sql`select used from scraping_bench.budgets where day='2026-10-28' and bucket='judge'`,
+  );
+  assert.equal(settled.rows[0].used, 3200);
+  checks.push(
+    "Grading is provider-blind and reservations settle to observed token usage",
+  );
+
   const contextRequest = requests.find((r) => r.path === "/context").body;
   assert.equal(contextRequest.sharedParams.mainContentOnly, true);
   assert.equal(

@@ -1,5 +1,4 @@
-import { report } from "@/lib/benchmark/report";
-import { database } from "@/lib/benchmark/store";
+import { cachedReport } from "@/lib/benchmark/cached-report";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
@@ -8,9 +7,9 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invalid page" }, { status: 400 });
   try {
     return Response.json(
-      await report(database(), {
-        run: params.get("run") ?? undefined,
-        provider: params.get("provider") ?? undefined,
+      await cachedReport({
+        run: params.get("run") || undefined,
+        provider: params.get("provider") || undefined,
         page,
       }),
       { headers: { "Cache-Control": "no-store" } },
