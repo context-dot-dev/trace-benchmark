@@ -60,6 +60,7 @@ export function summarize(
           ];
         }),
       );
+      const rateLimits = ["HTTP_429", "RATE_LIMIT_EXCEEDED", "RATE_LIMITED"];
       const timed = records
         .filter(
           (r) =>
@@ -67,7 +68,9 @@ export function summarize(
             ![
               "HTTP_401",
               "HTTP_402",
-              "HTTP_429",
+              ...rateLimits,
+              "NO_MORE_CREDITS",
+              "account_blocked_not_attempted",
               "INTERRUPTED_REQUEST",
             ].includes(r.error ?? ""),
         )
@@ -91,7 +94,8 @@ export function summarize(
             : null,
         p50: percentile(timed, 0.5),
         p95: percentile(timed, 0.95),
-        rateLimited: records.filter((r) => r.error === "HTTP_429").length,
+        rateLimited: records.filter((r) => rateLimits.includes(r.error ?? ""))
+          .length,
         categories: groups,
       };
     }),
