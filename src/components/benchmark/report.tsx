@@ -303,16 +303,19 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
               </g>
             );
           })}
-          {[0, 0.25, 0.5, 0.75, 1].map((value) => (
-            <text
-              key={value}
-              x={cx + 6}
-              y={cy - radius * value + 4}
-              className="bench-radar-scale"
-            >
-              {Math.round(value * 100)}%
-            </text>
-          ))}
+          {(width < 500 ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]).map(
+            (value) => (
+              <text
+                key={value}
+                x={point(-0.5, value)[0] - 6}
+                y={point(-0.5, value)[1] + 4}
+                textAnchor="end"
+                className="bench-radar-scale"
+              >
+                {Math.round(value * 100)}%
+              </text>
+            ),
+          )}
         </svg>
       </div>
     </>
@@ -445,6 +448,11 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   useEffect(() => {
+    if (copyStatus !== "Copied") return;
+    const timer = setTimeout(() => setCopyStatus(""), 2000);
+    return () => clearTimeout(timer);
+  }, [copyStatus]);
+  useEffect(() => {
     let active = true;
     const controller = new AbortController();
     async function refresh() {
@@ -516,7 +524,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
             contributes equally to the score. Context operates the benchmark and
             is one of the providers evaluated.
           </p>
-          <a href="#methodology">Read the methodology ↗</a>
+          <a href="#methodology">Read the methodology</a>
         </div>
         <div className="bench-sample">
           <p aria-live="polite">
@@ -613,7 +621,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
             />
             <Section
               title="Results by category"
-              note="Each axis shows the share of pages returning useful content, from 0% at the center to 100% at the edge. Select a provider to highlight its profile, or use the table for exact scores and sample sizes. Missing measurements leave gaps."
+              note="Compare useful-content rates across eight categories on the same pages for every provider. The radar uses a 0–100% scale and supports provider highlighting; the table gives exact scores and page counts, with an em dash for missing measurements."
               chart={<Radar rows={rows} />}
               table={
                 <Table
@@ -650,7 +658,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
               The selected sample has {integer(unknown)} unresolved results
               {pending ? ` and ${integer(pending)} pending results` : ""}.{" "}
               <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>
-                Download the results ↗
+                Download the results ↓
               </a>
             </p>
           </div>
@@ -744,7 +752,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
                     await navigator.clipboard.writeText(citation);
                     setCopyStatus("Copied");
                   } catch {
-                    setCopyStatus("Select and copy the citation below.");
+                    setCopyStatus("Select and copy the citation above.");
                   }
                 }}
               >

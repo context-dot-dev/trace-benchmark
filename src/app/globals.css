@@ -280,6 +280,9 @@ html {
   gap: var(--ds-space-6);
   margin: var(--ds-space-4) 0;
 }
+.bench-legend:has(button) {
+  margin-inline: calc(-1 * var(--ds-space-2));
+}
 .bench-legend > span,
 .bench-legend > button {
   display: flex;

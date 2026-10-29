@@ -62,7 +62,7 @@ function SelectContent({ className, children, position = "popper", ...props }: R
         position={position}
         sideOffset={6}
         className={cn(
-          "relative z-50 max-h-80 min-w-52 origin-(--radix-select-content-transform-origin) animate-pop-in overflow-hidden rounded-shell bg-surface p-(--ds-space-frame) shadow-floating",
+          "relative z-50 max-h-[min(20rem,var(--radix-select-content-available-height))] min-w-52 origin-(--radix-select-content-transform-origin) animate-pop-in overflow-hidden rounded-shell bg-surface p-(--ds-space-frame) shadow-floating",
           position === "popper" && "w-full min-w-(--radix-select-trigger-width)",
           className,
         )}
