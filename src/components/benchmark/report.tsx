@@ -1,6 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Surface } from "@/lib/surface";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProviderName } from "@/components/trace/provider-logo";
@@ -16,8 +26,6 @@ import {
 
 const percent = (value: number | null | undefined) =>
   value == null ? "—" : `${(value * 100).toFixed(1)}%`;
-const seconds = (value: number | null | undefined) =>
-  value == null ? "—" : `${(value / 1000).toFixed(2)} s`;
 const integer = (value: number) => value.toLocaleString("en-US");
 function Name({ id }: { id: string }) {
   return (
@@ -98,53 +106,221 @@ function Section({
     </section>
   );
 }
-function Bars({
-  rows,
-  metric,
-  max,
-  format,
+const patterns = ["", "8 4", "2 4", "10 3 2 3"];
+function Legend({
+  active,
+  onSelect,
 }: {
-  rows: ProviderMetric[];
-  metric: "rate" | "p50";
-  max: number;
-  format: typeof percent;
+  active?: string | null;
+  onSelect?: (id: string) => void;
 }) {
+  return (
+    <div className="bench-legend">
+      {providers.map((p, i) => {
+        const content = (
+          <>
+            <svg width="26" height="8" aria-hidden="true">
+              <line
+                x1="0"
+                x2="26"
+                y1="4"
+                y2="4"
+                stroke={p.color}
+                strokeWidth="3"
+                strokeDasharray={patterns[i]}
+              />
+            </svg>
+            <Name id={p.id} />
+          </>
+        );
+        return onSelect ? (
+          <button
+            key={p.id}
+            type="button"
+            aria-label={`Highlight ${p.name}`}
+            aria-pressed={active === p.id}
+            onClick={() => onSelect(p.id)}
+          >
+            {content}
+          </button>
+        ) : (
+          <span key={p.id}>{content}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+function Bars({ rows }: { rows: ProviderMetric[] }) {
   return (
     <div
       className="bench-bars"
       role="img"
-      aria-label={rows.map((r) => `${r.id}: ${format(r[metric])}`).join(", ")}
+      aria-label={rows.map((r) => `${r.id}: ${percent(r.rate)}`).join(", ")}
     >
       <div className="bench-axis">
-        <span>0{metric === "rate" ? "%" : " s"}</span>
-        <span>{metric === "rate" ? "100%" : format(max)}</span>
+        <span>0%</span>
+        <span>100%</span>
       </div>
       {providers.map((p) => {
-        const row = rows.find((r) => r.id === p.id);
-        const value = row?.[metric];
+        const value = rows.find((r) => r.id === p.id)?.rate;
         return (
           <div className="bench-bar-row" key={p.id}>
             <Name id={p.id} />
             <div className="bench-track">
               <div
                 className="bench-bar"
-                style={{
-                  width: `${value == null ? 0 : Math.min(100, (value / max) * 100)}%`,
-                  background: p.color,
-                }}
+                style={{ width: `${(value ?? 0) * 100}%`, background: p.color }}
               />
             </div>
-            <strong>{format(value)}</strong>
+            <strong>{percent(value)}</strong>
           </div>
         );
       })}
     </div>
   );
 }
+function categoryRate(row: ProviderMetric | undefined, category: string) {
+  const group = row?.categories[category];
+  return group?.total && group.completed ? group.useful / group.total : null;
+}
+function Radar({ rows }: { rows: ProviderMetric[] }) {
+  const [active, setActive] = useState<string | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(600);
+  useEffect(() => {
+    if (!container.current) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(Math.max(280, Math.round(entry.contentRect.width))),
+    );
+    observer.observe(container.current);
+    return () => observer.disconnect();
+  }, []);
+  const radius = Math.max(60, width / 2 - (width < 500 ? 70 : 96));
+  const height = radius * 2 + 128;
+  const cx = width / 2,
+    cy = height / 2;
+  const point = (i: number, value: number, extra = 0) => {
+    const angle = (i * Math.PI) / 4 - Math.PI / 2;
+    return [
+      cx + Math.cos(angle) * (radius * value + extra),
+      cy + Math.sin(angle) * (radius * value + extra),
+    ];
+  };
+  const labels = [
+    ["News"],
+    ["Commerce"],
+    ["Jobs"],
+    ["Finance"],
+    ["Research"],
+    width < 500 ? ["Legal"] : ["Legal &", "government"],
+    width < 500 ? ["Docs"] : ["Software", "& docs"],
+    ["Community"],
+  ];
+  return (
+    <>
+      <Legend
+        active={active}
+        onSelect={(id) => setActive(active === id ? null : id)}
+      />
+      <div className="bench-radar" ref={container}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label="Useful content by category on eight axes from zero to 100 percent; exact values and page counts are available in the table"
+        >
+          {[0.25, 0.5, 0.75, 1].map((value) => (
+            <polygon
+              key={value}
+              points={categories
+                .map((_, i) => point(i, value).join(","))
+                .join(" ")}
+              className="bench-radar-grid"
+            />
+          ))}
+          {categories.map((category, i) => {
+            const [x, y] = point(i, 1),
+              [lx, ly] = point(i, 1, 20);
+            return (
+              <g key={category.id}>
+                <line
+                  x1={cx}
+                  y1={cy}
+                  x2={x}
+                  y2={y}
+                  className="bench-radar-grid"
+                />
+                <text
+                  x={lx}
+                  y={ly}
+                  textAnchor={
+                    i === 0 || i === 4 ? "middle" : i < 4 ? "start" : "end"
+                  }
+                  dominantBaseline="middle"
+                >
+                  {labels[i].map((label, j) => (
+                    <tspan
+                      key={label}
+                      x={lx}
+                      dy={j ? 16 : labels[i].length > 1 ? -8 : 0}
+                    >
+                      {label}
+                    </tspan>
+                  ))}
+                </text>
+              </g>
+            );
+          })}
+          {providers.map((p, providerIndex) => {
+            const row = rows.find((r) => r.id === p.id);
+            const values = categories.map((c) => categoryRate(row, c.id));
+            return (
+              <g key={p.id} opacity={active && active !== p.id ? 0.2 : 1}>
+                {values.map((value, i) => {
+                  if (value == null) return null;
+                  const next = values[(i + 1) % values.length];
+                  const [x, y] = point(i, value),
+                    [nx, ny] = point((i + 1) % values.length, next ?? 0);
+                  return (
+                    <g key={categories[i].id}>
+                      {next != null && (
+                        <line
+                          x1={x}
+                          y1={y}
+                          x2={nx}
+                          y2={ny}
+                          stroke={p.color}
+                          strokeWidth="2"
+                          strokeDasharray={patterns[providerIndex]}
+                        />
+                      )}
+                      <circle cx={x} cy={y} r="3" fill={p.color}>
+                        <title>{`${p.name}, ${categories[i].name}: ${percent(value)} (${integer(row?.categories[categories[i].id]?.total ?? 0)} pages)`}</title>
+                      </circle>
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })}
+          {[0, 0.25, 0.5, 0.75, 1].map((value) => (
+            <text
+              key={value}
+              x={cx + 6}
+              y={cy - radius * value + 4}
+              className="bench-radar-scale"
+            >
+              {Math.round(value * 100)}%
+            </text>
+          ))}
+        </svg>
+      </div>
+    </>
+  );
+}
 function Trend({ history }: { history: RunSummary[] }) {
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1000);
-  const patterns = ["", "8 4", "2 4", "10 3 2 3"];
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -153,12 +329,14 @@ function Trend({ history }: { history: RunSummary[] }) {
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [history.length]);
   const firstDay = Date.parse(history[0]?.day ?? "1970-01-01");
   const lastDay = Date.parse(history.at(-1)?.day ?? "1970-01-01");
   const span = Math.max(86400000, lastDay - firstDay);
   const position = (time: number) =>
-    45 + ((time - firstDay) * (width - 60)) / span;
+    lastDay === firstDay
+      ? (width + 30) / 2
+      : 45 + ((time - firstDay) * (width - 60)) / span;
   const x = (i: number) => position(Date.parse(history[i].day));
   const tickCount = lastDay === firstDay ? 1 : width < 500 ? 3 : 6;
   const ticks = [
@@ -174,26 +352,15 @@ function Trend({ history }: { history: RunSummary[] }) {
       ),
     ),
   ];
+  if (!history.length)
+    return (
+      <p className="bench-notice">
+        No completed daily scores are available for this protocol yet.
+      </p>
+    );
   return (
     <>
-      <div className="bench-legend">
-        {providers.map((p, i) => (
-          <span key={p.id}>
-            <svg width="26" height="8" aria-hidden="true">
-              <line
-                x1="0"
-                x2="26"
-                y1="4"
-                y2="4"
-                stroke={p.color}
-                strokeWidth="3"
-                strokeDasharray={patterns[i]}
-              />
-            </svg>
-            <Name id={p.id} />
-          </span>
-        ))}
-      </div>
+      <Legend />
       <div className="bench-history" ref={container}>
         <svg
           viewBox={`0 0 ${width} 260`}
@@ -265,15 +432,18 @@ function Trend({ history }: { history: RunSummary[] }) {
     </>
   );
 }
+const citation = `@misc{scrapingbench2026,
+  author = {Ryaboy, Michael and Bakour, Yahia},
+  title = {{Scraping Bench}: A Live Scraping Benchmark},
+  year = {2026},
+  url = {https://trace-benchmark-contextdev.vercel.app/}
+}`;
 export function BenchmarkReport({ initial }: { initial: Report }) {
   const [data, setData] = useState(initial);
-  const [selection, setSelection] = useState({
-    run: "",
-    provider: "",
-    page: 0,
-  });
+  const [selection, setSelection] = useState("latest");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
@@ -281,12 +451,12 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/report?${new URLSearchParams({ ...selection, page: String(selection.page) })}`,
+          `/api/report?${new URLSearchParams({ run: selection === "latest" ? "" : selection })}`,
           { signal: controller.signal },
         );
         if (!response.ok)
           throw new Error(
-            "Results could not be refreshed. The last successful response is still shown.",
+            "Results could not be refreshed. The last successful sample is still shown.",
           );
         const next = await response.json();
         if (active) {
@@ -318,21 +488,18 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
   const unknown = rows.reduce((sum, r) => sum + r.unknown, 0);
   const history = data.history
     .filter((r) => r.protocol === run?.protocol && r.status === "completed")
-    .filter(
-      (r, i, rows) => rows.findIndex((other) => other.day === r.day) === i,
-    )
+    .filter((r, i, all) => all.findIndex((other) => other.day === r.day) === i)
     .slice(0, 30)
     .reverse();
-  const latencyMax = Math.max(1000, ...rows.map((r) => r.p50 ?? 0));
   return (
-    <div className="ds-product bench-shell">
+    <Surface kind="product" className="bench-shell">
       <header className="bench-header">
         <Link href="/" className="bench-wordmark">
           Scraping Bench
         </Link>
         <nav aria-label="Main navigation">
-          <a href="#results">Results</a>
           <a href="#methodology">Methodology</a>
+          <a href="#citation">Citation</a>
           <a href="https://github.com/context-dot-dev/trace-benchmark">
             GitHub ↗
           </a>
@@ -341,46 +508,50 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       </header>
       <main id="main">
         <div className="bench-intro">
-          <div>
-            <h1>Daily web scraping benchmark</h1>
-            <p>
-              Compare how reliably four providers return useful content from the
-              same pages across eight categories.
-            </p>
-          </div>
-          <label className="bench-select">
-            Sample date (UTC)
-            <select
-              value={selection.run}
-              onChange={(e) =>
-                setSelection({ run: e.target.value, provider: "", page: 0 })
-              }
-            >
-              <option value="">Latest completed sample</option>
+          <h1>Measuring web scraping quality</h1>
+          <p>
+            Scraping Bench evaluates whether four providers return useful
+            content from the same daily sample of pages across eight categories.
+            Responses are assessed without provider names, and each category
+            contributes equally to the score. Context operates the benchmark and
+            is one of the providers evaluated.
+          </p>
+          <a href="#methodology">Read the methodology ↗</a>
+        </div>
+        <div className="bench-sample">
+          <p aria-live="polite">
+            {run ? (
+              <>
+                Showing <strong>{run.day}</strong> UTC · {integer(run.pages)}{" "}
+                pages
+              </>
+            ) : (
+              "Awaiting the first sample"
+            )}
+            {loading && " · Updating…"}
+          </p>
+          <Select value={selection} onValueChange={setSelection}>
+            <SelectTrigger aria-label="Sample date (UTC)">
+              <CalendarDays aria-hidden="true" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="latest">Latest completed sample</SelectItem>
               {data.history.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.day} · {r.protocol === PROTOCOL ? "v4" : r.protocol}
-                </option>
+                <SelectItem
+                  key={r.id}
+                  value={r.id}
+                  description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
+                >
+                  {r.day}
+                </SelectItem>
               ))}
-            </select>
-          </label>
+            </SelectContent>
+          </Select>
         </div>
         {error && (
           <p role="alert" className="bench-notice">
             {error}
-          </p>
-        )}
-        {data.collecting && data.collecting.id !== run?.id && (
-          <p className="bench-notice">
-            Collection for {data.collecting.day} is in progress:{" "}
-            {integer(
-              data.collecting.providers.reduce(
-                (n, p) => n + p.total - p.pending,
-                0,
-              ),
-            )}{" "}
-            of {integer(data.collecting.pages * 4)} results are ready. Select
-            its date to inspect progress.
           </p>
         )}
         {!run ? (
@@ -389,154 +560,10 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
             scheduled collection progresses.
           </p>
         ) : (
-          <>
-            <div className="bench-summary" id="results">
-              <span>
-                <strong>{run.day}</strong> UTC
-              </span>
-              <span>
-                <strong>{integer(run.pages)}</strong> / {integer(run.target)}{" "}
-                pages
-              </span>
-              <span>
-                {run.status === "completed"
-                  ? "Collection complete"
-                  : `${integer(pending)} results pending`}
-              </span>
-              <span>{integer(unknown)} unresolved results</span>
-              <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>
-                Download results ↓
-              </a>
-            </div>
-            {run.pages < run.target && (
-              <p className="bench-notice">
-                This sample contains {integer(run.target - run.pages)} fewer
-                pages than its target. Category counts below show the gaps;
-                missing categories are never scored as zero.
-              </p>
-            )}
-            <div className="bench-primary">
-              <Section
-                title="Useful content"
-                note={`Share of sampled pages with substantive content matching the requested page. Each category has equal weight.${pending ? " Collection is in progress, so these are provisional lower bounds." : " Unresolved results remain in the denominator."}`}
-                chart={
-                  <Bars rows={rows} metric="rate" max={1} format={percent} />
-                }
-                table={
-                  <Table
-                    label="Useful content results"
-                    headers={[
-                      "Provider",
-                      "Useful",
-                      "Not useful",
-                      "Unresolved",
-                      "Pending",
-                      "Score",
-                    ]}
-                    rows={rows.map((r) => [
-                      <Name key={r.id} id={r.id} />,
-                      integer(r.useful),
-                      integer(r.failed),
-                      integer(r.unknown),
-                      integer(r.pending),
-                      percent(r.rate),
-                    ])}
-                  />
-                }
-              />
-              <Section
-                title="Response time"
-                note="Lower median response times indicate faster responses; grading time and authentication, credit, and rate-limit errors are excluded."
-                chart={
-                  <Bars
-                    rows={rows}
-                    metric="p50"
-                    max={latencyMax}
-                    format={seconds}
-                  />
-                }
-                table={
-                  <Table
-                    label="Response time results"
-                    headers={[
-                      "Provider",
-                      "Median",
-                      "95th percentile",
-                      "Rate limited",
-                    ]}
-                    rows={rows.map((r) => [
-                      <Name key={r.id} id={r.id} />,
-                      seconds(r.p50),
-                      seconds(r.p95),
-                      integer(r.rateLimited),
-                    ])}
-                  />
-                }
-              />
-            </div>
-            <Section
-              title="Results by category"
-              note="Each provider receives the same pages. Bar length shows the share returning useful content; counts show the actual sample size."
-              chart={
-                <div className="bench-category-grid">
-                  {categories.map((c) => (
-                    <div key={c.id}>
-                      <div className="bench-category-title">
-                        <h3>{c.name}</h3>
-                        <span>{integer(run.categories[c.id] ?? 0)} pages</span>
-                      </div>
-                      {providers.map((p) => {
-                        const g = rows.find((r) => r.id === p.id)?.categories[
-                          c.id
-                        ];
-                        const value =
-                          g?.total && g.completed ? g.useful / g.total : null;
-                        return (
-                          <div className="bench-mini-row" key={p.id}>
-                            <span>{p.name}</span>
-                            <div className="bench-track">
-                              <div
-                                className="bench-bar"
-                                style={{
-                                  width: `${(value ?? 0) * 100}%`,
-                                  background: p.color,
-                                }}
-                              />
-                            </div>
-                            <span>{percent(value)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              }
-              table={
-                <Table
-                  label="Category results"
-                  headers={[
-                    "Category",
-                    "Pages",
-                    ...providers.map((p) => p.name),
-                  ]}
-                  rows={categories.map((c) => [
-                    c.name,
-                    integer(run.categories[c.id] ?? 0),
-                    ...providers.map((p) => {
-                      const g = rows.find((r) => r.id === p.id)?.categories[
-                        c.id
-                      ];
-                      return percent(
-                        g?.total && g.completed ? g.useful / g.total : null,
-                      );
-                    }),
-                  ])}
-                />
-              }
-            />
+          <div id="results" aria-busy={loading}>
             <Section
               title="Quality over time"
-              note={`Daily useful-content scores for ${run.protocol}. Gaps mean no measured score, and protocol changes are not joined together.`}
+              note={`Daily useful-content scores for ${run.protocol}. Gaps indicate missing measurements; results from different protocols are kept separate.`}
               chart={<Trend history={history} />}
               table={
                 <Table
@@ -558,100 +585,75 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
                 />
               }
             />
-            <section className="bench-section" aria-busy={loading}>
-              <div className="bench-section-head">
-                <div>
-                  <h2>Individual results</h2>
-                  <p className="bench-note">
-                    Inspect outcomes for every measured page and provider.
-                  </p>
-                </div>
-                <label className="bench-select">
-                  Provider
-                  <select
-                    value={selection.provider}
-                    onChange={(e) =>
-                      setSelection({
-                        ...selection,
-                        provider: e.target.value,
-                        page: 0,
-                      })
-                    }
-                  >
-                    <option value="">All providers</option>
-                    {providers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <Table
-                label="Individual page results"
-                headers={["Page", "Provider", "Outcome", "Time", "Evidence"]}
-                rows={data.records.map((r) => [
-                  <a
-                    key={r.id}
-                    href={r.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bench-url"
-                    title={r.url}
-                  >
-                    {r.url.replace(/^https?:\/\//, "")}
-                  </a>,
-                  <Name key={r.id} id={r.provider} />,
-                  r.state !== "done"
-                    ? "Pending"
-                    : r.success === true
-                      ? "Useful"
-                      : r.success === false
-                        ? "Not useful"
-                        : "Unresolved",
-                  seconds(r.elapsedMs),
-                  r.error?.replaceAll("_", " ").toLowerCase() ??
-                    [r.content, r.identity].filter(Boolean).join(" · "),
-                ])}
-              />
-              {!data.records.length && (
-                <p className="bench-note">
-                  Individual records are available for 30 days; daily summaries
-                  remain in the history.
-                </p>
-              )}
-              <div className="bench-pagination">
-                <span>
-                  {integer(data.totalRecords)} results
-                  {loading ? " · Updating…" : ""}
-                </span>
-                <div>
-                  <button
-                    disabled={loading || data.page === 0}
-                    onClick={() =>
-                      setSelection({ ...selection, page: data.page - 1 })
-                    }
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    {data.page + 1} /{" "}
-                    {Math.max(1, Math.ceil(data.totalRecords / 20))}
-                  </span>
-                  <button
-                    disabled={
-                      loading || (data.page + 1) * 20 >= data.totalRecords
-                    }
-                    onClick={() =>
-                      setSelection({ ...selection, page: data.page + 1 })
-                    }
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </section>
-          </>
+            <Section
+              title="Useful content"
+              note={`Share of sampled pages returning substantive content from the requested page, averaged equally across categories.${pending ? " Collection is in progress, so scores are provisional lower bounds." : " Unresolved results remain in the denominator."}`}
+              chart={<Bars rows={rows} />}
+              table={
+                <Table
+                  label="Useful content results"
+                  headers={[
+                    "Provider",
+                    "Useful",
+                    "Not useful",
+                    "Unresolved",
+                    "Pending",
+                    "Score",
+                  ]}
+                  rows={rows.map((r) => [
+                    <Name key={r.id} id={r.id} />,
+                    integer(r.useful),
+                    integer(r.failed),
+                    integer(r.unknown),
+                    integer(r.pending),
+                    percent(r.rate),
+                  ])}
+                />
+              }
+            />
+            <Section
+              title="Results by category"
+              note="Each axis shows the share of pages returning useful content, from 0% at the center to 100% at the edge. Select a provider to highlight its profile, or use the table for exact scores and sample sizes. Missing measurements leave gaps."
+              chart={<Radar rows={rows} />}
+              table={
+                <Table
+                  label="Category results"
+                  headers={[
+                    "Category",
+                    "Pages",
+                    ...providers.map((p) => p.name),
+                  ]}
+                  rows={categories.map((c) => [
+                    c.name,
+                    integer(run.categories[c.id] ?? 0),
+                    ...providers.map((p) =>
+                      percent(
+                        categoryRate(
+                          rows.find((r) => r.id === p.id),
+                          c.id,
+                        ),
+                      ),
+                    ),
+                  ])}
+                />
+              }
+            />
+            {run.pages < run.target && (
+              <p className="bench-notice">
+                This sample includes {integer(run.pages)} of{" "}
+                {integer(run.target)} targeted pages. Missing categories appear
+                as gaps and withhold the overall score; they are never scored as
+                zero.
+              </p>
+            )}
+            <p className="bench-note">
+              The selected sample has {integer(unknown)} unresolved results
+              {pending ? ` and ${integer(pending)} pending results` : ""}.{" "}
+              <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>
+                Download the results ↗
+              </a>
+            </p>
+          </div>
         )}
         <section id="methodology" className="bench-method">
           <h2>Methodology</h2>
@@ -661,11 +663,11 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
             same frozen sample with fresh content requested and a 30-second
             request deadline. An automated judge evaluates whether returned
             content is substantive and belongs to the requested page, without
-            seeing the provider name. This measures useful content, not factual
-            accuracy or complete recall.
+            seeing the provider name. The score measures useful content rather
+            than factual accuracy or complete recall.
           </p>
           <details>
-            <summary>Collection, grading, and data retention</summary>
+            <summary>Collection, grading, and limitations</summary>
             <p>
               {run && run.protocol !== PROTOCOL
                 ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
@@ -675,15 +677,20 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
               characters from the beginning, middle, and end. A positive match
               can establish useful content, while a negative judgment from an
               incomplete excerpt remains unresolved. Failed, unresolved, and
-              pending results stay in the score denominator, with equal weight
-              for each of the eight categories.
+              pending results stay in the denominator, with equal weight for
+              each of the eight categories.
             </p>
             <p>
-              Vercel Cron checks for work every fifteen minutes. Drizzle stores
-              durable work claims, request budgets, results, and summaries in
-              Neon. Interrupted provider requests are not automatically
-              repeated. Each provider is limited to 4,000 requests per UTC day,
-              and grading has a separate input budget.
+              Fresh-fetch settings do not guarantee an uncached response.
+              Response time is therefore not compared. Source availability,
+              provider rate limits, and request budgets can reduce the daily
+              sample.
+            </p>
+            <p>
+              Vercel Cron checks for work every fifteen minutes, and results are
+              stored in Neon through Drizzle. Interrupted provider requests are
+              not automatically repeated. Each provider is limited to 4,000
+              requests per UTC day, and grading has a separate input budget.
             </p>
             <p>
               Individual results are retained for 30 days. Private grading
@@ -691,6 +698,19 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
               256 MB budget; daily summaries remain available. Historical
               records retain their original protocol and grading decisions.
             </p>
+            {data.collecting && data.collecting.id !== run?.id && (
+              <p>
+                Collection for {data.collecting.day} is in progress, with{" "}
+                {integer(
+                  data.collecting.providers.reduce(
+                    (n, p) => n + p.total - p.pending,
+                    0,
+                  ),
+                )}{" "}
+                of {integer(data.collecting.pages * providers.length)} results
+                ready.
+              </p>
+            )}
             <p>
               {data.health.healthySources} of {data.health.sources} sources last
               fetched successfully. Last collector update:{" "}
@@ -699,16 +719,64 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
                     .toISOString()
                     .replace("T", " ")
                     .slice(0, 19) + " UTC"
-                : "Not yet recorded"}
+                : "not yet recorded"}
               .{data.health.error && ` ${data.health.error}`}
             </p>
           </details>
+        </section>
+        <section id="citation" className="bench-citation">
+          <h2>Citation</h2>
+          <p>
+            Scraping Bench is maintained by{" "}
+            <a href="mailto:michael@context.dev">Michael Ryaboy</a> and{" "}
+            <a href="mailto:yahia@context.dev">Yahia Bakour</a> at Context. If
+            you use these results in your work, please cite the benchmark and
+            include the sample date and protocol.
+          </p>
+          <div className="bench-code">
+            <div className="bench-code-head">
+              <span>scraping-bench.bib</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(citation);
+                    setCopyStatus("Copied");
+                  } catch {
+                    setCopyStatus("Select and copy the citation below.");
+                  }
+                }}
+              >
+                {copyStatus === "Copied" ? <Check /> : <Copy />}
+                {copyStatus === "Copied" ? "Copied" : "Copy citation"}
+              </Button>
+            </div>
+            <pre tabIndex={0} aria-label="BibTeX citation">
+              <code>{citation}</code>
+            </pre>
+          </div>
+          <span
+            className={copyStatus === "Copied" ? "sr-only" : "bench-note"}
+            role="status"
+          >
+            {copyStatus}
+          </span>
+          <p>
+            Our approach is inspired by{" "}
+            <a href="https://keenableai.github.io/needle/">
+              NEEDLE: A Live Open-Source Search Benchmark for AI Agents
+            </a>{" "}
+            (2026), by Andrey Styskin, Matthias Petri, and Ilya Gusev. Its
+            fresh-query methodology and transparent comparisons informed this
+            benchmark, which evaluates scraping rather than search.
+          </p>
         </section>
       </main>
       <footer className="bench-footer">
         Published by <a href="https://context.dev">Context.dev</a>, with the
         same sample and scoring rules for every provider.
       </footer>
-    </div>
+    </Surface>
   );
 }
