@@ -112,6 +112,16 @@ check(
   '!!document.querySelector("#results")',
   "Keyboard returns to daily results",
 );
+browser("click", '[aria-label="Quality over time view"] [data-tab-id="table"]');
+const dailyReport = await (await fetch(base + "/api/report")).json();
+check(
+  `document.querySelectorAll('[aria-label="Daily quality history"] tbody tr').length === ${dailyReport.history.length}`,
+  "Complete daily timeline survives the merge",
+);
+check(
+  `document.querySelector('[aria-label="Daily quality history"]').textContent.includes('Protocol')`,
+  "Timeline retains protocol labels",
+);
 browser("back");
 browser("wait", "--fn", 'location.hash === "#wikipedia"');
 check(

@@ -18,6 +18,7 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type PointerEvent,
 } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProviderName } from "@/components/trace/provider-logo";
@@ -328,9 +329,21 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
     </>
   );
 }
+const dayMs = 86400000;
+const dateLabel = (time: number, long = false) =>
+  new Date(time).toLocaleDateString("en-US", {
+    month: long ? "long" : "short",
+    day: "numeric",
+    ...(long ? { year: "numeric" as const } : {}),
+    timeZone: "UTC",
+  });
+const protocolLabel = (protocol: string) =>
+  `Protocol ${protocol.match(/v\d+$/)?.[0] ?? protocol}`;
 function Trend({ history }: { history: RunSummary[] }) {
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1000);
+  const [active, setActive] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -342,102 +355,325 @@ function Trend({ history }: { history: RunSummary[] }) {
   }, [history.length]);
   const firstDay = Date.parse(history[0]?.day ?? "1970-01-01");
   const lastDay = Date.parse(history.at(-1)?.day ?? "1970-01-01");
-  const span = Math.max(86400000, lastDay - firstDay);
+  const dayCount = Math.round((lastDay - firstDay) / dayMs) + 1;
+  const inspectedDay = Math.max(
+    firstDay,
+    Math.min(lastDay, selectedDay ?? lastDay),
+  );
+  const plotLeft = 46,
+    plotRight = width - 32;
   const position = (time: number) =>
-    lastDay === firstDay
-      ? (width + 30) / 2
-      : 45 + ((time - firstDay) * (width - 60)) / span;
-  const x = (i: number) => position(Date.parse(history[i].day));
-  const tickCount = lastDay === firstDay ? 1 : width < 500 ? 3 : 6;
-  const ticks = [
-    ...new Set(
-      Array.from(
-        { length: tickCount },
-        (_, i) =>
+    dayCount === 1
+      ? (plotLeft + plotRight) / 2
+      : plotLeft +
+        ((time - firstDay) * (plotRight - plotLeft)) / (lastDay - firstDay);
+  const protocols = [...new Set(history.map((r) => r.protocol))];
+  const latestBySample = new Map<string, RunSummary>();
+  for (const sample of history) {
+    const key = `${sample.day}:${sample.protocol}`;
+    if (
+      sample.status === "completed" ||
+      latestBySample.get(key)?.status !== "completed"
+    ) {
+      latestBySample.set(key, sample);
+    }
+  }
+  const daily = [...latestBySample.values()];
+  const byDay = new Map<number, RunSummary[]>();
+  for (const sample of daily) {
+    const time = Date.parse(sample.day);
+    byDay.set(time, [...(byDay.get(time) ?? []), sample]);
+  }
+  const runsOnDay = (time: number) => byDay.get(time) ?? [];
+  const x = (r: RunSummary) => {
+    const sameDay = runsOnDay(Date.parse(r.day));
+    return (
+      position(Date.parse(r.day)) +
+      (sameDay.indexOf(r) - (sameDay.length - 1) / 2) *
+        Math.min(8, ((plotRight - plotLeft) / Math.max(1, dayCount - 1)) * 0.4)
+    );
+  };
+  const y = (value: number) => 280 - value * 240;
+  const tickStep = Math.max(
+    1,
+    Math.ceil((dayCount - 1) / (width < 500 ? 3 : 6) / 7) * 7,
+  );
+  const ticks = [firstDay];
+  for (
+    let t = firstDay + tickStep * dayMs;
+    t < lastDay - (tickStep * dayMs) / 2;
+    t += tickStep * dayMs
+  )
+    ticks.push(t);
+  if (lastDay !== firstDay) ticks.push(lastDay);
+  const inspected = runsOnDay(inspectedDay);
+  const pickDay = (event: PointerEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const px = ((event.clientX - bounds.left) * width) / bounds.width;
+    setSelectedDay(
+      Math.max(
+        firstDay,
+        Math.min(
+          lastDay,
           firstDay +
-          Math.round(
-            (i * (lastDay - firstDay)) / Math.max(1, tickCount - 1) / 86400000,
-          ) *
-            86400000,
+            Math.round(
+              ((px - plotLeft) / (plotRight - plotLeft)) * (dayCount - 1),
+            ) *
+              dayMs,
+        ),
       ),
-    ),
-  ];
+    );
+  };
   if (!history.length)
     return (
-      <p className="bench-notice">
-        No completed daily scores are available for this protocol yet.
-      </p>
+      <p className="bench-notice">No historical samples are available yet.</p>
     );
   return (
     <>
-      <Legend />
+      <div className="bench-history-range">
+        <p>
+          {dateLabel(firstDay, true)} – {dateLabel(lastDay, true)}{" "}
+          <span>
+            {byDay.size} sampled {byDay.size === 1 ? "day" : "days"}
+          </span>
+        </p>
+        <Legend
+          active={active}
+          onSelect={(id) => setActive(active === id ? null : id)}
+        />
+      </div>
       <div className="bench-history" ref={container}>
         <svg
-          viewBox={`0 0 ${width} 260`}
-          role="img"
-          aria-label="Daily useful-content scores; exact values are available in the table"
+          viewBox={`0 0 ${width} 348`}
+          role="slider"
+          tabIndex={0}
+          aria-label="History date"
+          aria-describedby="history-instructions"
+          aria-valuemin={0}
+          aria-valuemax={dayCount - 1}
+          aria-valuenow={Math.round((inspectedDay - firstDay) / dayMs)}
+          aria-valuetext={`${dateLabel(inspectedDay, true)} UTC`}
+          onKeyDown={(event) => {
+            const next =
+              event.key === "Home"
+                ? firstDay
+                : event.key === "End"
+                  ? lastDay
+                  : event.key === "ArrowLeft" || event.key === "ArrowDown"
+                    ? inspectedDay - dayMs
+                    : event.key === "ArrowRight" || event.key === "ArrowUp"
+                      ? inspectedDay + dayMs
+                      : null;
+            if (next != null) {
+              event.preventDefault();
+              setSelectedDay(Math.max(firstDay, Math.min(lastDay, next)));
+            }
+          }}
+          onPointerDown={(event) => {
+            pickDay(event);
+            event.currentTarget.focus({ preventScroll: true });
+          }}
+          onPointerMove={(event) => {
+            if (event.pointerType === "mouse" || event.buttons === 1)
+              pickDay(event);
+          }}
         >
           {[0, 25, 50, 75, 100].map((n) => (
             <g key={n}>
-              <text x="0" y={225 - n * 2}>
+              <text x="0" y={y(n / 100) + 5}>
                 {n}%
               </text>
-              <line x1="45" x2={width - 15} y1={220 - n * 2} y2={220 - n * 2} />
+              <line
+                x1={plotLeft}
+                x2={plotRight}
+                y1={y(n / 100)}
+                y2={y(n / 100)}
+              />
             </g>
           ))}
-          {providers.map((p, providerIndex) => (
-            <g key={p.id}>
-              {history.map((r, i) => {
-                const value = r.providers.find((v) => v.id === p.id)?.rate;
-                const previous = history[i - 1];
-                const before = previous?.providers.find(
-                  (v) => v.id === p.id,
-                )?.rate;
-                const adjacent =
-                  previous &&
-                  Date.parse(r.day) - Date.parse(previous.day) === 86400000;
-                if (value == null) return null;
-                return (
-                  <g key={r.id}>
-                    {before != null && adjacent && (
-                      <line
-                        x1={x(i - 1)}
-                        x2={x(i)}
-                        y1={220 - before * 200}
-                        y2={220 - value * 200}
-                        style={{
-                          stroke: p.color,
-                          strokeWidth: 2.5,
-                          strokeDasharray: patterns[providerIndex],
-                        }}
-                      />
-                    )}
-                    <circle
-                      cx={x(i)}
-                      cy={220 - value * 200}
-                      r="3"
-                      fill={p.color}
-                    >
-                      <title>{`${r.day}: ${p.name} ${percent(value)}`}</title>
-                    </circle>
-                  </g>
-                );
-              })}
-            </g>
-          ))}
+          {protocols.map((protocol, i) => {
+            const start = Date.parse(
+              daily.find((r) => r.protocol === protocol)!.day,
+            );
+            return (
+              <g key={protocol}>
+                <text
+                  x={i === 0 ? plotLeft : position(start) + 5}
+                  y="18"
+                  textAnchor="start"
+                >
+                  {i === 0
+                    ? protocolLabel(protocol)
+                    : (protocol.match(/v\d+$/)?.[0] ?? protocol)}
+                </text>
+                {i > 0 && (
+                  <line
+                    className="bench-protocol-boundary"
+                    x1={position(start)}
+                    x2={position(start)}
+                    y1="25"
+                    y2="290"
+                  />
+                )}
+              </g>
+            );
+          })}
+          <line
+            className="bench-history-cursor"
+            x1={position(inspectedDay)}
+            x2={position(inspectedDay)}
+            y1="35"
+            y2="336"
+          />
+          {protocols.flatMap((protocol) =>
+            providers.map((p, providerIndex) => {
+              const series = daily.filter((r) => r.protocol === protocol);
+              return (
+                <g
+                  key={`${protocol}-${p.id}`}
+                  opacity={active && active !== p.id ? 0.18 : 1}
+                >
+                  {series.map((r, i) => {
+                    const value =
+                      r.status === "completed"
+                        ? r.providers.find((v) => v.id === p.id)?.rate
+                        : null;
+                    const previous = series[i - 1];
+                    const before =
+                      previous?.status === "completed"
+                        ? previous.providers.find((v) => v.id === p.id)?.rate
+                        : null;
+                    if (value == null) return null;
+                    return (
+                      <g key={r.id}>
+                        {before != null &&
+                          Date.parse(r.day) - Date.parse(previous.day) ===
+                            dayMs && (
+                            <line
+                              x1={x(previous)}
+                              x2={x(r)}
+                              y1={y(before)}
+                              y2={y(value)}
+                              style={{
+                                stroke: p.color,
+                                strokeWidth: 2,
+                                strokeDasharray: patterns[providerIndex],
+                              }}
+                            />
+                          )}
+                        <circle
+                          cx={x(r)}
+                          cy={y(value)}
+                          r={Date.parse(r.day) === inspectedDay ? 4 : 3}
+                          fill={p.color}
+                        >
+                          <title>{`${r.day} · ${r.protocol}: ${p.name} ${percent(value)}`}</title>
+                        </circle>
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            }),
+          )}
           {ticks.map((time, i) => (
             <text
               key={time}
               x={position(time)}
-              y="255"
+              y="309"
               textAnchor={
                 i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"
               }
             >
-              {new Date(time).toISOString().slice(5, 10)}
+              {dateLabel(time)}
             </text>
           ))}
+          {Array.from({ length: dayCount }, (_, i) => {
+            const time = firstDay + i * dayMs;
+            const samples = runsOnDay(time);
+            const scored = samples.some(
+              (r) =>
+                r.status === "completed" &&
+                r.providers.some((p) => p.rate != null),
+            );
+            if (!samples.length)
+              return (
+                <path
+                  key={time}
+                  className="bench-coverage is-absent"
+                  d={`M${position(time) - 3},328 l6,6 M${position(time) - 3},334 l6,-6`}
+                />
+              );
+            return (
+              <rect
+                key={time}
+                x={position(time) - 3}
+                y="328"
+                width="6"
+                height="6"
+                rx="1"
+                className={`bench-coverage ${scored ? "is-scored" : "is-unscored"}`}
+              />
+            );
+          })}
         </svg>
+      </div>
+      <div className="bench-history-key" aria-label="Sample coverage legend">
+        <span>
+          <i className="is-scored" />
+          Score available
+        </span>
+        <span>
+          <i className="is-unscored" />
+          Sample without score
+        </span>
+        <span>
+          <i className="is-absent">×</i>
+          No sample
+        </span>
+      </div>
+      <p className="bench-note" id="history-instructions">
+        Hover or touch the chart to inspect a day, or focus it and use the arrow
+        keys. Gaps are not estimated.
+      </p>
+      <div
+        className="bench-history-detail"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <h3>
+          {dateLabel(inspectedDay, true)} <span>UTC</span>
+        </h3>
+        {!inspected.length && <p>No sample was collected on this day.</p>}
+        {inspected.map((r) => (
+          <div key={r.id} className="bench-history-sample">
+            <p>
+              {protocolLabel(r.protocol)} · {integer(r.pages)} pages
+              {r.status !== "completed" ? " · Collection in progress" : ""}
+            </p>
+            {r.status === "completed" &&
+              r.providers.every((p) => p.rate == null) && (
+                <p>
+                  A sample was collected, but at least one category is missing,
+                  so no overall score is reported.
+                </p>
+              )}
+            <dl>
+              {providers.map((p) => (
+                <div key={p.id}>
+                  <dt>
+                    <Name id={p.id} />
+                  </dt>
+                  <dd style={{ color: p.color }}>
+                    {r.status === "completed"
+                      ? percent(r.providers.find((m) => m.id === p.id)?.rate)
+                      : "—"}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
       </div>
     </>
   );
@@ -518,11 +754,9 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
   const rows = run?.providers ?? [];
   const pending = rows.reduce((sum, r) => sum + r.pending, 0);
   const unknown = rows.reduce((sum, r) => sum + r.unknown, 0);
-  const history = data.history
-    .filter((r) => r.protocol === run?.protocol && r.status === "completed")
-    .filter((r, i, all) => all.findIndex((other) => other.day === r.day) === i)
-    .slice(0, 30)
-    .reverse();
+  const history = [...data.history]
+    .reverse()
+    .sort((a, b) => a.day.localeCompare(b.day));
   return (
     <Surface kind="product" className="bench-shell">
       <header className="bench-header">
@@ -572,39 +806,6 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
             <TabsTrigger value="wikipedia">Wikipedia</TabsTrigger>
           </TabsList>
           <TabsContent value="daily">
-            <div className="bench-sample">
-              <p aria-live="polite">
-                {run ? (
-                  <>
-                    Showing <strong>{run.day}</strong> UTC ·{" "}
-                    {integer(run.pages)} pages
-                  </>
-                ) : (
-                  "Awaiting the first sample"
-                )}
-                {loading && " · Updating…"}
-              </p>
-              <Select value={selection} onValueChange={setSelection}>
-                <SelectTrigger aria-label="Sample date (UTC)">
-                  <CalendarDays aria-hidden="true" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="latest">
-                    Latest completed sample
-                  </SelectItem>
-                  {data.history.map((r) => (
-                    <SelectItem
-                      key={r.id}
-                      value={r.id}
-                      description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
-                    >
-                      {r.day}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             {error && (
               <p role="alert" className="bench-notice">
                 {error}
@@ -619,30 +820,75 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
               <div id="results" aria-busy={loading}>
                 <Section
                   title="Quality over time"
-                  note={`Daily useful-content scores for ${run.protocol}. Gaps indicate missing measurements; results from different protocols are kept separate.`}
+                  note="The complete history of daily useful-content scores is shown below. Scores from different protocols are not directly comparable, and a missing category prevents an overall score."
                   chart={<Trend history={history} />}
                   table={
                     <Table
                       label="Daily quality history"
                       headers={[
                         "Date (UTC)",
+                        "Protocol",
+                        "Status",
                         "Pages",
                         ...providers.map((p) => p.name),
                       ]}
-                      rows={[...history]
-                        .reverse()
-                        .map((r) => [
-                          r.day,
-                          integer(r.pages),
-                          ...providers.map((p) =>
-                            percent(
-                              r.providers.find((m) => m.id === p.id)?.rate,
-                            ),
-                          ),
-                        ])}
+                      rows={data.history.map((r) => [
+                        r.day,
+                        r.protocol,
+                        r.status !== "completed"
+                          ? "In progress"
+                          : r.providers.every((p) => p.rate == null)
+                            ? "Missing categories"
+                            : "Scored",
+                        integer(r.pages),
+                        ...providers.map((p) =>
+                          r.status === "completed"
+                            ? percent(
+                                r.providers.find((m) => m.id === p.id)?.rate,
+                              )
+                            : "—",
+                        ),
+                      ])}
                     />
                   }
                 />
+                <p className="bench-note">
+                  The results below describe one daily sample. Changing it
+                  leaves the historical timeline unchanged.
+                </p>
+                <div className="bench-sample">
+                  <p aria-live="polite">
+                    {run ? (
+                      <>
+                        Showing <strong>{run.day}</strong> UTC ·{" "}
+                        {integer(run.pages)} pages
+                      </>
+                    ) : (
+                      "Awaiting the first sample"
+                    )}
+                    {loading && " · Updating…"}
+                  </p>
+                  <Select value={selection} onValueChange={setSelection}>
+                    <SelectTrigger aria-label="Sample date (UTC)">
+                      <CalendarDays aria-hidden="true" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="latest">
+                        Latest completed sample
+                      </SelectItem>
+                      {data.history.map((r) => (
+                        <SelectItem
+                          key={r.id}
+                          value={r.id}
+                          description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
+                        >
+                          {r.day}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Section
                   title="Useful content"
                   note={`Share of sampled pages returning substantive content from the requested page, averaged equally across categories.${pending ? " Collection is in progress, so scores are provisional lower bounds." : " Unresolved results remain in the denominator."}`}

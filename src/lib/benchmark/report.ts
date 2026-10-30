@@ -110,7 +110,6 @@ export async function report(
       .select()
       .from(runs)
       .orderBy(desc(runs.day), desc(runs.createdAt))
-      .limit(90)
   ).map((r) => r.summary);
   const latest =
     (options.run
