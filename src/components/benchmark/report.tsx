@@ -447,9 +447,9 @@ function Trend({ history }: { history: RunSummary[] }) {
           tabIndex={0}
           aria-label="History date"
           aria-describedby="history-instructions"
-          aria-valuemin={firstDay}
-          aria-valuemax={lastDay}
-          aria-valuenow={inspectedDay}
+          aria-valuemin={0}
+          aria-valuemax={dayCount - 1}
+          aria-valuenow={Math.round((inspectedDay - firstDay) / dayMs)}
           aria-valuetext={`${dateLabel(inspectedDay, true)} UTC`}
           onKeyDown={(event) => {
             const next =
