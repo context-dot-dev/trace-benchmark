@@ -359,7 +359,7 @@ function Trend({ history }: { history: RunSummary[] }) {
     Math.min(lastDay, selectedDay ?? lastDay),
   );
   const plotLeft = 46,
-    plotRight = width - 16;
+    plotRight = width - 32;
   const position = (time: number) =>
     dayCount === 1
       ? (plotLeft + plotRight) / 2
@@ -387,7 +387,8 @@ function Trend({ history }: { history: RunSummary[] }) {
     const sameDay = runsOnDay(Date.parse(r.day));
     return (
       position(Date.parse(r.day)) +
-      (sameDay.indexOf(r) - (sameDay.length - 1) / 2) * 8
+      (sameDay.indexOf(r) - (sameDay.length - 1) / 2) *
+        Math.min(8, ((plotRight - plotLeft) / Math.max(1, dayCount - 1)) * 0.4)
     );
   };
   const y = (value: number) => 280 - value * 240;
@@ -431,7 +432,7 @@ function Trend({ history }: { history: RunSummary[] }) {
         <p>
           {dateLabel(firstDay, true)} – {dateLabel(lastDay, true)}{" "}
           <span>
-            · {byDay.size} sampled {byDay.size === 1 ? "day" : "days"}
+            {byDay.size} sampled {byDay.size === 1 ? "day" : "days"}
           </span>
         </p>
         <Legend
@@ -495,11 +496,13 @@ function Trend({ history }: { history: RunSummary[] }) {
             return (
               <g key={protocol}>
                 <text
-                  x={i === 0 ? plotLeft : position(start)}
+                  x={i === 0 ? plotLeft : position(start) + 5}
                   y="18"
-                  textAnchor={i === 0 ? "start" : "end"}
+                  textAnchor="start"
                 >
-                  {protocolLabel(protocol)}
+                  {i === 0
+                    ? protocolLabel(protocol)
+                    : (protocol.match(/v\d+$/)?.[0] ?? protocol)}
                 </text>
                 {i > 0 && (
                   <line
@@ -591,6 +594,14 @@ function Trend({ history }: { history: RunSummary[] }) {
                 r.status === "completed" &&
                 r.providers.some((p) => p.rate != null),
             );
+            if (!samples.length)
+              return (
+                <path
+                  key={time}
+                  className="bench-coverage is-absent"
+                  d={`M${position(time) - 3},328 l6,6 M${position(time) - 3},334 l6,-6`}
+                />
+              );
             return (
               <rect
                 key={time}
@@ -599,7 +610,7 @@ function Trend({ history }: { history: RunSummary[] }) {
                 width="6"
                 height="6"
                 rx="1"
-                className={`bench-coverage ${scored ? "is-scored" : samples.length ? "is-unscored" : "is-absent"}`}
+                className={`bench-coverage ${scored ? "is-scored" : "is-unscored"}`}
               />
             );
           })}
@@ -615,13 +626,13 @@ function Trend({ history }: { history: RunSummary[] }) {
           Sample without score
         </span>
         <span>
-          <i className="is-absent" />
+          <i className="is-absent">×</i>
           No sample
         </span>
       </div>
       <p className="bench-note" id="history-instructions">
         Hover or touch the chart to inspect a day, or focus it and use the arrow
-        keys. Protocol changes start separate series; gaps are not estimated.
+        keys. Gaps are not estimated.
       </p>
       <div
         className="bench-history-detail"
