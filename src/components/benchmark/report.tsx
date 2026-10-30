@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { CalendarDays, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,18 +15,23 @@ import {
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
   type PointerEvent,
 } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProviderName } from "@/components/trace/provider-logo";
+import { PageResults } from "./page-results";
+import {
+  benchmarkCategories,
+  scorePages,
+  uniquePages,
+  type BenchmarkDataset,
+} from "@/lib/benchmark/combined";
 import { ThemeToggle } from "@/components/trace/theme-toggle";
 import {
   categories,
   providers,
   PROTOCOL,
-  type Report,
   type ProviderMetric,
   type RunSummary,
 } from "@/lib/benchmark/types";
@@ -181,7 +185,7 @@ function Bars({ rows }: { rows: ProviderMetric[] }) {
                 style={{ width: `${(value ?? 0) * 100}%`, background: p.color }}
               />
             </div>
-            <strong>{percent(value)}</strong>
+            <strong data-score={p.id}>{percent(value)}</strong>
           </div>
         );
       })}
@@ -192,7 +196,13 @@ function categoryRate(row: ProviderMetric | undefined, category: string) {
   const group = row?.categories[category];
   return group?.total && group.completed ? group.useful / group.total : null;
 }
-function Radar({ rows }: { rows: ProviderMetric[] }) {
+function Radar({
+  rows,
+  chartCategories,
+}: {
+  rows: ProviderMetric[];
+  chartCategories: { id: string; name: string }[];
+}) {
   const [active, setActive] = useState<string | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
@@ -204,27 +214,23 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
     observer.observe(container.current);
     return () => observer.disconnect();
   }, []);
-  const radius = Math.max(60, width / 2 - (width < 500 ? 70 : 96));
+  const radius = Math.max(40, width / 2 - (width < 500 ? 104 : 96));
   const height = radius * 2 + 128;
   const cx = width / 2,
     cy = height / 2;
   const point = (i: number, value: number, extra = 0) => {
-    const angle = (i * Math.PI) / 4 - Math.PI / 2;
+    const angle = (i * 2 * Math.PI) / chartCategories.length - Math.PI / 2;
     return [
       cx + Math.cos(angle) * (radius * value + extra),
       cy + Math.sin(angle) * (radius * value + extra),
     ];
   };
-  const labels = [
-    ["News"],
-    ["Commerce"],
-    ["Jobs"],
-    ["Finance"],
-    ["Research"],
-    width < 500 ? ["Legal"] : ["Legal &", "government"],
-    width < 500 ? ["Docs"] : ["Software", "& docs"],
-    ["Community"],
-  ];
+  const shortNames: Record<string, string[]> = {
+    legal_regulatory: ["Legal"],
+    software_docs: ["Docs"],
+    arts_sports_reference: ["Arts &", "reference"],
+  };
+  const labels = chartCategories.map((c) => shortNames[c.id] ?? [c.name]);
   return (
     <>
       <Legend
@@ -235,18 +241,18 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Useful content by category on eight axes from zero to 100 percent; exact values and page counts are available in the table"
+          aria-label="Useful content by category from zero to 100 percent; exact values and page counts are available in the table"
         >
           {[0.25, 0.5, 0.75, 1].map((value) => (
             <polygon
               key={value}
-              points={categories
+              points={chartCategories
                 .map((_, i) => point(i, value).join(","))
                 .join(" ")}
               className="bench-radar-grid"
             />
           ))}
-          {categories.map((category, i) => {
+          {chartCategories.map((category, i) => {
             const [x, y] = point(i, 1),
               [lx, ly] = point(i, 1, 20);
             return (
@@ -262,7 +268,7 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
                   x={lx}
                   y={ly}
                   textAnchor={
-                    i === 0 || i === 4 ? "middle" : i < 4 ? "start" : "end"
+                    Math.abs(lx - cx) < 1 ? "middle" : lx > cx ? "start" : "end"
                   }
                   dominantBaseline="middle"
                 >
@@ -281,7 +287,7 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
           })}
           {providers.map((p, providerIndex) => {
             const row = rows.find((r) => r.id === p.id);
-            const values = categories.map((c) => categoryRate(row, c.id));
+            const values = chartCategories.map((c) => categoryRate(row, c.id));
             return (
               <g key={p.id} opacity={active && active !== p.id ? 0.2 : 1}>
                 {values.map((value, i) => {
@@ -290,7 +296,7 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
                   const [x, y] = point(i, value),
                     [nx, ny] = point((i + 1) % values.length, next ?? 0);
                   return (
-                    <g key={categories[i].id}>
+                    <g key={chartCategories[i].id}>
                       {next != null && (
                         <line
                           x1={x}
@@ -303,7 +309,7 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
                         />
                       )}
                       <circle cx={x} cy={y} r="3" fill={p.color}>
-                        <title>{`${p.name}, ${categories[i].name}: ${percent(value)} (${integer(row?.categories[categories[i].id]?.total ?? 0)} pages)`}</title>
+                        <title>{`${p.name}, ${chartCategories[i].name}: ${percent(value)} (${integer(row?.categories[chartCategories[i].id]?.total ?? 0)} pages)`}</title>
                       </circle>
                     </g>
                   );
@@ -315,9 +321,9 @@ function Radar({ rows }: { rows: ProviderMetric[] }) {
             (value) => (
               <text
                 key={value}
-                x={point(-0.5, value)[0] - 6}
-                y={point(-0.5, value)[1] + 4}
-                textAnchor="end"
+                x={cx + 8}
+                y={cy - radius * value + 4}
+                textAnchor="start"
                 className="bench-radar-scale"
               >
                 {Math.round(value * 100)}%
@@ -684,60 +690,82 @@ const citation = `@misc{scrapingbench2026,
   year = {2026},
   url = {https://trace-benchmark-contextdev.vercel.app/}
 }`;
-const WikipediaBenchmark = dynamic(() => import("./wikipedia"), {
-  loading: () => (
-    <p role="status" className="bench-note">
-      Loading Wikipedia sample…
-    </p>
-  ),
-});
-function subscribeToTab(callback: () => void) {
-  window.addEventListener("hashchange", callback);
-  return () => window.removeEventListener("hashchange", callback);
+function Filter({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string; description?: string }[];
+}) {
+  return (
+    <div className="sample-filter">
+      <span>{label}</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger appearance="field" aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem
+              key={o.value}
+              value={o.value}
+              description={o.description}
+            >
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
-function currentTab() {
-  return window.location.hash.startsWith("#wikipedia") ? "wikipedia" : "daily";
-}
-export function BenchmarkReport({ initial }: { initial: Report }) {
-  const tab = useSyncExternalStore(subscribeToTab, currentTab, () => "daily");
-  const methodology =
-    tab === "wikipedia" ? "#wikipedia-methodology" : "#methodology";
-  const [data, setData] = useState(initial);
+export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
+  const [dataset, setDataset] = useState(initial);
   const [selection, setSelection] = useState("latest");
+  const [source, setSource] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [validation, setValidation] = useState("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const data = dataset.report;
+  const run = data.latest;
   useEffect(() => {
     if (copyStatus !== "Copied") return;
     const timer = setTimeout(() => setCopyStatus(""), 2000);
     return () => clearTimeout(timer);
   }, [copyStatus]);
   useEffect(() => {
-    let active = true;
     const controller = new AbortController();
     async function refresh() {
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/report?${new URLSearchParams({ run: selection === "latest" ? "" : selection })}`,
+          `/api/benchmark?${new URLSearchParams({ run: selection === "latest" ? "" : selection })}`,
           { signal: controller.signal },
         );
         if (!response.ok)
           throw new Error(
             "Results could not be refreshed. The last successful sample is still shown.",
           );
-        const next = await response.json();
-        if (active) {
-          setData(next);
+        const next: BenchmarkDataset = await response.json();
+        if (!controller.signal.aborted) {
+          setDataset(next);
           setError("");
         }
       } catch (e) {
-        if (active && !controller.signal.aborted)
+        if (!controller.signal.aborted)
           setError(
             e instanceof Error ? e.message : "Results could not be refreshed.",
           );
       } finally {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     void refresh();
@@ -745,18 +773,102 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       if (document.visibilityState === "visible") void refresh();
     }, 900000);
     return () => {
-      active = false;
       controller.abort();
       clearInterval(timer);
     };
   }, [selection]);
-  const run = data.latest;
-  const rows = run?.providers ?? [];
+  const selected = uniquePages(
+    dataset.pages.filter(
+      (p) =>
+        (source === "all" || p.source === source) &&
+        (category === "all" || p.category === category) &&
+        (validation === "all" ||
+          (validation === "hard"
+            ? p.screened
+            : p.audit === "reference_checked")) &&
+        `${p.url} ${p.article ?? ""}`
+          .toLowerCase()
+          .includes(query.trim().toLowerCase()),
+    ),
+  );
+  const observedCategories = [...new Set(selected.map((p) => p.category))];
+  const categoryIds =
+    source === "daily" &&
+    category === "all" &&
+    validation === "all" &&
+    !query.trim()
+      ? categories.map((c) => c.id)
+      : observedCategories;
+  const rows = scorePages(selected, categoryIds);
   const pending = rows.reduce((sum, r) => sum + r.pending, 0);
   const unknown = rows.reduce((sum, r) => sum + r.unknown, 0);
+  const chartCategories = benchmarkCategories.filter((c) =>
+    categoryIds.includes(c.id),
+  );
   const history = [...data.history]
     .reverse()
     .sort((a, b) => a.day.localeCompare(b.day));
+  const dailyCount = selected.filter((p) => p.source === "daily").length;
+  const retainedDaily = dataset.pages.filter(
+    (p) => p.source === "daily",
+  ).length;
+  const wikiCount = selected.filter((p) => p.source === "wikipedia").length;
+  const categoryTable = (
+    <Table
+      label="Category results"
+      headers={["Category", "Pages", ...providers.map((p) => p.name)]}
+      rows={chartCategories.map((c) => [
+        c.name,
+        integer(selected.filter((p) => p.category === c.id).length),
+        ...providers.map((p) =>
+          percent(
+            categoryRate(
+              rows.find((r) => r.id === p.id),
+              c.id,
+            ),
+          ),
+        ),
+      ])}
+    />
+  );
+  function change(setter: (value: string) => void) {
+    return (value: string) => {
+      setter(value);
+      setPage(0);
+    };
+  }
+  function reset() {
+    setSource("all");
+    setCategory("all");
+    setValidation("all");
+    setQuery("");
+    setPage(0);
+  }
+  function download() {
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            scoring:
+              "Equal weight per represented category, equal weight per page within each category. Unresolved and pending outcomes remain in denominators.",
+            filters: { source, category, validation, query },
+            dailyRun: run?.id,
+            scores: rows,
+            pages: selected,
+          },
+          null,
+          2,
+        ),
+      ],
+      { type: "application/json" },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "scraping-bench-filtered.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   return (
     <Surface kind="product" className="bench-shell">
       <header className="bench-header">
@@ -764,10 +876,8 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
           Scraping Bench
         </Link>
         <nav aria-label="Main navigation">
-          <a href={methodology}>Methodology</a>
-          <a href={tab === "wikipedia" ? "#wikipedia-citation" : "#citation"}>
-            Citation
-          </a>
+          <a href="#methodology">Methodology</a>
+          <a href="#citation">Citation</a>
           <a href="https://github.com/context-dot-dev/trace-benchmark">
             GitHub ↗
           </a>
@@ -777,271 +887,369 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       <main id="main">
         <div className="bench-intro">
           <h1>Measuring web scraping quality</h1>
-          {tab === "wikipedia" ? (
-            <p>
-              Four providers, 1,041 external URLs discovered through English
-              Wikipedia citations. This fixed study tests the linked websites,
-              not Wikipedia itself. Context operates the benchmark and is one of
-              the providers evaluated.
-            </p>
-          ) : (
-            <p>
-              Scraping Bench evaluates whether four providers return useful
-              content from the same daily sample of pages across eight
-              categories. Responses are assessed without provider names, and
-              each category contributes equally to the score. Context operates
-              the benchmark and is one of the providers evaluated.
+          <p>
+            Four providers, the same pages. Compare useful content across daily
+            feeds, public registries, and Wikipedia citations, with the evidence
+            behind every result.
+          </p>
+          <a href="#methodology">How we measure</a>
+        </div>
+        <div className="sample-filters" aria-label="Benchmark filters">
+          <Filter
+            label="Source"
+            value={source}
+            onChange={change(setSource)}
+            options={[
+              { value: "all", label: "All sources" },
+              { value: "daily", label: "Daily feeds & registries" },
+              { value: "wikipedia", label: "Wikipedia citations" },
+            ]}
+          />
+          <Filter
+            label="Category"
+            value={category}
+            onChange={change(setCategory)}
+            options={[
+              { value: "all", label: "All categories" },
+              ...benchmarkCategories.map((c) => ({
+                value: c.id,
+                label: c.name,
+              })),
+            ]}
+          />
+          <Filter
+            label="Validation"
+            value={validation}
+            onChange={change(setValidation)}
+            options={[
+              { value: "all", label: "All pages" },
+              { value: "hard", label: "Screened hard candidates" },
+              { value: "reference", label: "Reference checked" },
+            ]}
+          />
+          <label className="sample-search" htmlFor="page-search">
+            <span>Search pages</span>
+            <input
+              id="page-search"
+              type="search"
+              placeholder="URL or citing article…"
+              value={query}
+              onChange={(e) => change(setQuery)(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="bench-sample">
+          <p aria-live="polite">
+            {run ? (
+              <>
+                Daily sample: <strong>{run.day}</strong> UTC
+              </>
+            ) : (
+              "No daily sample available"
+            )}{" "}
+            · Wikipedia: October 29 fixed study{loading && " · Updating…"}
+          </p>
+          <div className="sample-actions">
+            <Select
+              value={selection}
+              onValueChange={change(setSelection)}
+              disabled={source === "wikipedia"}
+            >
+              <SelectTrigger aria-label="Sample date (UTC)">
+                <CalendarDays aria-hidden="true" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="latest">Latest completed sample</SelectItem>
+                {data.history.map((r) => (
+                  <SelectItem
+                    key={r.id}
+                    value={r.id}
+                    description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
+                  >
+                    {r.day}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" aria-label="Reset filters" onClick={reset}>
+              Reset filters
+            </Button>
+          </div>
+        </div>
+        {error && (
+          <p role="alert" className="bench-notice">
+            {error}
+          </p>
+        )}
+        {run && source !== "wikipedia" && retainedDaily < run.pages && (
+          <p className="bench-notice" role="status" data-retention-notice>
+            Only {integer(retainedDaily)} of {integer(run.pages)} daily page
+            records are available for {run.day}. Individual records expire after
+            30 days. The filters and scores below use available records only;
+            original daily scores remain in the history.
+          </p>
+        )}
+        <div id="results" aria-busy={loading}>
+          <dl className="sample-metrics" aria-live="polite">
+            <div>
+              <dt>Pages in sample</dt>
+              <dd data-sample-count>{integer(selected.length)}</dd>
+            </div>
+            <div>
+              <dt>Daily pages</dt>
+              <dd>{integer(dailyCount)}</dd>
+            </div>
+            <div>
+              <dt>Wikipedia citations</dt>
+              <dd>{integer(wikiCount)}</dd>
+            </div>
+            <div>
+              <dt>Categories represented</dt>
+              <dd>{integer(observedCategories.length)}</dd>
+            </div>
+          </dl>
+          {validation !== "all" && (
+            <p className="bench-notice">
+              {validation === "hard"
+                ? "This subset was selected using provider failures and is not an unbiased ranking. Independent validation is incomplete."
+                : "Five pages were reference checked against visible article bodies or public abstracts. This small subset is not representative."}{" "}
+              Daily pages have not been independently screened and are excluded.
             </p>
           )}
-          <a href={methodology}>Read the methodology</a>
+          <Section
+            title="Useful content"
+            note={`Each represented category has equal weight; pages within a category have equal weight. ${unknown ? integer(unknown) + " unresolved results stay in the denominator." : "Failed results stay in the denominator."}${pending ? " " + integer(pending) + " pending results make these scores provisional lower bounds." : ""}`}
+            chart={<Bars rows={rows} />}
+            table={
+              <Table
+                label="Useful content results"
+                headers={[
+                  "Provider",
+                  "Useful",
+                  "Not useful",
+                  "Unresolved",
+                  "Pending",
+                  "Score",
+                ]}
+                rows={rows.map((r) => [
+                  <Name key={r.id} id={r.id} />,
+                  integer(r.useful),
+                  integer(r.failed),
+                  integer(r.unknown),
+                  integer(r.pending),
+                  percent(r.rate),
+                ])}
+              />
+            }
+          />
+          <p className="bench-note">
+            {dailyCount > 0 && wikiCount > 0
+              ? "The overall score combines two collection protocols. Use Source to inspect each separately. "
+              : ""}
+            Context operates this benchmark and is one of the providers
+            evaluated. <a href="#methodology">Scoring and limitations</a>.
+          </p>
+          {wikiCount > 0 && (
+            <p className="bench-note">
+              Plain HTTP + Trafilatura recovered useful content from{" "}
+              {integer(
+                selected.filter(
+                  (p) => p.source === "wikipedia" && p.plainHttp === true,
+                ).length,
+              )}{" "}
+              of {integer(wikiCount)} selected Wikipedia pages. This baseline
+              was not measured for daily pages.
+            </p>
+          )}
+          <Section
+            title="Results by category"
+            note="Every provider is evaluated on the same filtered pages. Missing measurements appear as an em dash. The table shows exact rates and page counts."
+            chart={
+              chartCategories.length >= 3 ? (
+                <Radar rows={rows} chartCategories={chartCategories} />
+              ) : (
+                categoryTable
+              )
+            }
+            table={categoryTable}
+          />
+          <div className="bench-section-head">
+            <p className="bench-note">
+              {integer(selected.length)} pages match these filters. Downloads
+              include source, protocol, original grades and review notes.
+            </p>
+            <Button
+              variant="outline"
+              className="sample-download"
+              data-download-results
+              onClick={download}
+            >
+              Download filtered results ↓
+            </Button>
+          </div>
+          <PageResults pages={selected} page={page} setPage={setPage} />
         </div>
-        <Tabs
-          value={tab}
-          onValueChange={(value) => {
-            window.location.hash = value;
-          }}
-        >
-          <TabsList aria-label="Benchmark sample">
-            <TabsTrigger value="daily">Daily benchmark</TabsTrigger>
-            <TabsTrigger value="wikipedia">Wikipedia</TabsTrigger>
-          </TabsList>
-          <TabsContent value="daily">
-            {error && (
-              <p role="alert" className="bench-notice">
-                {error}
-              </p>
-            )}
-            {!run ? (
-              <p className="bench-notice">
-                The first sample has not been collected yet. Results appear here
-                as scheduled collection progresses.
-              </p>
-            ) : (
-              <div id="results" aria-busy={loading}>
-                <Section
-                  title="Quality over time"
-                  note="The complete history of daily useful-content scores is shown below. Scores from different protocols are not directly comparable, and a missing category prevents an overall score."
-                  chart={<Trend history={history} />}
-                  table={
-                    <Table
-                      label="Daily quality history"
-                      headers={[
-                        "Date (UTC)",
-                        "Protocol",
-                        "Status",
-                        "Pages",
-                        ...providers.map((p) => p.name),
-                      ]}
-                      rows={data.history.map((r) => [
-                        r.day,
-                        r.protocol,
-                        r.status !== "completed"
-                          ? "In progress"
-                          : r.providers.every((p) => p.rate == null)
-                            ? "Missing categories"
-                            : "Scored",
-                        integer(r.pages),
-                        ...providers.map((p) =>
-                          r.status === "completed"
-                            ? percent(
-                                r.providers.find((m) => m.id === p.id)?.rate,
-                              )
-                            : "—",
-                        ),
-                      ])}
-                    />
-                  }
-                />
-                <p className="bench-note">
-                  The results below describe one daily sample. Changing it
-                  leaves the historical timeline unchanged.
-                </p>
-                <div className="bench-sample">
-                  <p aria-live="polite">
-                    {run ? (
-                      <>
-                        Showing <strong>{run.day}</strong> UTC ·{" "}
-                        {integer(run.pages)} pages
-                      </>
-                    ) : (
-                      "Awaiting the first sample"
-                    )}
-                    {loading && " · Updating…"}
-                  </p>
-                  <Select value={selection} onValueChange={setSelection}>
-                    <SelectTrigger aria-label="Sample date (UTC)">
-                      <CalendarDays aria-hidden="true" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="latest">
-                        Latest completed sample
-                      </SelectItem>
-                      {data.history.map((r) => (
-                        <SelectItem
-                          key={r.id}
-                          value={r.id}
-                          description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
-                        >
-                          {r.day}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Section
-                  title="Useful content"
-                  note={`Share of sampled pages returning substantive content from the requested page, averaged equally across categories.${pending ? " Collection is in progress, so scores are provisional lower bounds." : " Unresolved results remain in the denominator."}`}
-                  chart={<Bars rows={rows} />}
-                  table={
-                    <Table
-                      label="Useful content results"
-                      headers={[
-                        "Provider",
-                        "Useful",
-                        "Not useful",
-                        "Unresolved",
-                        "Pending",
-                        "Score",
-                      ]}
-                      rows={rows.map((r) => [
-                        <Name key={r.id} id={r.id} />,
-                        integer(r.useful),
-                        integer(r.failed),
-                        integer(r.unknown),
-                        integer(r.pending),
-                        percent(r.rate),
-                      ])}
-                    />
-                  }
-                />
-                <Section
-                  title="Results by category"
-                  note="Compare useful-content rates across eight categories on the same pages for every provider. The radar uses a 0–100% scale and supports provider highlighting; the table gives exact scores and page counts, with an em dash for missing measurements."
-                  chart={<Radar rows={rows} />}
-                  table={
-                    <Table
-                      label="Category results"
-                      headers={[
-                        "Category",
-                        "Pages",
-                        ...providers.map((p) => p.name),
-                      ]}
-                      rows={categories.map((c) => [
-                        c.name,
-                        integer(run.categories[c.id] ?? 0),
-                        ...providers.map((p) =>
-                          percent(
-                            categoryRate(
-                              rows.find((r) => r.id === p.id),
-                              c.id,
-                            ),
-                          ),
-                        ),
-                      ])}
-                    />
-                  }
-                />
-                {run.pages < run.target && (
-                  <p className="bench-notice">
-                    This sample includes {integer(run.pages)} of{" "}
-                    {integer(run.target)} targeted pages. Missing categories
-                    appear as gaps and withhold the overall score; they are
-                    never scored as zero.
-                  </p>
-                )}
-                <p className="bench-note">
-                  The selected sample has {integer(unknown)} unresolved results
-                  {pending
-                    ? ` and ${integer(pending)} pending results`
-                    : ""}.{" "}
-                  <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>
-                    Download the results ↓
-                  </a>
-                </p>
-              </div>
-            )}
-            <section id="methodology" className="bench-method">
-              <h2>Methodology</h2>
+        <Section
+          title="Daily quality over time"
+          note="Complete daily history, using each run’s original scoring rules. These historical scores are not recalculated by the filters above and do not include the fixed Wikipedia study. Different protocols are not directly comparable; missing categories withhold the overall daily score."
+          chart={<Trend history={history} />}
+          table={
+            <Table
+              label="Daily quality history"
+              headers={[
+                "Date (UTC)",
+                "Protocol",
+                "Status",
+                "Pages",
+                ...providers.map((p) => p.name),
+              ]}
+              rows={data.history.map((r) => [
+                r.day,
+                r.protocol,
+                r.status !== "completed"
+                  ? "In progress"
+                  : r.providers.every((p) => p.rate == null)
+                    ? "Missing categories"
+                    : "Scored",
+                integer(r.pages),
+                ...providers.map((p) =>
+                  r.status === "completed"
+                    ? percent(r.providers.find((m) => m.id === p.id)?.rate)
+                    : "—",
+                ),
+              ])}
+            />
+          }
+        />
+        <section id="methodology" className="bench-method">
+          <h2>Methodology</h2>
+          <p>
+            The overall view pools the selected daily sample and the fixed
+            Wikipedia citation study. Each represented category has equal
+            weight; pages within a category have equal weight. Legal and finance
+            labels are normalized across sources, and arts, sports &amp;
+            reference remains its own category. Failed, unresolved, and pending
+            results stay in the denominator. Duplicate URLs, ignoring fragments,
+            count once; the daily observation takes precedence when both sources
+            contain a URL.
+          </p>
+          <p>
+            Pooling does not harmonize the collection protocols. The Wikipedia
+            study was measured on October 29 using identity-content-jev-v2
+            grading and frozen Python adapters, with Context requesting
+            mainContentOnly=false. Daily collection uses the protocol recorded
+            below. Treat the overall score as a descriptive comparison of this
+            mixed sample; use the source filter for a protocol-specific
+            comparison. Wikipedia-only scores now use the same category
+            weighting as the overall view, so they differ from the earlier
+            page-weighted study chart.
+          </p>
+          <details>
+            <summary>Wikipedia discovery and validation</summary>
+            <p>
+              48 two-minute windows on October 25 and 27 yielded 1,041 external
+              URLs from 4,777 measured English Wikipedia edits. Newly cited does
+              not mean newly published. The benchmark tests the linked websites,
+              not Wikipedia itself. First-run grades are used; repeat tests only
+              inform screening.
+            </p>
+            <p>
+              73 pages survived repeatability and quality screening. The hard
+              cohort was selected using provider failures, so it is not an
+              unbiased provider ranking. Of 20 randomly audited candidates, five
+              were reference checked, three rejected and twelve unresolved.
+              Reference checks include public abstracts and do not establish
+              full-paper recovery. Two known grader errors remain flagged with
+              their original grades.
+            </p>
+            <p>
+              Daily pages have not received this independent screening and are
+              excluded by the validation filters. A reliable supply of 1,000
+              validated hard pages per day has not been established. This fixed
+              study does not enable recurring Wikipedia collection.{" "}
+              <a href="/data/wikipedia-study.json" download>
+                Download the original study and provenance hashes
+              </a>
+              .
+            </p>
+          </details>
+          <h3>Daily collection</h3>
+          {run && run.pages < run.target && (
+            <p>
+              The selected daily run collected {integer(run.pages)} of{" "}
+              {integer(run.target)} targeted pages. In the unfiltered daily-only
+              view, a missing category withholds the overall score.
+            </p>
+          )}
+          <p>
+            Public feeds, registries, and sitemaps supply up to 300 previously
+            unseen pages per category each day. All four providers receive the
+            same frozen sample with fresh content requested and a 30-second
+            request deadline. An automated judge evaluates whether returned
+            content is substantive and belongs to the requested page, without
+            seeing the provider name. The score measures useful content rather
+            than factual accuracy or complete recall.
+          </p>
+          <details>
+            <summary>Collection, grading, and limitations</summary>
+            <p>
+              {run && run.protocol !== PROTOCOL
+                ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
+                : `Collection uses ${PROTOCOL}.`}{" "}
+              Context and Firecrawl request main content; all outputs are
+              limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
+              characters from the beginning, middle, and end. A positive match
+              can establish useful content, while a negative judgment from an
+              incomplete excerpt remains unresolved. Failed, unresolved, and
+              pending results stay in the denominator, with equal weight for
+              each of the eight categories.
+            </p>
+            <p>
+              Fresh-fetch settings do not guarantee an uncached response.
+              Response time is therefore not compared. Source availability,
+              provider rate limits, and request budgets can reduce the daily
+              sample.
+            </p>
+            <p>
+              Vercel Cron checks for work every fifteen minutes, and results are
+              stored in Neon through Drizzle. Interrupted provider requests are
+              not automatically repeated. Each provider is limited to 4,000
+              requests per UTC day, and grading has a separate input budget.
+            </p>
+            <p>
+              Individual results are retained for 30 days. Private grading
+              excerpts are compressed and retained for up to seven days within a
+              256 MB budget; daily summaries remain available. Historical
+              records retain their original protocol and grading decisions.
+            </p>
+            {data.collecting && data.collecting.id !== run?.id && (
               <p>
-                Public feeds, registries, and sitemaps supply up to 300
-                previously unseen pages per category each day. All four
-                providers receive the same frozen sample with fresh content
-                requested and a 30-second request deadline. An automated judge
-                evaluates whether returned content is substantive and belongs to
-                the requested page, without seeing the provider name. The score
-                measures useful content rather than factual accuracy or complete
-                recall.
+                Collection for {data.collecting.day} is in progress, with{" "}
+                {integer(
+                  data.collecting.providers.reduce(
+                    (n, p) => n + p.total - p.pending,
+                    0,
+                  ),
+                )}{" "}
+                of {integer(data.collecting.pages * providers.length)} results
+                ready.
               </p>
-              <details>
-                <summary>Collection, grading, and limitations</summary>
-                <p>
-                  {run && run.protocol !== PROTOCOL
-                    ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
-                    : `Collection uses ${PROTOCOL}.`}{" "}
-                  Context and Firecrawl request main content; all outputs are
-                  limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
-                  characters from the beginning, middle, and end. A positive
-                  match can establish useful content, while a negative judgment
-                  from an incomplete excerpt remains unresolved. Failed,
-                  unresolved, and pending results stay in the denominator, with
-                  equal weight for each of the eight categories.
-                </p>
-                <p>
-                  Fresh-fetch settings do not guarantee an uncached response.
-                  Response time is therefore not compared. Source availability,
-                  provider rate limits, and request budgets can reduce the daily
-                  sample.
-                </p>
-                <p>
-                  Vercel Cron checks for work every fifteen minutes, and results
-                  are stored in Neon through Drizzle. Interrupted provider
-                  requests are not automatically repeated. Each provider is
-                  limited to 4,000 requests per UTC day, and grading has a
-                  separate input budget.
-                </p>
-                <p>
-                  Individual results are retained for 30 days. Private grading
-                  excerpts are compressed and retained for up to seven days
-                  within a 256 MB budget; daily summaries remain available.
-                  Historical records retain their original protocol and grading
-                  decisions.
-                </p>
-                {data.collecting && data.collecting.id !== run?.id && (
-                  <p>
-                    Collection for {data.collecting.day} is in progress, with{" "}
-                    {integer(
-                      data.collecting.providers.reduce(
-                        (n, p) => n + p.total - p.pending,
-                        0,
-                      ),
-                    )}{" "}
-                    of {integer(data.collecting.pages * providers.length)}{" "}
-                    results ready.
-                  </p>
-                )}
-                <p>
-                  {data.health.healthySources} of {data.health.sources} sources
-                  last fetched successfully. Last collector update:{" "}
-                  {data.health.lastTick
-                    ? new Date(data.health.lastTick)
-                        .toISOString()
-                        .replace("T", " ")
-                        .slice(0, 19) + " UTC"
-                    : "not yet recorded"}
-                  .{data.health.error && ` ${data.health.error}`}
-                </p>
-              </details>
-            </section>
-          </TabsContent>
-          <TabsContent value="wikipedia">
-            <WikipediaBenchmark />
-          </TabsContent>
-        </Tabs>
-        <section
-          id={tab === "wikipedia" ? "wikipedia-citation" : "citation"}
-          className="bench-citation"
-        >
+            )}
+            <p>
+              {data.health.healthySources} of {data.health.sources} sources last
+              fetched successfully. Last collector update:{" "}
+              {data.health.lastTick
+                ? new Date(data.health.lastTick)
+                    .toISOString()
+                    .replace("T", " ")
+                    .slice(0, 19) + " UTC"
+                : "not yet recorded"}
+              .{data.health.error && ` ${data.health.error}`}
+            </p>
+          </details>
+        </section>
+        <section id="citation" className="bench-citation">
           <h2>Citation</h2>
           <p>
             Scraping Bench is maintained by{" "}
@@ -1092,7 +1300,7 @@ export function BenchmarkReport({ initial }: { initial: Report }) {
       </main>
       <footer className="bench-footer">
         Published by <a href="https://context.dev">Context.dev</a>, with the
-        same sample and scoring rules for every provider.
+        same pages for every provider within each source sample.
       </footer>
     </Surface>
   );
