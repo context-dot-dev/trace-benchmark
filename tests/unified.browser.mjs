@@ -252,6 +252,7 @@ browser(
   "eval",
   'window.scrollTo({top:0,behavior:"instant"});document.documentElement.dataset.theme="dark"',
 );
+browser("wait", "300");
 browser("screenshot", resolve(evidence, "dark-after.png"));
 browser("eval", 'document.documentElement.dataset.theme="light"');
 writeFileSync(
