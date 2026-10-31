@@ -684,7 +684,7 @@ function Trend({ history }: { history: RunSummary[] }) {
   );
 }
 const citation = `@misc{scrapingbench2026,
-  author = {Ryaboy, Michael and Bakour, Yahia},
+  author = {{Context.dev}},
   title = {{Scraping Bench}: A Live Scraping Benchmark},
   year = {2026},
   url = {https://trace-benchmark-contextdev.vercel.app/}
@@ -728,7 +728,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const [source, setSource] = useState("all");
   const [category, setCategory] = useState("all");
   const [validation, setValidation] = useState("all");
-  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -783,18 +782,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         (validation === "all" ||
           (validation === "hard"
             ? p.screened
-            : p.audit === "reference_checked")) &&
-        `${p.url} ${p.article ?? ""}`
-          .toLowerCase()
-          .includes(query.trim().toLowerCase()),
+            : p.audit === "reference_checked")),
     ),
   );
   const observedCategories = [...new Set(selected.map((p) => p.category))];
   const categoryIds =
     source === "daily" &&
     category === "all" &&
-    validation === "all" &&
-    !query.trim()
+    validation === "all"
       ? categories.map((c) => c.id)
       : observedCategories;
   const rows = scorePages(selected, categoryIds);
@@ -833,7 +828,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     setSource("all");
     setCategory("all");
     setValidation("all");
-    setQuery("");
   }
   function download() {
     const blob = new Blob(
@@ -842,7 +836,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           {
             scoring:
               "Equal weight per represented category, equal weight per page within each category. Unresolved and pending outcomes remain in denominators.",
-            filters: { source, category, validation, query },
+            filters: { source, category, validation },
             dailyRun: run?.id,
             scores: rows,
             pages: selected,
@@ -918,16 +912,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               { value: "reference", label: "Reference checked" },
             ]}
           />
-          <label className="sample-search" htmlFor="page-search">
-            <span>Search pages</span>
-            <input
-              id="page-search"
-              type="search"
-              placeholder="URL or citing article…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
         </div>
         <div className="bench-sample">
           <p aria-live="polite">
@@ -1243,9 +1227,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <h2>Citation</h2>
           <p>
             Scraping Bench is maintained by{" "}
-            <a href="mailto:michael@context.dev">Michael Ryaboy</a> and{" "}
-            <a href="mailto:yahia@context.dev">Yahia Bakour</a> at Context. If
-            you use these results in your work, please cite the benchmark and
+            <a href="https://context.dev">Context.dev</a>. If you use these
+            results in your work, please cite the benchmark and
             include the sample date and protocol.
           </p>
           <div className="bench-code">
