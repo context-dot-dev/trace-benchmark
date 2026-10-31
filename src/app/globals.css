@@ -665,20 +665,18 @@ body::after,
 
 .sample-filters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ds-space-4);
   margin: var(--ds-space-8) 0 var(--ds-space-5);
 }
-.sample-filter,
-.sample-search {
+.sample-filter {
   display: grid;
   gap: var(--ds-space-2);
   color: var(--ds-color-text-muted);
   font-size: var(--ds-text-body-sm);
   min-width: 0;
 }
-.sample-filter [role="combobox"],
-.sample-search input {
+.sample-filter [role="combobox"] {
   min-height: 44px;
   width: 100%;
   min-width: 0;
@@ -686,18 +684,6 @@ body::after,
 .sample-filter [role="combobox"] > span {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.sample-search input {
-  padding: var(--ds-space-2) var(--ds-space-3);
-  border: 1px solid var(--ds-color-border-default);
-  border-radius: var(--ds-radius-control);
-  background: var(--ds-color-bg-default);
-  color: var(--ds-color-text-default);
-  font: inherit;
-}
-.sample-search input:focus-visible {
-  outline: 2px solid var(--ds-color-focus-ring);
-  outline-offset: 2px;
 }
 .sample-actions {
   display: flex;
@@ -731,10 +717,6 @@ body::after,
 @media (max-width: 43.2rem) {
   .sample-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .sample-search,
-  .sample-search input {
-    width: 100%;
   }
 }
 .sample-actions button,

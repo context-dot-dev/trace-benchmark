@@ -100,6 +100,10 @@ check(
   "Reader view omits page inspector and pagination",
 );
 check(
+  '!document.querySelector("#page-search") && document.querySelectorAll(".sample-filters [role=combobox]").length === 3',
+  "Only source, category and validation filters are shown",
+);
+check(
   `document.querySelector('[data-sample-count]').textContent === '${unique.length.toLocaleString("en-US")}'`,
   "Default includes both sources, deduplicated",
 );
@@ -150,12 +154,7 @@ for (const row of dataset.report.latest.providers)
     `${row.id}: original daily score preserved`,
   );
 choose("Source", "All sources");
-browser("fill", "#page-search", "no-such-page-unified-xyz");
-check(
-  'document.querySelector("[data-sample-count]").textContent === "0" && document.querySelector("[data-score=context]").textContent === "—"',
-  "Search filters both scores and records",
-);
-browser("fill", "#page-search", " ");
+choose("Source", "Wikipedia citations");
 browser("click", 'button[aria-label="Reset filters"]');
 check(
   `document.querySelector('[data-sample-count]').textContent === '${unique.length.toLocaleString("en-US")}'`,
