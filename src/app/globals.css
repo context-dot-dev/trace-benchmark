@@ -704,15 +704,6 @@ body::after,
   flex-wrap: wrap;
   gap: var(--ds-space-2);
 }
-.sample-error {
-  margin-top: var(--ds-space-2);
-  font-size: var(--ds-text-body-sm);
-}
-.sample-error p {
-  max-width: 16rem;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 900px) {
   .sample-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -722,14 +713,6 @@ body::after,
   .sample-metrics dt {
     min-height: 2.6em;
   }
-  .sample-page-scroll tr {
-    padding: var(--ds-space-3);
-    gap: var(--ds-space-2);
-  }
-  .sample-page-scroll .sample-url,
-  .sample-page-scroll .sample-category {
-    margin-top: var(--ds-space-1);
-  }
 }
 .sample-metrics {
   display: grid;
@@ -737,58 +720,13 @@ body::after,
   gap: var(--ds-space-6);
   margin: var(--ds-space-8) 0;
 }
-.sample-metrics dt,
-.sample-pagination,
-.sample-url,
-.sample-category {
+.sample-metrics dt {
   color: var(--ds-color-text-muted);
 }
 .sample-metrics dd {
   margin-top: var(--ds-space-2);
   font-size: var(--ds-text-h3);
   font-variant-numeric: tabular-nums;
-}
-.sample-page-cell a,
-.sample-review-cell summary {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.sample-page-scroll td,
-.sample-page-scroll th {
-  vertical-align: top;
-}
-.sample-page-scroll .sample-page-cell {
-  min-width: 20rem;
-  max-width: 30rem;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-.sample-url,
-.sample-category,
-.sample-citation {
-  display: block;
-  margin-top: var(--ds-space-2);
-  font-size: var(--ds-text-body);
-}
-.sample-page-scroll .sample-review-cell {
-  min-width: 12rem;
-  max-width: 20rem;
-  white-space: normal;
-}
-.sample-review-cell details {
-  margin-top: var(--ds-space-2);
-  font-size: var(--ds-text-body);
-}
-.sample-review-cell summary {
-  cursor: pointer;
-}
-.sample-pagination,
-.sample-pagination > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-space-3);
-  margin-top: var(--ds-space-4);
 }
 @media (max-width: 43.2rem) {
   .sample-metrics {
@@ -799,32 +737,6 @@ body::after,
     width: 100%;
   }
 }
-.sample-pagination button {
-  min-height: 44px;
-  text-decoration: none;
-}
-.sample-page-scroll td {
-  text-align: left;
-}
-@media (max-width: 580px) {
-  .sample-page-scroll .sample-page-cell,
-  .sample-page-scroll .sample-review-cell {
-    min-width: 0;
-    max-width: none;
-  }
-  .sample-page-scroll .sample-review-cell {
-    grid-column: 1 / -1;
-  }
-  .sample-page-scroll td:last-child {
-    grid-column: auto;
-  }
-  .sample-page-cell a {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-  }
-}
-
 .sample-actions button,
 .sample-download,
 .bench-header button {

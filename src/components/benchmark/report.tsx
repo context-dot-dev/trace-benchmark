@@ -20,7 +20,6 @@ import {
 } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProviderName } from "@/components/trace/provider-logo";
-import { PageResults } from "./page-results";
 import {
   benchmarkCategories,
   scorePages,
@@ -730,7 +729,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const [category, setCategory] = useState("all");
   const [validation, setValidation] = useState("all");
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -831,18 +829,11 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
       ])}
     />
   );
-  function change(setter: (value: string) => void) {
-    return (value: string) => {
-      setter(value);
-      setPage(0);
-    };
-  }
   function reset() {
     setSource("all");
     setCategory("all");
     setValidation("all");
     setQuery("");
-    setPage(0);
   }
   function download() {
     const blob = new Blob(
@@ -898,7 +889,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <Filter
             label="Source"
             value={source}
-            onChange={change(setSource)}
+            onChange={setSource}
             options={[
               { value: "all", label: "All sources" },
               { value: "daily", label: "Daily feeds & registries" },
@@ -908,7 +899,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <Filter
             label="Category"
             value={category}
-            onChange={change(setCategory)}
+            onChange={setCategory}
             options={[
               { value: "all", label: "All categories" },
               ...benchmarkCategories.map((c) => ({
@@ -920,7 +911,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <Filter
             label="Validation"
             value={validation}
-            onChange={change(setValidation)}
+            onChange={setValidation}
             options={[
               { value: "all", label: "All pages" },
               { value: "hard", label: "Screened hard candidates" },
@@ -934,7 +925,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               type="search"
               placeholder="URL or citing article…"
               value={query}
-              onChange={(e) => change(setQuery)(e.target.value)}
+              onChange={(e) => setQuery(e.target.value)}
             />
           </label>
         </div>
@@ -952,7 +943,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <div className="sample-actions">
             <Select
               value={selection}
-              onValueChange={change(setSelection)}
+              onValueChange={setSelection}
               disabled={source === "wikipedia"}
             >
               <SelectTrigger aria-label="Sample date (UTC)">
@@ -1088,7 +1079,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               Download filtered results ↓
             </Button>
           </div>
-          <PageResults pages={selected} page={page} setPage={setPage} />
         </div>
         <Section
           title="Daily quality over time"

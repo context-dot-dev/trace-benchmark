@@ -1,6 +1,6 @@
 // Failure cases: Wikipedia omitted by default; unequal page sets; mixed category
 // names; failures dropped from denominators; duplicate URLs; stale filters or
-// pagination; missing historical data; inaccessible filters; mobile overflow.
+// inspection clutter; missing historical data; inaccessible filters; mobile overflow.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
@@ -96,6 +96,10 @@ check(
   "One view, no source tabs",
 );
 check(
+  '!document.querySelector("#page-results") && !document.querySelector("#page-range") && !document.body.textContent.includes("Inspect the pages")',
+  "Reader view omits page inspector and pagination",
+);
+check(
   `document.querySelector('[data-sample-count]').textContent === '${unique.length.toLocaleString("en-US")}'`,
   "Default includes both sources, deduplicated",
 );
@@ -146,19 +150,9 @@ for (const row of dataset.report.latest.providers)
     `${row.id}: original daily score preserved`,
   );
 choose("Source", "All sources");
-browser("click", 'button[aria-label="Next pages"]');
-check(
-  'document.querySelector("#page-range").textContent.includes("21–40")',
-  "Page list advances",
-);
-choose("Source", "Wikipedia citations");
-check(
-  'document.querySelector("#page-range").textContent.includes("1–20")',
-  "Source filter resets pagination",
-);
 browser("fill", "#page-search", "no-such-page-unified-xyz");
 check(
-  'document.querySelector("#page-results").textContent.includes("No pages match") && document.querySelector("[data-sample-count]").textContent === "0"',
+  'document.querySelector("[data-sample-count]").textContent === "0" && document.querySelector("[data-score=context]").textContent === "—"',
   "Search filters both scores and records",
 );
 browser("fill", "#page-search", " ");
@@ -213,9 +207,9 @@ for (const [name, w, h] of [
     browser("screenshot", resolve(evidence, "mobile-categories.png"));
     browser(
       "eval",
-      'document.querySelector("#page-results").scrollIntoView({behavior:"instant"})',
+      'document.querySelector("[data-download-results]").scrollIntoView({behavior:"instant",block:"start"})',
     );
-    browser("screenshot", resolve(evidence, "mobile-pages.png"));
+    browser("screenshot", resolve(evidence, "mobile-summary.png"));
   }
 
   choose("Source", "Wikipedia citations");

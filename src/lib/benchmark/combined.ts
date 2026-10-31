@@ -32,10 +32,6 @@ export type BenchmarkPage = {
   plainHttp?: boolean | null;
 };
 export type BenchmarkDataset = { report: Report; pages: BenchmarkPage[] };
-export const categoryName = (id: string) =>
-  benchmarkCategories.find((c) => c.id === id)?.name ?? id;
-export const sourceName = (id: string) =>
-  id === "wikipedia" ? "Wikipedia citations" : "Daily feeds & registries";
 export function normalizeCategory(id: string) {
   if (id === "legal_government") return "legal_regulatory";
   if (id === "finance") return "finance_filings";
