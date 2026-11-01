@@ -85,7 +85,6 @@ export async function runTick(store: Store, options: TickOptions = {}) {
   if (!acquired.length) return { status: "busy" };
   let processed = 0;
   try {
-    // Never repeat an external request whose outcome was lost after dispatch.
     await store.db
       .update(attempts)
       .set({
@@ -164,7 +163,6 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       let advanced = 0;
       await Promise.all(
         queued.map(async (row, index) => {
-          // Stagger page dispatch; each provider has at most eight concurrent calls.
           if (!options.deadlineMs)
             await new Promise((resolve) =>
               setTimeout(resolve, Math.floor(index / 4) * 500),
@@ -605,7 +603,6 @@ async function retainEvidence(store: Store, clock: Date) {
     await store.db.execute(
       sql`with oldest as (select id,sum(evidence_bytes) over(order by day,id) as size from scraping_bench.attempts where state='done' and evidence_bytes>0) update scraping_bench.attempts set evidence=null,evidence_bytes=0 where id in(select id from oldest where size<=${bytes - 240_000_000})`,
     );
-  // Keep durable day summaries and seen identities; bound the working set on Neon Free.
   await store.db
     .delete(attempts)
     .where(

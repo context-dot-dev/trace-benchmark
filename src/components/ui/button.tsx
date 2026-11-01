@@ -4,10 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-// One button for both surfaces. The product's variants and sizes are the dashboard's (button-class-name.ts): black
-// `primary`, brand blue `brand` for the one main action, `outline` (the default), `outline-brand`, `ghost` and
-// `on-brand`, all with control corners and a small press. The site's pills (brand-outline-pill.ts) are the other three:
-// the black pill, the blue outline pill and the white outline pill on blue.
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap font-normal outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-focus-ring active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
@@ -25,17 +21,13 @@ const buttonVariants = cva(
       },
       size: {
         sm: "h-8 px-3.5 text-body-sm",
-        // The main action on a form or page (the dashboard's Support button).
         md: "h-10 px-4.5 text-body-sm",
-        // A square icon button, the size of the dashboard's row menu and dialog close buttons.
         icon: "size-8 px-0 [&_svg:not([class*='size-'])]:size-4",
       },
     },
     compoundVariants: [
       { variant: ["primary", "brand", "outline", "outline-brand", "ghost", "on-brand"], className: "transition-[color,background-color,border-color,scale] duration-150 ease-out" },
       { variant: "ghost", size: "icon", className: "text-fg-subtle" },
-      // The site's pills are sized by their padding, at body size, as on the brand's pages; `sm` is the smaller pill
-      // the brand's forms and lists use.
       { variant: ["pill", "pill-outline", "pill-on-brand"], className: "transition-[color,background-color,border-color,scale] duration-200 ease-out" },
       { variant: ["pill", "pill-outline", "pill-on-brand"], size: "md", className: "h-auto px-5 py-3 text-body leading-snug" },
       { variant: ["pill", "pill-outline", "pill-on-brand"], size: "sm", className: "h-auto px-4 py-2 text-body-sm leading-snug" },

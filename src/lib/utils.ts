@@ -1,9 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-// The brand's scales have their own names (text-body-sm, rounded-card, shadow-floating). Without teaching
-// tailwind-merge, it reads text-body-sm as a text color and drops the real color beside it, and keeps a default
-// rounded-md next to a brand radius meant to replace it.
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {

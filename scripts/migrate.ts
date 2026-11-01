@@ -48,7 +48,6 @@ try {
         identities.add(hash(canonical(c.url)));
         identities.add(hash(c.organization + "\0" + (c.document_id || c.url)));
       } catch {
-        /* Preserve valid identities even if an old URL cannot be normalized. */
       }
     }
     const ids = [...identities];

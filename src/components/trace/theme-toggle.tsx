@@ -9,7 +9,6 @@ export type ThemeChoice = "system" | "light" | "dark";
 
 export const THEME_STORAGE_KEY = "trace-theme";
 
-/** Runs before the page paints (see the layout), so a stored theme never flashes the other one first. */
 export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(t==="light"||t==="dark"||t==="system")document.documentElement.dataset.theme=t}catch(e){}`;
 
 function applyTheme(choice: ThemeChoice) {
@@ -17,8 +16,8 @@ function applyTheme(choice: ThemeChoice) {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, choice);
   } catch {
-    // Private windows can refuse storage; the theme still applies for this visit.
   }
+  window.dispatchEvent(new Event("trace-theme-change"));
 }
 
 function readTheme(): ThemeChoice {
@@ -26,13 +25,13 @@ function readTheme(): ThemeChoice {
   return stored === "dark" || stored === "system" ? stored : "light";
 }
 
-const subscribe = () => () => {};
+const subscribe = (listener: () => void) => {
+  window.addEventListener("trace-theme-change", listener);
+  return () => window.removeEventListener("trace-theme-change", listener);
+};
 
-/** Single button to switch the page between its light and dark appearances. */
 export function ThemeToggle({ className }: { className?: string }) {
-  const initial = React.useSyncExternalStore(subscribe, readTheme, () => "light" as ThemeChoice);
-  const [choice, setChoice] = React.useState<ThemeChoice | null>(null);
-  const current = choice ?? initial;
+  const current = React.useSyncExternalStore(subscribe, readTheme, () => "light" as ThemeChoice);
   const dark = current === "dark" || (current === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const next = dark ? "light" : "dark";
 
@@ -43,7 +42,6 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-pressed={dark}
       title="Dark appearance"
       onClick={() => {
-        setChoice(next);
         applyTheme(next);
       }}
       className={cn("grid size-10.5 place-items-center rounded-pill border border-line bg-surface text-fg-muted transition-colors hover:text-fg max-[43.2rem]:size-11", className)}

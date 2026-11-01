@@ -21,7 +21,6 @@ export function ContextMark({ className }: { className?: string }) {
   );
 }
 
-/** Every provider is named by its own logo beside its name, never by color alone. */
 export function ProviderLogo({ id, className = "size-4" }: { id: string; className?: string }) {
   if (id === "context") {
     return (

@@ -101,9 +101,7 @@ const xml = new XMLParser({
   removeNSPrefix: true,
   processEntities: false,
 });
-// Feed and registry payloads have incompatible schemas; normalize only the fields used below.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const list = (v: any): any[] => (v == null ? [] : Array.isArray(v) ? v : [v]);
+const list = <T>(v: T | T[] | null | undefined): T[] => (v == null ? [] : Array.isArray(v) ? v : [v]);
 const text = (v: unknown): string =>
   typeof v === "object"
     ? String((v as Record<string, unknown> | null)?.["#text"] ?? "")
@@ -126,7 +124,6 @@ export async function discoverSource(source: Source): Promise<Candidate[]> {
         !new URL(clean).pathname.includes("/products/")
       )
         return;
-      // DOI/document identity deduplicates aliases without requiring page-reader calls.
       const id = createHash("sha256")
         .update(organization + "\0" + text(document || clean))
         .digest("hex");
@@ -140,7 +137,6 @@ export async function discoverSource(source: Source): Promise<Candidate[]> {
         discoveredAt: now,
       });
     } catch {
-      /* Invalid upstream links do not invalidate the rest of the feed. */
     }
   };
   const raw = await read(

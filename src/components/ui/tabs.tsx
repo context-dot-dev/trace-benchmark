@@ -6,12 +6,9 @@ import { cva } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-// The dashboard's tabs: plain labels with a static selected surface. `segmented` sits them on a gray track with a
-// white selected surface. The site's `pill` tabs are pill-shaped labels with a static blue outline when selected.
 type Variant = "default" | "segmented" | "pill";
 type Size = "sm" | "md";
 
-// The track's inner corners: the control radius less the track's 2px padding, so the pill sits concentric in it.
 const INNER_RADIUS = "rounded-[calc(var(--ds-radius-control)-0.125rem)]";
 const SELF_SURFACE: Record<Variant, string> = {
   default: "data-[state=active]:bg-wash-pill",

@@ -1,6 +1,5 @@
-/* Dark theme: the design system's published dark tokens (context-ds r/theme.json, tokens.dark). The second block fills
-   the site tokens that set leaves out, from the same ramp. Applied by a stored dark choice, or by the system when "system" is chosen; with no choice the page is light. */
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+:root[data-theme="dark"] .ds-site {
 	color-scheme: dark;
 	--ds-color-brand: #3B73ED;
 	--ds-color-bg-default: #151517;
@@ -60,7 +59,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
-	:root[data-theme="system"] {
+	:root[data-theme="system"],
+	:root[data-theme="system"] .ds-site {
 		color-scheme: dark;
 		--ds-color-brand: #3B73ED;
 		--ds-color-bg-default: #151517;

@@ -1,6 +1,3 @@
-"""Import the sanitized study ledger and citation manifest; never copy raw responses.
-Usage: python3 scripts/import-wikipedia-study.py LEDGER.csv TASKS.json
-"""
 import csv, hashlib, json, sys
 from pathlib import Path
 
