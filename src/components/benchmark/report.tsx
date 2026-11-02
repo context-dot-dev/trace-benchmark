@@ -1,15 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { CalendarDays, Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { Surface } from "@/lib/surface";
 import {
   useEffect,
@@ -19,7 +12,13 @@ import {
   type PointerEvent,
 } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProviderName } from "@/components/trace/provider-logo";
+import { ContextMark, ProviderName } from "@/components/trace/provider-logo";
+import { CodeBlock, CodeWindow } from "@/components/site/code-window";
+import { percent } from "@/lib/benchmark/format";
+import { Hero } from "@/components/site/hero";
+import { SiteHeader } from "@/components/site/site-header";
+import { SiteSection, SectionHeading, SectionHeaderRule } from "@/components/site/section";
+import { HeroDotField } from "@/components/visuals/hero-dot-field";
 import {
   benchmarkCategories,
   scorePages,
@@ -35,8 +34,6 @@ import {
   type RunSummary,
 } from "@/lib/benchmark/types";
 
-const percent = (value: number | null | undefined) =>
-  value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 const integer = (value: number) => value.toLocaleString("en-US");
 function Name({ id }: { id: string }) {
   return (
@@ -52,7 +49,7 @@ function Table({
   label,
 }: {
   headers: string[];
-  rows: ReactNode[][];
+  rows: { id: string; cells: ReactNode[] }[];
   label: string;
 }) {
   return (
@@ -69,15 +66,15 @@ function Table({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {row.map((cell, j) =>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              {row.cells.map((cell, j) =>
                 j === 0 ? (
-                  <th key={j} scope="row">
+                  <th key={headers[j]} scope="row">
                     {cell}
                   </th>
                 ) : (
-                  <td key={j} data-label={headers[j]}>
+                  <td key={headers[j]} data-label={headers[j]}>
                     {cell}
                   </td>
                 ),
@@ -90,31 +87,37 @@ function Table({
   );
 }
 function Section({
+  id,
+  accent,
   title,
   note,
   chart,
   table,
 }: {
+  id: string;
+  accent: string;
   title: string;
   note: string;
   chart: ReactNode;
   table: ReactNode;
 }) {
   return (
-    <section className="bench-section">
+    <SiteSection id={id} lines className="bench-section">
       <Tabs defaultValue="chart">
-        <div className="bench-section-head">
-          <h2>{title}</h2>
-          <TabsList variant="segmented" aria-label={`${title} view`}>
-            <TabsTrigger value="chart">Chart</TabsTrigger>
-            <TabsTrigger value="table">Table</TabsTrigger>
-          </TabsList>
-        </div>
-        <p className="bench-note">{note}</p>
+        <SectionHeading
+          title={title.slice(0, -accent.length).trimEnd()}
+          accent={accent}
+          description={note}
+        />
+        <SectionHeaderRule />
+        <TabsList variant="segmented" aria-label={`${title} view`}>
+          <TabsTrigger value="chart">Chart</TabsTrigger>
+          <TabsTrigger value="table">Table</TabsTrigger>
+        </TabsList>
         <TabsContent value="chart">{chart}</TabsContent>
         <TabsContent value="table">{table}</TabsContent>
       </Tabs>
-    </section>
+    </SiteSection>
   );
 }
 const patterns = ["", "8 4", "2 4", "10 3 2 3"];
@@ -138,6 +141,7 @@ function Legend({
                 y2="4"
                 stroke={p.color}
                 strokeWidth="3"
+                strokeLinecap="round"
                 strokeDasharray={patterns[i]}
               />
             </svg>
@@ -163,6 +167,18 @@ function Legend({
 }
 
 function Bars({ rows }: { rows: ProviderMetric[] }) {
+  const track = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(30);
+
+  useEffect(() => {
+    if (!track.current) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setColumns(Math.max(1, Math.floor(entry.contentRect.width / 12))),
+    );
+    observer.observe(track.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div
       className="bench-bars"
@@ -173,16 +189,24 @@ function Bars({ rows }: { rows: ProviderMetric[] }) {
         <span>0%</span>
         <span>100%</span>
       </div>
-      {providers.map((p) => {
+      {providers.map((p, index) => {
         const value = rows.find((r) => r.id === p.id)?.rate;
+        const filled = Math.round((value ?? 0) * columns);
+        const tone = p.id === "context" ? "border-brand bg-brand" : "border-neutral-40 bg-neutral-40";
         return (
           <div className="bench-bar-row" key={p.id}>
             <Name id={p.id} />
-            <div className="bench-track">
-              <div
-                className="bench-bar"
-                style={{ width: `${(value ?? 0) * 100}%`, background: p.color }}
-              />
+            <div
+              ref={index === 0 ? track : undefined}
+              className="bench-track"
+              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+              aria-hidden="true"
+            >
+              {Array.from({ length: columns * 2 }, (_, cell) => (
+                <span className="meter-cell" key={cell}>
+                  <span className={`meter-dot ${Math.floor(cell / 2) < filled ? tone : ""}`} />
+                </span>
+              ))}
             </div>
             <strong data-score={p.id}>{percent(value)}</strong>
           </div>
@@ -411,7 +435,6 @@ function Trend({ history }: { history: RunSummary[] }) {
   )
     ticks.push(t);
   if (lastDay !== firstDay) ticks.push(lastDay);
-  const inspected = runsOnDay(inspectedDay);
   const pickDay = (event: PointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const px = ((event.clientX - bounds.left) * width) / bounds.width;
@@ -559,6 +582,7 @@ function Trend({ history }: { history: RunSummary[] }) {
                               x2={x(r)}
                               y1={y(before)}
                               y2={y(value)}
+                              strokeLinecap="round"
                               style={{
                                 stroke: p.color,
                                 strokeWidth: 2,
@@ -610,13 +634,11 @@ function Trend({ history }: { history: RunSummary[] }) {
                 />
               );
             return (
-              <rect
+              <circle
                 key={time}
-                x={position(time) - 3}
-                y="328"
-                width="6"
-                height="6"
-                rx="1"
+                cx={position(time)}
+                cy="331"
+                r="3"
                 className={`bench-coverage ${scored ? "is-scored" : "is-unscored"}`}
               />
             );
@@ -646,39 +668,53 @@ function Trend({ history }: { history: RunSummary[] }) {
         aria-live="polite"
         aria-atomic="true"
       >
-        <h3>
-          {dateLabel(inspectedDay, true)} <span>UTC</span>
-        </h3>
-        {!inspected.length && <p>No sample was collected on this day.</p>}
-        {inspected.map((r) => (
-          <div key={r.id} className="bench-history-sample">
-            <p>
-              {protocolLabel(r.protocol)} · {integer(r.pages)} pages
-              {r.status !== "completed" ? " · Collection in progress" : ""}
-            </p>
-            {r.status === "completed" &&
-              r.providers.every((p) => p.rate == null) && (
-                <p>
-                  A sample was collected, but at least one category is missing,
-                  so no overall score is reported.
-                </p>
-              )}
-            <dl>
-              {providers.map((p) => (
-                <div key={p.id}>
-                  <dt>
-                    <Name id={p.id} />
-                  </dt>
-                  <dd style={{ color: p.color }}>
-                    {r.status === "completed"
-                      ? percent(r.providers.find((m) => m.id === p.id)?.rate)
-                      : "—"}
-                  </dd>
+        {Array.from({ length: dayCount }, (_, index) => {
+          const time = firstDay + index * dayMs;
+          const samples = runsOnDay(time);
+          const current = time === inspectedDay;
+          return (
+            <div
+              key={time}
+              className="bench-history-day"
+              data-active={current}
+              aria-hidden={!current}
+            >
+              <h3>
+                {dateLabel(time, true)} <span>UTC</span>
+              </h3>
+              {!samples.length && <p>No sample was collected on this day.</p>}
+              {samples.map((r) => (
+                <div key={r.id} className="bench-history-sample">
+                  <p>
+                    {protocolLabel(r.protocol)} · {integer(r.pages)} pages
+                    {r.status !== "completed" ? " · Collection in progress" : ""}
+                  </p>
+                  {r.status === "completed" &&
+                    r.providers.every((p) => p.rate == null) && (
+                      <p>
+                        A sample was collected, but at least one category is missing,
+                        so no overall score is reported.
+                      </p>
+                    )}
+                  <dl>
+                    {providers.map((p) => (
+                      <div key={p.id}>
+                        <dt>
+                          <Name id={p.id} />
+                        </dt>
+                        <dd style={{ color: p.color }}>
+                          {r.status === "completed"
+                            ? percent(r.providers.find((m) => m.id === p.id)?.rate)
+                            : "—"}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                 </div>
               ))}
-            </dl>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </>
   );
@@ -703,22 +739,7 @@ function Filter({
   return (
     <div className="sample-filter">
       <span>{label}</span>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger appearance="field" aria-label={label}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem
-              key={o.value}
-              value={o.value}
-              description={o.description}
-            >
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Select value={value} onValueChange={onChange} options={options} label={label} appearance="field" />
     </div>
   );
 }
@@ -740,30 +761,38 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   }, [copyStatus]);
   useEffect(() => {
     const controller = new AbortController();
-    async function refresh() {
+    function refresh() {
       setLoading(true);
-      try {
-        const response = await fetch(
-          `/api/benchmark?${new URLSearchParams({ run: selection === "latest" ? "" : selection })}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok)
-          throw new Error(
-            "Results could not be refreshed. The last successful sample is still shown.",
-          );
-        const next: BenchmarkDataset = await response.json();
-        if (!controller.signal.aborted) {
-          setDataset(next);
-          setError("");
-        }
-      } catch (e) {
-        if (!controller.signal.aborted)
-          setError(
-            e instanceof Error ? e.message : "Results could not be refreshed.",
-          );
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
+      return fetch(
+        `/api/benchmark?${new URLSearchParams({ run: selection === "latest" ? "" : selection })}`,
+        { signal: controller.signal },
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(
+              "Results could not be refreshed. The last successful sample is still shown.",
+            );
+          }
+          return response.json() as Promise<BenchmarkDataset>;
+        })
+        .then((next) => {
+          if (!controller.signal.aborted) {
+            setDataset(next);
+            setError("");
+          }
+        })
+        .catch((e: unknown) => {
+          if (!controller.signal.aborted) {
+            setError(
+              e instanceof Error ? e.message : "Results could not be refreshed.",
+            );
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
+        });
     }
     void refresh();
     const timer = setInterval(() => {
@@ -810,7 +839,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     <Table
       label="Category results"
       headers={["Category", "Pages", ...providers.map((p) => p.name)]}
-      rows={chartCategories.map((c) => [
+      rows={chartCategories.map((c) => ({ id: c.id, cells: [
         c.name,
         integer(selected.filter((p) => p.category === c.id).length),
         ...providers.map((p) =>
@@ -821,7 +850,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ),
           ),
         ),
-      ])}
+      ] }))}
     />
   );
   function reset() {
@@ -855,30 +884,32 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <Surface kind="product" className="bench-shell">
-      <header className="bench-header">
-        <Link href="/" className="bench-wordmark">
-          Scraping Bench
-        </Link>
-        <nav aria-label="Main navigation">
-          <a href="#methodology">Methodology</a>
-          <a href="#citation">Citation</a>
-          <a href="https://github.com/context-dot-dev/trace-benchmark">
-            GitHub ↗
-          </a>
-          <ThemeToggle />
-        </nav>
-      </header>
+    <Surface kind="site" className="bench-page">
+      <SiteHeader
+        logo={<ContextMark />}
+        wordmark="Scraping Bench"
+        logoHref="/"
+        logoLabel="Scraping Bench"
+        className="data-[scrolled=false]:bg-surface max-[879px]:bg-surface max-[879px]:data-[scrolled=true]:border-b max-[879px]:data-[scrolled=true]:border-hairline"
+        items={[
+          { label: "Methodology", href: "#methodology" },
+          { label: "Citation", href: "#citation" },
+          { label: "GitHub ↗", href: "https://github.com/context-dot-dev/trace-benchmark" },
+        ]}
+        endAction={<ThemeToggle />}
+      />
       <main id="main">
-        <div className="bench-intro">
-          <h1>Measuring web scraping quality</h1>
-          <p>
-            Four providers, the same pages. Compare useful content across daily
-            feeds, public registries, and Wikipedia citations, with the evidence
-            behind every result.
-          </p>
-          <a href="#methodology">How we measure</a>
-        </div>
+        <Hero
+          id="overview"
+          title="Measuring web scraping quality"
+          accent="scraping quality"
+          description="Four providers, the same pages. Compare useful content across daily feeds, public registries, and Wikipedia citations, with the evidence behind every result."
+          background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
+          contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
+          actions={<a href="#methodology" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">How we measure</a>}
+        />
+        <div id="results" aria-busy={loading}>
+        <SiteSection id="sample" lines>
         <div className="sample-filters" aria-label="Benchmark filters">
           <Filter
             label="Source"
@@ -929,25 +960,24 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               value={selection}
               onValueChange={setSelection}
               disabled={source === "wikipedia"}
-            >
-              <SelectTrigger aria-label="Sample date (UTC)">
-                <CalendarDays aria-hidden="true" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="latest">Latest completed sample</SelectItem>
-                {data.history.map((r) => (
-                  <SelectItem
-                    key={r.id}
-                    value={r.id}
-                    description={`${r.protocol}${r.status !== "completed" ? " · In progress" : ""}`}
-                  >
-                    {r.day}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="ghost" aria-label="Reset filters" onClick={reset}>
+              label="Sample date (UTC)"
+              className="rounded-pill px-5"
+              icon={
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="18" height="16" rx="2" />
+                  <path d="M16 3v4M8 3v4M3 11h18" />
+                </svg>
+              }
+              options={[
+                { value: "latest", label: "Latest completed sample" },
+                ...data.history.map((run) => ({
+                  value: run.id,
+                  label: run.day,
+                  description: `${run.protocol}${run.status !== "completed" ? " · In progress" : ""}`,
+                })),
+              ]}
+            />
+            <Button variant="outline-brand" className="rounded-pill px-5" aria-label="Reset filters" onClick={reset}>
               Reset filters
             </Button>
           </div>
@@ -965,7 +995,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             original daily scores remain in the history.
           </p>
         )}
-        <div id="results" aria-busy={loading}>
           <dl className="sample-metrics" aria-live="polite">
             <div>
               <dt>Pages in sample</dt>
@@ -992,7 +1021,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               Daily pages have not been independently screened and are excluded.
             </p>
           )}
+        </SiteSection>
           <Section
+            id="useful-content"
+            accent="content"
             title="Useful content"
             note={`Each represented category has equal weight; pages within a category have equal weight. ${unknown ? integer(unknown) + " unresolved results stay in the denominator." : "Failed results stay in the denominator."}${pending ? " " + integer(pending) + " pending results make these scores provisional lower bounds." : ""}`}
             chart={<Bars rows={rows} />}
@@ -1007,17 +1039,18 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                   "Pending",
                   "Score",
                 ]}
-                rows={rows.map((r) => [
+                rows={rows.map((r) => ({ id: r.id, cells: [
                   <Name key={r.id} id={r.id} />,
                   integer(r.useful),
                   integer(r.failed),
                   integer(r.unknown),
                   integer(r.pending),
                   percent(r.rate),
-                ])}
+                ] }))}
               />
             }
           />
+          <div className="bench-column bench-support">
           <p className="bench-note">
             {dailyCount > 0 && wikiCount > 0
               ? "The overall score combines two collection protocols. Use Source to inspect each separately. "
@@ -1037,7 +1070,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               was not measured for daily pages.
             </p>
           )}
+          </div>
           <Section
+            id="categories"
+            accent="category"
             title="Results by category"
             note="Every provider is evaluated on the same filtered pages. Missing measurements appear as an em dash. The table shows exact rates and page counts."
             chart={
@@ -1049,7 +1085,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             }
             table={categoryTable}
           />
-          <div className="bench-section-head">
+          <div className="bench-section-head bench-column bench-download">
             <p className="bench-note">
               {integer(selected.length)} pages match these filters. Downloads
               include source, protocol, original grades and review notes.
@@ -1065,6 +1101,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           </div>
         </div>
         <Section
+          id="history"
+          accent="over time"
           title="Daily quality over time"
           note="Complete daily history, using each run’s original scoring rules. These historical scores are not recalculated by the filters above and do not include the fixed Wikipedia study. Different protocols are not directly comparable; missing categories withhold the overall daily score."
           chart={<Trend history={history} />}
@@ -1078,7 +1116,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 "Pages",
                 ...providers.map((p) => p.name),
               ]}
-              rows={data.history.map((r) => [
+              rows={data.history.map((r) => ({ id: r.id, cells: [
                 r.day,
                 r.protocol,
                 r.status !== "completed"
@@ -1092,12 +1130,13 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                     ? percent(r.providers.find((m) => m.id === p.id)?.rate)
                     : "—",
                 ),
-              ])}
+              ] }))}
             />
           }
         />
-        <section id="methodology" className="bench-method">
-          <h2>Methodology</h2>
+        <SiteSection id="methodology" lines className="bench-method">
+          <SectionHeading title="Methodology" />
+          <SectionHeaderRule />
           <p>
             The overall view pools the selected daily sample and the fixed
             Wikipedia citation study. Each represented category has equal
@@ -1222,21 +1261,24 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               .{data.health.error && ` ${data.health.error}`}
             </p>
           </details>
-        </section>
-        <section id="citation" className="bench-citation">
-          <h2>Citation</h2>
+        </SiteSection>
+        <SiteSection id="citation" lines className="bench-citation">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div className="flex flex-col gap-6">
+          <SectionHeading title="Citation" />
           <p>
             Scraping Bench is maintained by{" "}
             <a href="https://context.dev">Context.dev</a>. If you use these
             results in your work, please cite the benchmark and
             include the sample date and protocol.
           </p>
-          <div className="bench-code">
-            <div className="bench-code-head">
-              <span>scraping-bench.bib</span>
+          </div>
+          <div className="flex min-w-0 flex-col gap-10">
+          <CodeWindow label="scraping-bench.bib" windowClassName="[&>div:first-child]:flex-wrap" actions={
               <Button
-                size="sm"
+                size="icon"
                 variant="ghost"
+                className="text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(citation);
@@ -1247,20 +1289,20 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 }}
               >
                 {copyStatus === "Copied" ? <Check /> : <Copy />}
-                {copyStatus === "Copied" ? "Copied" : "Copy citation"}
+                <span className="sr-only">{copyStatus === "Copied" ? "Copied" : "Copy citation"}</span>
               </Button>
+          }>
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="BibTeX citation">
+              <CodeBlock code={citation} className="[&_span]:whitespace-pre-wrap [&_span]:wrap-anywhere" />
             </div>
-            <pre tabIndex={0} aria-label="BibTeX citation">
-              <code>{citation}</code>
-            </pre>
-          </div>
+          </CodeWindow>
           <span
-            className={copyStatus === "Copied" ? "sr-only" : "bench-note"}
+            className={!copyStatus || copyStatus === "Copied" ? "sr-only" : "bench-note"}
             role="status"
           >
             {copyStatus}
           </span>
-          <p>
+          <p className="text-body-sm leading-relaxed text-fg-muted">
             Our approach is inspired by{" "}
             <a href="https://keenableai.github.io/needle/">
               NEEDLE: A Live Open-Source Search Benchmark for AI Agents
@@ -1269,9 +1311,11 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             fresh-query methodology and transparent comparisons informed this
             benchmark, which evaluates scraping rather than search.
           </p>
-        </section>
+          </div>
+          </div>
+        </SiteSection>
       </main>
-      <footer className="bench-footer">
+      <footer className="bench-footer bench-column">
         Published by <a href="https://context.dev">Context.dev</a>, with the
         same pages for every provider within each source sample.
       </footer>

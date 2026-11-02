@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { serverEnv } from "../env.server";
 import { eq } from "drizzle-orm";
 import { cachedReport } from "./cached-report";
 import { database } from "./store";
@@ -76,6 +77,13 @@ const wikipediaPages: BenchmarkPage[] = study.pages.map((p) => ({
 export async function benchmarkDataset(
   run?: string,
 ): Promise<BenchmarkDataset> {
+  if (serverEnv.benchmarkDataOrigin) {
+    const url = new URL("/api/benchmark", serverEnv.benchmarkDataOrigin);
+    if (run) url.searchParams.set("run", run);
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("Benchmark data is unavailable");
+    return response.json();
+  }
   const report = await cachedReport({ run });
   const daily = report.latest
     ? await dailyPages(report.latest.id, report.latest.protocol)

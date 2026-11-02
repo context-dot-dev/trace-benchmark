@@ -1,6 +1,4 @@
-/* Written by context-ds from its brand files. Do not edit; run the CLI again to update. */
 :root, .ds-site {
-	/* Core */
 	--ds-color-brand: #2563EB;
 	--ds-color-black: #000000;
 	--ds-color-white: #FFFFFF;
@@ -20,7 +18,6 @@
 	--ds-color-neutral-80: #333333;
 	--ds-color-neutral-90: #191919;
 
-	/* Surfaces: white, blue or black, never a gray page */
 	--ds-color-bg-default: #FFFFFF;
 	--ds-color-bg-subtle: #F8F8F8;
 	--ds-color-bg-frame: #F2F2F2;
@@ -33,7 +30,6 @@
 	--ds-color-bg-scrim: rgb(0 0 0 / 0.1);
 	--ds-color-bg-announcement: #F7F8FA;
 
-	/* Text: black, and black at 65, 60, 55 and 40 percent on white */
 	--ds-color-text-default: #000000;
 	--ds-color-text-secondary: #595959;
 	--ds-color-text-muted: #666666;
@@ -44,7 +40,6 @@
 	--ds-color-text-brand: #2563EB;
 	--ds-color-text-on-brand: #FFFFFF;
 
-	/* Lines */
 	--ds-color-border-default: #E6E6E6;
 	--ds-color-border-subtle: #F0F0F0;
 	--ds-color-border-strong: #CCCCCC;
@@ -61,7 +56,6 @@
 	--ds-color-wash-pill: rgb(0 0 0 / 0.06);
 	--ds-color-wash-selected: rgb(0 0 0 / 0.07);
 
-	/* Actions and states */
 	--ds-color-action-primary: #000000;
 	--ds-color-action-primary-hover: #333333;
 	--ds-color-action-primary-fg: #FFFFFF;
@@ -73,12 +67,9 @@
 	--ds-color-chart-series-2: #14B8A6;
 	--ds-color-chart-series-3: #F59E0B;
 	--ds-color-chart-series-4: #8B5CF6;
-	/* The three dots of a code window's title bar. */
 	--ds-color-window-close: #FF5F56;
 	--ds-color-window-minimize: #FFBD2E;
 	--ds-color-window-zoom: #27C93F;
-	/* From the dashboard redesign (brand-dev-webapp PR 1045, dashboard-system.css): the full ramps, alerts, the
-	   HTTP status chart colors and the skeleton sheen. */
 	--ds-color-blue-30: #BED0F9;
 	--ds-color-blue-50: #92B1F5;
 	--ds-color-blue-70: #6692F1;
@@ -102,7 +93,6 @@
 	--ds-color-chart-rate-limited: #9A7FE0;
 	--ds-color-skeleton-shine: #EDEDED;
 
-	/* Type */
 	--ds-font-sans: var(--font-rethink-sans, "Rethink Sans"), system-ui, sans-serif;
 	--ds-font-data: var(--font-doto, "Doto"), ui-monospace, monospace;
 	--ds-font-mono: var(--ds-font-sans);
@@ -121,7 +111,6 @@
 	--ds-text-body: 1rem;
 	--ds-text-body-sm: 0.875rem;
 	--ds-text-caption: 0.75rem;
-	/* Chart axis labels (the product's charts). */
 	--ds-text-axis: 11px;
 	--ds-text-counter: 10px;
 	--ds-text-initial: 9px;
@@ -133,7 +122,6 @@
 	--ds-leading-snug: 1.3;
 	--ds-leading-normal: 1.5;
 	--ds-leading-relaxed: 1.625;
-	/* Section headings on the site, and code in a window. */
 	--ds-leading-display: 1.12;
 	--ds-leading-code: 1.7;
 	--ds-leading-title: 1.4;
@@ -149,7 +137,6 @@
 	--ds-tracking-normal: 0;
 	--ds-tracking-label: 0.08em;
 
-	/* Space (rem, so it follows the root) */
 	--ds-space-0: 0;
 	--ds-space-px: 1px;
 	--ds-space-frame: 6px;
@@ -174,10 +161,8 @@
 	--ds-space-24: 6rem;
 	--ds-space-32: 8rem;
 
-	/* Layout */
 	--ds-layout-column: 68.75rem;
 	--ds-layout-column-wide: 81.25rem;
-	/* The ruled column's width: full width on phones, 90vw, then min(85vw, column-wide) (site.css). Content containers use it. */
 	--ds-frame-column: calc(100% - 2px);
 	--ds-layout-text: 36rem;
 	--ds-layout-heading: 42rem;
@@ -186,7 +171,6 @@
 	--ds-layout-parameters-header: 32px;
 	--ds-layout-product-column: 880px;
 
-	/* Shape */
 	--ds-radius-sm: 0.25rem;
 	--ds-radius-tag: 0.375rem;
 	--ds-radius-icon: 4px;
@@ -205,7 +189,6 @@
 	--ds-shadow-ring-hover: 0 0 0 4px var(--ds-color-ring-tint);
 	--ds-shadow-drawer: 0 0 0 1px var(--ds-color-border-hairline), 0 12px 32px rgb(0 0 0 / 0.16);
 
-	/* Motion: fast UI feedback only, no ease-in */
 	--ds-duration-fast: 150ms;
 	--ds-duration-base: 200ms;
 	--ds-duration-moderate: 250ms;
@@ -293,19 +276,13 @@
 	--ds-color-skeleton-shine: #262629;
 }
 
-/* The site layer: what every Context.dev marketing page has before any component is styled, measured from the
-   redesign branch. Defaults use :where() so the site's own rules still win; only the frame lines and the touches are
-   added. */
 
-/* The site renders its rem scale at 90% from 43.2rem up (a 14px token reads 12.6px); phones keep the full size. */
 @media (min-width: 43.2rem) {
 	html {
 		font-size: 90%;
 	}
 }
 
-/* Element defaults sit in the base layer, so a utility class on an element (a library component's text-white) wins
-   over them; their :where() selectors already let an app's own rules win. */
 @layer base {
 	html,
 	body {
@@ -350,9 +327,6 @@
 	}
 }
 
-/* The ruled column: hairlines down both edges of the content column from below the hero to the end, a full-bleed rule between
-   top-level sections, and a solid node where a rule meets a column edge. The lines sit above section backgrounds (a
-   hero's own fill would hide them) and under anything positioned above them; content keeps inside them. */
 @media (min-width: 43.2rem) {
 	:root {
 		--ds-frame-column: 90vw;
@@ -387,8 +361,6 @@ body::after {
 	border-top: 1px solid var(--ds-color-border-rule);
 }
 
-/* The hero (and the header over it) has no side lines, as on the brand's pages: the opening section sits above them on
-   the page's own white, and the lines begin at the rule under it. */
 :where([data-ds-dots], .hero, main > section:first-child, body > section:first-of-type) {
 	position: relative;
 	z-index: 1;
@@ -414,22 +386,18 @@ body::after {
 	pointer-events: none;
 }
 
-/* Touches. Few and quiet, as on the brand's site. */
 
-/* The key phrase of a headline (its last few words) in blue, same weight. */
 .ds-accent {
 	color: var(--ds-color-text-brand);
 	font-weight: inherit;
 }
 
-/* A large figure (a stat, a step number) in Doto. Never words. */
 .ds-figure {
 	font-family: var(--ds-font-data);
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0;
 }
 
-/* The hero's dot streams (dots.js): small dots running in from the hero's edges, the middle bare. */
 [data-ds-dots] {
 	position: relative;
 	isolation: isolate;
@@ -444,7 +412,6 @@ body::after {
 	color: color-mix(in srgb, var(--ds-color-brand) 60%, transparent);
 	pointer-events: none;
 	opacity: 0;
-	/* Fades in once measured, so the dots never pop in around the text. */
 	transition: opacity var(--ds-duration-base) var(--ds-easing-out);
 }
 

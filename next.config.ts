@@ -1,17 +1,22 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { serverEnv } from "./src/lib/env.server";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.2.2"],
-  // A package-lock.json in the home directory would otherwise make Turbopack treat $HOME as the workspace root.
+  devIndicators: false,
+  async rewrites() {
+    return {
+      beforeFiles: serverEnv.benchmarkDataOrigin
+        ? [{
+            source: "/api/:endpoint(benchmark|report|download)",
+            destination: `${serverEnv.benchmarkDataOrigin}/api/:endpoint`,
+          }]
+        : [],
+    };
+  },
   turbopack: {
     root: path.resolve(__dirname),
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
   },
 };
 

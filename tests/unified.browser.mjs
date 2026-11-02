@@ -1,6 +1,3 @@
-// Failure cases: Wikipedia omitted by default; unequal page sets; mixed category
-// names; failures dropped from denominators; duplicate URLs; stale filters or
-// inspection clutter; missing historical data; inaccessible filters; mobile overflow.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";

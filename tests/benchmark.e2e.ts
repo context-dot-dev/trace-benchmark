@@ -1,8 +1,3 @@
-/** Failure cases: unauthorized cron, preview billing, duplicate ticks, worker death,
- * stale writes, an unfinished prior day, rate limits, bad Unicode, invalid grading,
- * private URL redirects, category starvation, budget exhaustion, evidence leaks,
- * and repeated retention writes bloating already-cleared historical rows.
- * Uses a real PostgreSQL database and real HTTP fixture provider endpoints. */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
@@ -199,7 +194,6 @@ try {
   assert.ok(!JSON.stringify(data).includes("fixture-key"));
   assert.ok(!JSON.stringify(data).includes("complete target article"));
   checks.push("Public report excludes credentials and private grading text");
-  // Simulate process death after dispatch by persisting its real durable states.
   await store.db.execute(
     sql`update scraping_bench.attempts set state='fetching', claim='dead', lease_until='2026-10-27' where id=(select id from scraping_bench.attempts limit 1)`,
   );
@@ -226,7 +220,6 @@ try {
   checks.push(
     "Expired dispatch becomes explicit unknown and cannot block a later day",
   );
-  // Exhaust every provider bucket before a new day is processed.
   const capped = new Date("2026-10-30T00:20:00Z");
   await store.seedCandidates(
     candidates.map((c, i) => ({
