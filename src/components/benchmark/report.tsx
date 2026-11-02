@@ -26,6 +26,7 @@ import {
   type BenchmarkDataset,
 } from "@/lib/benchmark/combined";
 import { ThemeToggle } from "@/components/trace/theme-toggle";
+import { BenchmarkSources } from "./sources";
 import {
   categories,
   providers,
@@ -373,6 +374,7 @@ function Trend({ history }: { history: RunSummary[] }) {
   const [width, setWidth] = useState(1000);
   const [active, setActive] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -384,10 +386,15 @@ function Trend({ history }: { history: RunSummary[] }) {
   }, [history.length]);
   const firstDay = Date.parse(history[0]?.day ?? "1970-01-01");
   const lastDay = Date.parse(history.at(-1)?.day ?? "1970-01-01");
+  const latestCompleted = history.findLast(
+    (sample) => sample.status === "completed" && sample.pages > 0,
+  );
+  const latestSample = latestCompleted ?? history.findLast((sample) => sample.pages > 0) ?? history.at(-1);
+  const defaultDay = latestSample ? Date.parse(latestSample.day) : lastDay;
   const dayCount = Math.round((lastDay - firstDay) / dayMs) + 1;
   const inspectedDay = Math.max(
     firstDay,
-    Math.min(lastDay, selectedDay ?? lastDay),
+    Math.min(lastDay, hoveredDay ?? selectedDay ?? defaultDay),
   );
   const plotLeft = 46,
     plotRight = width - 32;
@@ -438,17 +445,14 @@ function Trend({ history }: { history: RunSummary[] }) {
   const pickDay = (event: PointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const px = ((event.clientX - bounds.left) * width) / bounds.width;
-    setSelectedDay(
-      Math.max(
-        firstDay,
-        Math.min(
-          lastDay,
-          firstDay +
-            Math.round(
-              ((px - plotLeft) / (plotRight - plotLeft)) * (dayCount - 1),
-            ) *
-              dayMs,
-        ),
+    return Math.max(
+      firstDay,
+      Math.min(
+        lastDay,
+        firstDay +
+          Math.round(
+            ((px - plotLeft) / (plotRight - plotLeft)) * (dayCount - 1),
+          ) * dayMs,
       ),
     );
   };
@@ -494,17 +498,20 @@ function Trend({ history }: { history: RunSummary[] }) {
                       : null;
             if (next != null) {
               event.preventDefault();
+              setHoveredDay(null);
               setSelectedDay(Math.max(firstDay, Math.min(lastDay, next)));
             }
           }}
           onPointerDown={(event) => {
-            pickDay(event);
+            setHoveredDay(null);
+            setSelectedDay(pickDay(event));
             event.currentTarget.focus({ preventScroll: true });
           }}
           onPointerMove={(event) => {
-            if (event.pointerType === "mouse" || event.buttons === 1)
-              pickDay(event);
+            if (event.pointerType === "mouse") setHoveredDay(pickDay(event));
+            else if (event.buttons === 1) setSelectedDay(pickDay(event));
           }}
+          onPointerLeave={() => setHoveredDay(null)}
         >
           {[0, 25, 50, 75, 100].map((n) => (
             <g key={n}>
@@ -660,9 +667,15 @@ function Trend({ history }: { history: RunSummary[] }) {
         </span>
       </div>
       <p className="bench-note" id="history-instructions">
-        Hover or touch the chart to inspect a day, or focus it and use the arrow
-        keys. Gaps are not estimated.
+        {latestCompleted ? "Showing the latest completed sample by default." : "No completed sample yet; showing the latest available sample."} Hover to preview a day;
+        click, touch or use the arrow keys to keep it selected. Gaps are not estimated.
       </p>
+      <Button variant="outline" className="mb-6" onClick={() => {
+        setSelectedDay(null);
+        setHoveredDay(null);
+      }}>
+        {latestCompleted ? "Latest completed result" : "Latest available sample"}
+      </Button>
       <div
         className="bench-history-detail"
         aria-live="polite"
@@ -687,7 +700,7 @@ function Trend({ history }: { history: RunSummary[] }) {
                 <div key={r.id} className="bench-history-sample">
                   <p>
                     {protocolLabel(r.protocol)} · {integer(r.pages)} pages
-                    {r.status !== "completed" ? " · Collection in progress" : ""}
+                    {r.pages === 0 ? " · No pages were collected" : r.status !== "completed" ? " · Collection in progress" : ""}
                   </p>
                   {r.status === "completed" &&
                     r.providers.every((p) => p.rate == null) && (
@@ -892,6 +905,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         logoLabel="Scraping Bench"
         className="data-[scrolled=false]:bg-surface max-[879px]:bg-surface max-[879px]:data-[scrolled=true]:border-b max-[879px]:data-[scrolled=true]:border-hairline"
         items={[
+          { label: "Sources", href: "#sources" },
           { label: "Methodology", href: "#methodology" },
           { label: "Citation", href: "#citation" },
           { label: "GitHub ↗", href: "https://github.com/context-dot-dev/trace-benchmark" },
@@ -944,16 +958,26 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ]}
           />
         </div>
+        <p className="bench-note mt-6">
+          {source === "wikipedia"
+            ? "External pages linked from Wikipedia edits. This is a fixed study measured on October 29, 2026."
+            : source === "daily"
+              ? "Pages discovered through publisher feeds, public record APIs and website sitemaps. A new sample is collected each day."
+              : "Two samples: a daily web collection and a fixed study of pages linked from Wikipedia."}{" "}
+          <a href="#sources">Where the pages come from</a>.
+        </p>
         <div className="bench-sample">
           <p aria-live="polite">
-            {run ? (
+            {source !== "wikipedia" && (run ? (
               <>
                 Daily sample: <strong>{run.day}</strong> UTC
               </>
             ) : (
               "No daily sample available"
-            )}{" "}
-            · Wikipedia: October 29 fixed study{loading && " · Updating…"}
+            ))}
+            {source === "all" && " · "}
+            {source !== "daily" && "Wikipedia-linked pages: measured October 29, 2026"}
+            {loading && " · Updating…"}
           </p>
           <div className="sample-actions">
             <Select
@@ -1134,6 +1158,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             />
           }
         />
+        <BenchmarkSources pages={dataset.pages} onViewWikipedia={() => {
+          setSource("wikipedia");
+          setCategory("all");
+          setValidation("all");
+          document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
+        }} />
         <SiteSection id="methodology" lines className="bench-method">
           <SectionHeading title="Methodology" />
           <SectionHeaderRule />
@@ -1158,35 +1188,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             weighting as the overall view, so they differ from the earlier
             page-weighted study chart.
           </p>
-          <details>
-            <summary>Wikipedia discovery and validation</summary>
-            <p>
-              48 two-minute windows on October 25 and 27 yielded 1,041 external
-              URLs from 4,777 measured English Wikipedia edits. Newly cited does
-              not mean newly published. The benchmark tests the linked websites,
-              not Wikipedia itself. First-run grades are used; repeat tests only
-              inform screening.
-            </p>
-            <p>
-              73 pages survived repeatability and quality screening. The hard
-              cohort was selected using provider failures, so it is not an
-              unbiased provider ranking. Of 20 randomly audited candidates, five
-              were reference checked, three rejected and twelve unresolved.
-              Reference checks include public abstracts and do not establish
-              full-paper recovery. Two known grader errors remain flagged with
-              their original grades.
-            </p>
-            <p>
-              Daily pages have not received this independent screening and are
-              excluded by the validation filters. A reliable supply of 1,000
-              validated hard pages per day has not been established. This fixed
-              study does not enable recurring Wikipedia collection.{" "}
-              <a href="/data/wikipedia-study.json" download>
-                Download the original study and provenance hashes
-              </a>
-              .
-            </p>
-          </details>
           <h3>Daily collection</h3>
           {run && run.pages < run.target && (
             <p>

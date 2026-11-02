@@ -802,6 +802,27 @@ body::after {
   font-size: var(--ds-text-h4);
   margin-top: var(--ds-space-8);
 }
+.bench-sources h3 {
+  font-size: var(--ds-text-h4);
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-sources p {
+  max-width: var(--ds-layout-text);
+  margin-block: var(--ds-space-4);
+  color: var(--ds-color-text-muted);
+  line-height: 1.7;
+}
+.bench-sources summary {
+  cursor: pointer;
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-sources a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.bench-sources dd {
+  line-height: 1.6;
+}
 .bench-support {
   padding-bottom: var(--ds-space-8);
 }
