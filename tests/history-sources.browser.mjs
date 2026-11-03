@@ -221,15 +221,18 @@ try {
         .getByRole("link", { name: "Explore the sources and example pages" })
         .click();
       assert.equal(new URL(page.url()).hash, "#sources");
-      await page
-        .getByRole("link", { name: "About the original Wikipedia study" })
-        .click();
-      assert.equal(new URL(page.url()).hash, "#wikipedia");
-      assert.match(await page.locator("#wikipedia").textContent(), /1,041/);
-      assert.equal(
-        await page.locator('#wikipedia a[href*="oldid="]').count(),
-        3,
-      );
+      assert.equal(await page.getByRole("heading", { name: "Original Wikipedia study", exact: true }).count(), 0);
+      assert.match(await page.locator("#sources").textContent(), /Wikipedia/);
+      const archive = page.locator("#methodology details#wikipedia");
+      assert.equal(await archive.count(), 1);
+      assert.equal(await archive.getAttribute("open"), null);
+      await archive.locator("summary").first().focus();
+      await page.keyboard.press("Enter");
+      assert.equal(await archive.evaluate(el => el.open), true);
+      assert.match(await archive.textContent(), /fixed snapshot to daily samples/);
+      const archiveDownload = archive.getByRole("link", { name: "Download the archived URLs and results" });
+      const downloadData = await (await page.request.get(new URL(await archiveDownload.getAttribute("href"), base).href)).json();
+      assert.equal(downloadData.pages.length, 1041);
       await page
         .getByRole("button", { name: "View original Wikipedia results" })
         .click();
@@ -250,16 +253,13 @@ try {
         true,
       );
       await page.getByRole("button", { name: "Reset filters" }).click();
-      await page
-        .getByRole("link", { name: "Wikipedia screening and reference checks" })
-        .click();
-      assert.equal(new URL(page.url()).hash, "#wikipedia-methodology");
-      assert.equal(
-        await page.locator("#methodology summary").filter({ hasText: "Wikipedia screening" }).count(),
-        1,
-      );
-      assert.equal(await page.locator("#wikipedia details").count(), 0);
+      await archive.locator("summary").first().click();
+      await page.getByRole("link", { name: "Includes archived results" }).click();
+      assert.equal(new URL(page.url()).hash, "#wikipedia");
+      assert.equal(await archive.evaluate(el => el.open), true);
+      assert.equal(await page.locator("#wikipedia-methodology").count(), 1);
       await capture(`wikipedia-${width}-after`, "#wikipedia");
+      await archive.locator("summary").first().click();
       await capture(`sources-${width}-after`, "#sources");
       assert.equal(
         await page.evaluate(
@@ -268,7 +268,7 @@ try {
         true,
       );
       checks.push(
-        `${width}px: source anchors, linked revisions, filter action and layout work`,
+        `${width}px: daily explanation, keyboard-accessible methodology archive, download, filter and layout work`,
       );
     }
     const dailyWiki = {
@@ -290,6 +290,7 @@ try {
     await page.goto(base, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "View daily Wikipedia results", exact: true }).click();
     assert.match(await page.locator("#results").textContent(), /No daily Wikipedia pages/);
+    await page.locator("#wikipedia > summary").click();
     await page.getByRole("button", { name: "View original Wikipedia results", exact: true }).click();
     assert.equal(await page.locator("[data-sample-count]").textContent(), "1,041");
     checks.push("Daily Wikipedia uses the selected date, shows only fresh records and has a truthful empty state; the original study remains separate");
