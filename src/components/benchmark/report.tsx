@@ -973,9 +973,9 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           )}
           {source !== "wikipedia" && (
             <p className="bench-note">
-              We also check English Wikipedia edits every hour for newly added
-              external links. Previously untested pages enter the next daily
-              sample, where all four providers retrieve the linked websites.
+              Before building each daily sample, we check the previous day’s
+              English Wikipedia edits for new external links. All four providers
+              then retrieve the previously untested pages in that sample.
             </p>
           )}
           {(source === "all" || source === "wikipedia") && (
@@ -1252,13 +1252,15 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             every fact is correct or that all of the page’s content was recovered.
           </p>
           <p>
-            Wikipedia discovery samples up to 50 non-bot article edits from the
-            preceding hour and compares the old and new revision text. Only new
+            Wikipedia discovery runs once before the daily sample is created,
+            using up to 1,200 non-bot article edits spread across the previous
+            UTC day. We compare the old and new revision text. Only new
             external URLs are eligible; previously tested URLs and the original
             study pages are excluded. The daily sample includes up to 300 of
             these pages in the Other category, without inferring their subject
             from the citing article. This is a sample of edits, not every link
-            added to Wikipedia. Failed discovery is retried after fifteen minutes.
+            added to Wikipedia. If discovery fails, the other sources can still
+            form the daily sample, and Wikipedia is checked again the next day.
           </p>
           <p>
             Protocol v5 adds this group to the daily sample. It receives the same

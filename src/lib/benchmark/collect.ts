@@ -9,6 +9,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   or,
   sql,
 } from "drizzle-orm";
@@ -104,9 +105,17 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       .where(
         and(eq(attempts.state, "grading"), lt(attempts.leaseUntil, clock)),
       );
+    const samplePending =
+      clock.toISOString().slice(11, 16) >= "00:15" &&
+      !(
+        await store.db
+          .select({ id: runs.id })
+          .from(runs)
+          .where(eq(runs.id, PROTOCOL + ":" + day))
+      ).length;
     if (options.discover !== false)
-      await discoverDue(store, clock, options.discovery);
-    if (clock.toISOString().slice(11, 16) >= "00:15")
+      await discoverDue(store, clock, samplePending, options.discovery);
+    if (samplePending)
       await selectSample(store, day, options.perCategory ?? 300, clock);
     const maxPages = options.maxPages ?? 100;
     while (
@@ -398,6 +407,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
 async function discoverDue(
   store: Store,
   clock: Date,
+  samplePending: boolean,
   discovery?: TickOptions["discovery"],
 ) {
   const sourceRegistry = discovery?.registry ?? registry;
@@ -411,9 +421,38 @@ async function discoverDue(
   const due = await store.db
     .select()
     .from(sources)
-    .where(lt(sources.nextPoll, clock))
+    .where(
+      and(
+        lt(sources.nextPoll, clock),
+        inArray(
+          sources.id,
+          sourceRegistry
+            .filter((s) => s.kind !== "wikipedia")
+            .map((s) => s.source_id),
+        ),
+      ),
+    )
     .orderBy(sources.nextPoll)
     .limit(48);
+  if (samplePending)
+    due.push(
+      ...(await store.db
+        .select()
+        .from(sources)
+        .where(
+          and(
+            lte(sources.nextPoll, clock),
+            inArray(
+              sources.id,
+              sourceRegistry
+                .filter((s) => s.kind === "wikipedia")
+                .map((s) => s.source_id),
+            ),
+          ),
+        )),
+    );
+  const nextDailySample = new Date(clock);
+  nextDailySample.setUTCHours(24, 15, 0, 0);
   await Promise.all(
     due.map(async (due) => {
       const source = sourceRegistry.find((s) => s.source_id === due.id) as
@@ -426,9 +465,12 @@ async function discoverDue(
           .update(sources)
           .set({
             lastPoll: clock,
-            nextPoll: new Date(
-              clock.getTime() + source.poll_interval_hours * 3600000,
-            ),
+            nextPoll:
+              source.kind === "wikipedia"
+                ? nextDailySample
+                : new Date(
+                    clock.getTime() + source.poll_interval_hours * 3600000,
+                  ),
             count: rows.length,
             error: null,
           })
@@ -438,12 +480,13 @@ async function discoverDue(
           .update(sources)
           .set({
             ...(source.kind === "wikipedia" ? {} : { lastPoll: clock }),
-            nextPoll: new Date(
-              clock.getTime() +
-                (source.kind === "wikipedia"
-                  ? 15 * 60000
-                  : Math.max(1, source.poll_interval_hours) * 3600000),
-            ),
+            nextPoll:
+              source.kind === "wikipedia"
+                ? nextDailySample
+                : new Date(
+                    clock.getTime() +
+                      Math.max(1, source.poll_interval_hours) * 3600000,
+                  ),
             error:
               error instanceof Error
                 ? error.message.slice(0, 120)

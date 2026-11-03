@@ -5,7 +5,7 @@
     "kind": "wikipedia",
     "category": "other",
     "organization": "Wikipedia",
-    "poll_interval_hours": 1
+    "poll_interval_hours": 24
   },
   {
     "category": "news",

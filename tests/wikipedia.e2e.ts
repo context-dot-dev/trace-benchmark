@@ -23,6 +23,7 @@ const requests: string[] = [];
 let revision = 2;
 let fail = false;
 let hidden = false;
+let suppressed = false;
 const fixture = createServer(async (req, res) => {
   res.setHeader("content-type", "application/json");
   const url = new URL(req.url!, "http://fixture");
@@ -36,16 +37,18 @@ const fixture = createServer(async (req, res) => {
       res.end(
         JSON.stringify({
           query: {
-            recentchanges: [
-              {
-                title: "Example article",
-                revid: revision,
-                old_revid: 1,
-                timestamp: "2026-11-03T00:10:00Z",
-                ns: 0,
-                type: "edit",
-              },
-            ],
+            recentchanges: Array.from({ length: 50 }, (_, i) => ({
+              title: "Example article",
+              revid:
+                revision +
+                (new Date(url.searchParams.get("rcend")!).getUTCHours() * 50 +
+                  i) *
+                  100,
+              old_revid: 1,
+              timestamp: url.searchParams.get("rcstart"),
+              ns: 0,
+              type: "edit",
+            })),
           },
         }),
       );
@@ -57,13 +60,21 @@ const fixture = createServer(async (req, res) => {
           query: {
             pages: [
               {
-                revisions: [
-                  { revid: 1, slots: { main: { content: old } } },
-                  {
-                    revid: revision,
-                    slots: { main: hidden ? {} : { content: added } },
-                  },
-                ],
+                revisions: url.searchParams
+                  .get("revids")!
+                  .split("|")
+                  .map(Number)
+                  .map((id) => ({
+                    revid: id,
+                    slots: {
+                      main:
+                        suppressed && id === revision
+                          ? { texthidden: true }
+                          : hidden && id !== 1
+                            ? {}
+                            : { content: id === 1 ? old : added },
+                    },
+                  })),
               },
             ],
           },
@@ -123,7 +134,7 @@ const source: Source = {
   url: "https://en.wikipedia.org/w/api.php",
   category: "other",
   organization: "Wikipedia",
-  poll_interval_hours: 1,
+  poll_interval_hours: 24,
 };
 const readers = createReaders({
   endpoints: Object.fromEntries(
@@ -182,6 +193,31 @@ try {
         discoveredAt: clock,
       })),
     );
+  const wikipediaCalls = () => requests.filter((r) => r.startsWith("?")).length;
+  const discoveryCalls = wikipediaCalls();
+  const windows = requests
+    .filter((r) => new URLSearchParams(r).get("list") === "recentchanges")
+    .map((r) => new URLSearchParams(r));
+  assert.equal(windows.length, 24);
+  assert.equal(
+    windows.map((p) => p.get("rcend")).sort()[0],
+    "2026-11-02T00:00:00.000Z",
+  );
+  assert.equal(
+    windows
+      .map((p) => p.get("rcstart"))
+      .sort()
+      .at(-1),
+    "2026-11-02T23:59:59.000Z",
+  );
+  clock = new Date("2026-11-03T00:00:00Z");
+  await runTick(store, options);
+  assert.equal(
+    wikipediaCalls(),
+    discoveryCalls,
+    "No Wikipedia discovery before the daily sample window",
+  );
+  clock = new Date("2026-11-03T00:20:00Z");
   await seedFeeds();
   await runTick(store, options);
   let data = await report(store);
@@ -199,14 +235,23 @@ try {
   const providerCalls = () =>
     requests.filter((r) => providers.some((p) => r === "/" + p.id)).length;
   assert.equal(providerCalls(), 36);
+  const dailyDiscoveryCalls = wikipediaCalls();
   await runTick(store, options);
-  clock = new Date("2026-11-03T02:20:00Z");
+  clock = new Date("2026-11-03T23:50:00Z");
   await runTick(store, options);
   assert.equal(providerCalls(), 36);
+  assert.equal(
+    wikipediaCalls(),
+    dailyDiscoveryCalls,
+    "Later ticks must not repeat Wikipedia discovery",
+  );
+  checks.push(
+    "One daily batch samples the prior UTC day before freezing the sample; later ticks do not rediscover",
+  );
   checks.push(
     "New Wikipedia pages run through all four providers, grading and reporting without repeated billing",
   );
-  clock = new Date("2026-11-04T00:20:00Z");
+  clock = new Date("2026-11-04T00:15:00Z");
   revision = 3;
   await seedFeeds();
   await runTick(store, options);
@@ -230,27 +275,45 @@ try {
   checks.push(
     "The next UTC day discovers and benchmarks new Wikipedia links while excluding previously tested URLs",
   );
-  clock = new Date("2026-11-04T02:20:00Z");
+  clock = new Date("2026-11-05T00:15:00Z");
+  await seedFeeds();
   fail = true;
   await runTick(store, { ...options, maxPages: 0 });
   const failures = await store.db.execute(
     sql`select error,next_poll,last_poll from scraping_bench.sources where id='wikipedia_recent_links'`,
   );
   assert.match(String(failures.rows[0].error), /WIKIPEDIA/);
-  assert.ok(
-    new Date(failures.rows[0].next_poll).getTime() <=
-      clock.getTime() + 15 * 60000,
+  assert.equal(
+    new Date(failures.rows[0].next_poll).toISOString(),
+    "2026-11-06T00:15:00.000Z",
+  );
+  const failedCalls = wikipediaCalls();
+  clock = new Date("2026-11-05T12:00:00Z");
+  await runTick(store, { ...options, maxPages: 0 });
+  assert.equal(
+    wikipediaCalls(),
+    failedCalls,
+    "No repeated discovery after the daily sample has been frozen",
   );
   assert.equal(
     new Date(failures.rows[0].last_poll).toISOString(),
-    "2026-11-04T00:20:00.000Z",
+    "2026-11-04T00:15:00.000Z",
   );
   fail = false;
+  suppressed = true;
+  const partialDiscovery = await discovery.discover(source, { now: clock });
+  assert.equal(partialDiscovery.length, 1);
+  assert.equal(
+    partialDiscovery[0].provenance?.revision,
+    revision + 100,
+    "Explicitly hidden revisions are skipped; readable comparisons remain eligible",
+  );
+  suppressed = false;
   hidden = true;
   await assert.rejects(discovery.discover(source, { now: clock }), /WIKIPEDIA/);
   hidden = false;
   revision = 4;
-  clock = new Date("2026-11-04T02:40:00Z");
+  clock = new Date("2026-11-06T00:15:00Z");
   await runTick(store, { ...options, maxPages: 0 });
   const recovered = await store.db.execute(
     sql`select error,count from scraping_bench.sources where id='wikipedia_recent_links'`,
@@ -258,13 +321,13 @@ try {
   assert.equal(recovered.rows[0].error, null);
   assert.equal(recovered.rows[0].count, 1);
   checks.push(
-    "API errors and unavailable revision content remain failures; scheduled retry recovers without erasing last success",
+    "API errors and unavailable revision content remain failures; the next daily batch recovers without erasing last success",
   );
-  clock = new Date("2026-11-05T00:20:00Z");
+  clock = new Date("2026-11-07T00:15:00Z");
   fail = true;
   await store.db.execute(sql`truncate scraping_bench.candidates`);
   await store.db.execute(
-    sql`update scraping_bench.sources set last_poll=null,next_poll=now()-interval '1 day'`,
+    sql`update scraping_bench.sources set last_poll=null,next_poll='2026-11-07T00:00:00Z'`,
   );
   await seedFeeds();
   await store.db.execute(
@@ -272,7 +335,7 @@ try {
   );
   await runTick(store, { ...options, maxPages: 0 });
   const partial = await store.db.execute(
-    sql`select id from scraping_bench.runs where day='2026-11-05'`,
+    sql`select id from scraping_bench.runs where day='2026-11-07'`,
   );
   assert.equal(
     partial.rows.length,

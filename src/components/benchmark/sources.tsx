@@ -109,11 +109,11 @@ export function BenchmarkSources({
           <div>
             <h3>Daily Wikipedia discoveries</h3>
             <p>
-              Every hour, we compare recent English Wikipedia revisions to find
-              newly added external links. We keep previously untested URLs for
-              the next daily sample and ask all four providers to retrieve the
-              linked pages. These pages are grouped under Other because their
-              subjects have not been classified.
+              Once a day, before building the sample, we compare revisions from
+              the previous day’s English Wikipedia edits to find new external
+              links. We include previously untested URLs in that day’s sample
+              and ask all four providers to retrieve the linked pages. These pages
+              are grouped under Other because their subjects have not been classified.
             </p>
             <Button variant="outline-brand" onClick={onViewDailyWikipedia}>
               View daily Wikipedia results
