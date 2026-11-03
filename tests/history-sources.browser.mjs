@@ -218,7 +218,7 @@ try {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       await page
-        .getByRole("link", { name: "Where the pages come from" })
+        .getByRole("link", { name: "Explore the sources and example pages" })
         .click();
       assert.equal(new URL(page.url()).hash, "#sources");
       await page
@@ -250,6 +250,15 @@ try {
         true,
       );
       await page.getByRole("button", { name: "Reset filters" }).click();
+      await page
+        .getByRole("link", { name: "Wikipedia screening and reference checks" })
+        .click();
+      assert.equal(new URL(page.url()).hash, "#wikipedia-methodology");
+      assert.equal(
+        await page.locator("#methodology summary").filter({ hasText: "Wikipedia screening" }).count(),
+        1,
+      );
+      assert.equal(await page.locator("#wikipedia details").count(), 0);
       await capture(`wikipedia-${width}-after`, "#wikipedia");
       await capture(`sources-${width}-after`, "#sources");
       assert.equal(
