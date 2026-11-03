@@ -128,6 +128,31 @@ try {
     }, 500);
   });
   await page.goto(base, { waitUntil: "networkidle" });
+  for (const width of [1440, 581, 580, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const id of ["useful-content", "categories", "history"]) {
+      const section = page.locator(`#${id}`);
+      await section.getByRole("tab", { name: "Table", exact: true }).click();
+      const alignment = await section.locator("table").evaluate(table => {
+        const headers = [...table.querySelectorAll("thead th")];
+        const cells = [...table.querySelectorAll("tbody tr:first-child > *")];
+        return cells.map((cell, i) => ({
+          header: getComputedStyle(headers[i]).textAlign,
+          cell: getComputedStyle(cell).textAlign,
+        }));
+      });
+      assert.ok(alignment.length > 0);
+      if (width > 580) {
+        for (const column of alignment) assert.equal(column.header, column.cell, `${id} headings align with values at ${width}px`);
+      } else {
+        assert.ok(alignment.every(column => column.cell === "left"), `${id} mobile cards retain left alignment`);
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await section.getByRole("tab", { name: "Chart", exact: true }).click();
+    }
+    checks.push(`${width}px: all three tables preserve matching column alignment and avoid page overflow`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => (document.documentElement.dataset.theme = "dark"));
   await capture(
     before ? "history-before" : "history-after",

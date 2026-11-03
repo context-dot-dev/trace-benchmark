@@ -418,6 +418,7 @@ html::-webkit-scrollbar {
   text-align: left;
 }
 @media (min-width: 581px) {
+  .bench-scroll:not([aria-label="Daily quality history"]) thead th:not(:first-child),
   .bench-scroll[aria-label="Daily quality history"] thead th:nth-child(n + 4) {
     text-align: right;
   }
