@@ -203,28 +203,10 @@ export function BenchmarkSources({
             Download all 1,041 URLs and results ↓
           </a>
         </div>
-        <details className="mt-8">
-          <summary>Screening, reference checks and limitations</summary>
-          <p>
-            The scores use each provider’s first attempt. We repeated some
-            requests to check whether failures persisted and identified 73 pages
-            for further study. Because those pages were selected using provider
-            failures, this subset cannot support an unbiased ranking.
-          </p>
-          <p>
-            Of 20 randomly audited candidates, five were reference checked,
-            three were rejected, and twelve remain unresolved. Some reference
-            checks used public abstracts, so they do not establish whether the
-            full paper was recovered. Two known grading errors are flagged in
-            the data, with their original grades preserved.
-          </p>
-          <p>
-            Daily pages have not received this independent screening and are
-            excluded by the validation filters. A reliable supply of 1,000
-            validated hard pages per day has not been established. The download
-            includes original grades, review notes and provenance hashes.
-          </p>
-        </details>
+        <p>
+          Read about <a href="#wikipedia-methodology">Wikipedia screening and reference checks</a> in
+          the methodology.
+        </p>
       </SiteSection>
     </>
   );

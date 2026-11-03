@@ -921,10 +921,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="overview"
           title="How reliably can web scrapers read a page?"
           accent="read a page?"
-          description="We compare Context, Exa, Firecrawl, and Keenable on the same web pages to see how often they return useful content. The results cover daily web samples and a fixed study of pages cited on Wikipedia."
+          description="We ask Context, Exa, Firecrawl, and Keenable to retrieve the same web pages, then check whether each response contains meaningful content from the requested page. The results show how reliably each provider handles different kinds of websites."
           background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
           contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
-          actions={<a href="#methodology" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">Read the methodology</a>}
+          actions={<a href="#sources" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">See where the pages come from</a>}
         />
         <div id="results" aria-busy={loading}>
         <SiteSection id="sample" lines>
@@ -935,8 +935,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             onChange={setSource}
             options={[
               { value: "all", label: "All sources" },
-              { value: "daily", label: "Daily feeds & registries" },
-              { value: "wikipedia", label: "Wikipedia citations" },
+              { value: "daily", label: "Daily web sample" },
+              { value: "wikipedia", label: "Pages linked from Wikipedia" },
             ]}
           />
           <Filter
@@ -962,14 +962,26 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ]}
           />
         </div>
-        <p className="bench-note mt-6">
-          {source === "wikipedia"
-            ? "External pages linked from Wikipedia edits. This is a fixed study measured on October 29, 2026."
-            : source === "daily"
-              ? "Pages discovered through publisher feeds, public record APIs and website sitemaps. A new sample is collected each day."
-              : "These results combine the daily web sample with a fixed study of pages cited on Wikipedia."}{" "}
-          <a href="#sources">Where the pages come from</a>.
-        </p>
+        <div className="mt-6">
+          {source !== "wikipedia" && (
+            <p className="bench-note">
+              Each day, we find pages through publisher feeds that announce new
+              articles, public databases that list records such as company filings
+              and job openings, and sitemaps that list a website’s pages.
+            </p>
+          )}
+          {source !== "daily" && (
+            <p className="bench-note">
+              The Wikipedia sample contains external pages that editors linked
+              from English Wikipedia articles. We test the linked websites, not
+              the Wikipedia articles themselves. This fixed sample was tested on
+              October 29, 2026, and does not refresh daily.
+            </p>
+          )}
+          <p className="bench-note">
+            <a href="#sources">Explore the sources and example pages</a>.
+          </p>
+        </div>
         <div className="bench-sample">
           <p aria-live="polite">
             {source !== "wikipedia" && (run ? (
@@ -1033,7 +1045,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               <dd>{integer(dailyCount)}</dd>
             </div>
             <div>
-              <dt>Wikipedia citations</dt>
+              <dt>Pages linked from Wikipedia</dt>
               <dd>{integer(wikiCount)}</dd>
             </div>
             <div>
@@ -1054,7 +1066,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             id="useful-content"
             accent="useful content"
             title="Pages with useful content"
-            note={`We calculate the share of pages that returned useful content in each category, then average those rates so larger categories do not dominate the score. Failed requests${unknown ? " and " + integer(unknown) + " unresolved results" : ""} count against the score.${pending ? " Another " + integer(pending) + " results are still pending and count against it until collection finishes." : ""}`}
+            note="The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."
             chart={<Bars rows={rows} />}
             table={
               <Table
@@ -1079,31 +1091,21 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             }
           />
           <div className="bench-column bench-support">
-          <p className="bench-note">
-            {dailyCount > 0 && wikiCount > 0
-              ? "The combined score includes studies with different collection settings; use the Source filter to compare providers within either study. "
-              : ""}
-            Context operates this benchmark and is one of the providers
-            evaluated. Read about <a href="#methodology">how scores are calculated and what they can tell you</a>.
-          </p>
-          {wikiCount > 0 && (
             <p className="bench-note">
-              A basic HTTP fetch with Trafilatura, an article-text extractor, recovered useful content from{" "}
-              {integer(
-                selected.filter(
-                  (p) => p.source === "wikipedia" && p.plainHttp === true,
-                ).length,
-              )}{" "}
-              of {integer(wikiCount)} selected Wikipedia pages. This baseline
-              was not measured for daily pages.
+              Context runs this benchmark and is one of the providers tested. See
+              the <a href="#methodology">methodology</a> for scoring rules and limitations.
             </p>
-          )}
+            {pending > 0 && (
+              <p className="bench-note" role="status">
+                Results for this selection are still being collected.
+              </p>
+            )}
           </div>
           <Section
             id="categories"
             accent="category"
             title="Results by category"
-            note="Compare how often each provider returns useful content from the same pages within a category. Switch to the table for exact percentages and page counts; a dash means no score is available."
+            note="Compare how reliably each provider returns content from different kinds of pages, including news articles, research papers, and product listings."
             chart={
               chartCategories.length >= 3 ? (
                 <Radar rows={rows} chartCategories={chartCategories} />
@@ -1132,7 +1134,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="history"
           accent="over time"
           title="Daily quality over time"
-          note="Follow each provider’s daily results under the scoring rules used at the time. This history excludes the fixed Wikipedia study and stays the same when you change the filters above. Gaps mark missing scores, and separate line segments show where the scoring rules changed."
+          note="Follow each provider’s results as we test a new sample of web pages each day. This chart shows the daily collection and does not include the fixed Wikipedia sample."
           chart={<Trend history={history} />}
           table={
             <Table
@@ -1171,6 +1173,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         <SiteSection id="methodology" lines className="bench-method">
           <SectionHeading title="Methodology" />
           <SectionHeaderRule />
+          <h3>How scores are calculated</h3>
           <p>
             A page counts as useful when the response contains substantive
             content that matches the requested page. We calculate the percentage
@@ -1181,6 +1184,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             score, so it reflects more than the quality of successfully returned
             content.
           </p>
+          {(unknown > 0 || pending > 0) && (
+            <p>
+              For the current selection, {integer(unknown)} provider results
+              remain unresolved and {integer(pending)} are pending. These results
+              count against the score until useful content is confirmed. You can
+              inspect each provider’s counts in the results table.
+            </p>
+          )}
           <p>
             The combined view brings together the selected daily sample and the
             fixed Wikipedia study. We align their legal and finance categories
@@ -1197,6 +1208,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             page rather than main content only. Its scores here use equal
             category weights, so they differ from the original study chart,
             which gave every page equal weight.
+          </p>
+          <h3>Reading the daily history</h3>
+          <p>
+            Historical scores keep the scoring rules used at the time and do
+            not change with the filters above. Gaps mark missing scores, and
+            separate line segments show where the scoring rules changed. Scores
+            from different collection protocols are not directly comparable.
+            A dash in a results table means no score is available.
           </p>
           <h3>Daily collection</h3>
           {run && run.pages < run.target && (
@@ -1271,6 +1290,38 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                     .slice(0, 19) + " UTC"
                 : "not yet recorded"}
               .{data.health.error && ` ${data.health.error}`}
+            </p>
+          </details>
+          <h3 id="wikipedia-methodology">Wikipedia validation</h3>
+          {wikiCount > 0 && (
+            <p>
+              A basic HTTP fetch with Trafilatura, an article-text extractor,
+              recovered useful content from {integer(selected.filter(
+                (page) => page.source === "wikipedia" && page.plainHttp === true,
+              ).length)} of {integer(wikiCount)} selected pages linked from
+              Wikipedia. This baseline was not measured for daily pages.
+            </p>
+          )}
+          <details>
+            <summary>Wikipedia screening and reference checks</summary>
+            <p>
+              The scores use each provider’s first attempt. We repeated some
+              requests to check whether failures persisted and identified 73 pages
+              for further study. Because those pages were selected using provider
+              failures, this subset cannot support an unbiased ranking.
+            </p>
+            <p>
+              Of 20 randomly audited candidates, five were reference checked,
+              three were rejected, and twelve remain unresolved. Some reference
+              checks used public abstracts, so they do not establish whether the
+              full paper was recovered. Two known grading errors are flagged in
+              the data, with their original grades preserved.
+            </p>
+            <p>
+              Daily pages have not received this independent screening and are
+              excluded by the validation filters. A reliable supply of 1,000
+              validated hard pages per day has not been established. The download
+              includes original grades, review notes and provenance hashes.
             </p>
           </details>
         </SiteSection>
