@@ -8,10 +8,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Scraping Bench · Context.dev",
-  description: "Compare daily web scraping quality and latency using shared pages and inspectable results.",
+  description: "Compare how reliably Context, Exa, Firecrawl, and Keenable return useful content from the same web pages, with daily results and a fixed Wikipedia citation study.",
   openGraph: {
     title: "Scraping Bench · Context.dev",
-    description: "Compare how reliably web scrapers return useful content from the same pages, with daily measurements of useful content and response time.",
+    description: "Compare how reliably Context, Exa, Firecrawl, and Keenable return useful content from the same web pages, with daily results and a fixed Wikipedia citation study.",
     type: "website",
   },
 };

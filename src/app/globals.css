@@ -94,13 +94,16 @@ html::-webkit-scrollbar {
 }
 
 @theme {
-  --color-provider-context: var(--ds-color-brand);
-  --color-provider-exa: var(--ds-color-neutral-50);
-  --color-provider-keenable: var(--ds-color-neutral-50);
-  --color-provider-firecrawl: var(--ds-color-neutral-50);
+  --color-provider-context: var(--ds-color-text-brand);
+  --color-provider-exa: color-mix(in srgb, var(--ds-color-chart-series-2) 68%, var(--ds-color-text-default));
+  --color-provider-keenable: color-mix(in srgb, var(--ds-color-chart-series-4) 68%, var(--ds-color-text-default));
+  --color-provider-firecrawl: color-mix(in srgb, var(--ds-color-chart-series-3) 66%, var(--ds-color-text-default));
 }
 
 :root {
+  --ds-color-chart-series-2: #14B8A6;
+  --ds-color-chart-series-3: #F59E0B;
+  --ds-color-chart-series-4: #8B5CF6;
   --ds-font-mono: var(--font-ibm-plex-mono), monospace;
 }
 .bench-shell {
@@ -801,6 +804,27 @@ body::after {
 .bench-method h3 {
   font-size: var(--ds-text-h4);
   margin-top: var(--ds-space-8);
+}
+.bench-sources h3 {
+  font-size: var(--ds-text-h4);
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-sources p {
+  max-width: var(--ds-layout-text);
+  margin-block: var(--ds-space-4);
+  color: var(--ds-color-text-muted);
+  line-height: 1.7;
+}
+.bench-sources summary {
+  cursor: pointer;
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-sources a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.bench-sources dd {
+  line-height: 1.6;
 }
 .bench-support {
   padding-bottom: var(--ds-space-8);
