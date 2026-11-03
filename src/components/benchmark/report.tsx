@@ -373,6 +373,13 @@ const dateLabel = (time: number, long = false) =>
   });
 const protocolLabel = (protocol: string) =>
   `Protocol ${protocol.match(/v\d+$/)?.[0] ?? protocol}`;
+function historyResult(run: RunSummary, provider: string) {
+  const result = run.providers.find((metric) => metric.id === provider);
+  if (run.status !== "completed" || !result?.total) return "—";
+  return result.rate == null
+    ? `${integer(result.useful)} / ${integer(result.total)} useful`
+    : percent(result.rate);
+}
 function Trend({ history }: { history: RunSummary[] }) {
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1000);
@@ -709,8 +716,8 @@ function Trend({ history }: { history: RunSummary[] }) {
                   {r.status === "completed" &&
                     r.providers.every((p) => p.rate == null) && (
                       <p>
-                        A sample was collected, but at least one category is missing,
-                        so no overall score is reported.
+                        This sample does not cover every category, so no overall score is reported.
+                        The results below show useful pages out of all pages tested.
                       </p>
                     )}
                   <dl>
@@ -720,9 +727,7 @@ function Trend({ history }: { history: RunSummary[] }) {
                           <Name id={p.id} />
                         </dt>
                         <dd style={{ color: p.color }}>
-                          {r.status === "completed"
-                            ? percent(r.providers.find((m) => m.id === p.id)?.rate)
-                            : "—"}
+                          {historyResult(r, p.id)}
                         </dd>
                       </div>
                     ))}
@@ -1169,14 +1174,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 r.status !== "completed"
                   ? "In progress"
                   : r.providers.every((p) => p.rate == null)
-                    ? "Missing categories"
+                    ? "Completed · partial coverage"
                     : "Scored",
                 integer(r.pages),
-                ...providers.map((p) =>
-                  r.status === "completed"
-                    ? percent(r.providers.find((m) => m.id === p.id)?.rate)
-                    : "—",
-                ),
+                ...providers.map((p) => historyResult(r, p.id)),
               ] }))}
             />
           }
