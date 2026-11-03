@@ -345,6 +345,44 @@ try {
   checks.push(
     "A first-poll Wikipedia failure does not block daily collection when a core category has insufficient supply",
   );
+  await store.db.execute(
+    sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
+  );
+  fail = false;
+  revision = 5;
+  clock = new Date("2026-11-08T00:20:00Z");
+  await seedFeeds();
+  await runTick(store, { ...options, discover: false, maxPages: 0 });
+  await store.db.execute(sql`
+    insert into scraping_bench.runs (id,day,protocol,status,created_at,summary)
+    select 'scraping-bench-v4:2026-11-08',day,'scraping-bench-v4',status,created_at,
+      summary || '{"id":"scraping-bench-v4:2026-11-08","protocol":"scraping-bench-v4","target":8}'::jsonb
+    from scraping_bench.runs where day='2026-11-08'
+  `);
+  await store.db.execute(sql`update scraping_bench.attempts set run_id='scraping-bench-v4:2026-11-08' where day='2026-11-08'`);
+  await store.db.execute(sql`delete from scraping_bench.runs where id='scraping-bench-v5:2026-11-08'`);
+  const upgradeDiscoveryCalls = wikipediaCalls();
+  const upgradeProviderCalls = providerCalls();
+  await runTick(store, options);
+  assert.equal(wikipediaCalls(), upgradeDiscoveryCalls, "A protocol upgrade must preserve today's frozen sample");
+  data = await report(store);
+  assert.equal(data.history.length, 1, "An upgrade must not create a second sample for the same day");
+  assert.equal(data.latest?.protocol, "scraping-bench-v4");
+  assert.equal(data.latest?.status, "completed", "An in-flight run from the previous protocol must finish");
+  assert.ok(data.latest?.providers.every((p) => p.total === 8 && p.rate === 1));
+  assert.equal(providerCalls() - upgradeProviderCalls, 32);
+  await runTick(store, options);
+  assert.equal(providerCalls() - upgradeProviderCalls, 32, "Completed older runs must not be billed again");
+  clock = new Date("2026-11-09T00:15:00Z");
+  revision = 6;
+  await seedFeeds();
+  await runTick(store, options);
+  data = await report(store);
+  assert.equal(data.latest?.protocol, "scraping-bench-v5");
+  assert.equal(data.latest?.pages, 9);
+  assert.equal(data.latest?.status, "completed");
+  assert.ok(wikipediaCalls() > upgradeDiscoveryCalls);
+  checks.push("A mid-day protocol upgrade completes the existing run without duplicating discovery or billing, then starts v5 with Wikipedia the next day");
   await mkdir("artifacts/daily-wikipedia", { recursive: true });
   await writeFile(
     "artifacts/daily-wikipedia/e2e.json",

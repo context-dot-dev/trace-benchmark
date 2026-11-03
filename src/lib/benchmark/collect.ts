@@ -111,7 +111,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
         await store.db
           .select({ id: runs.id })
           .from(runs)
-          .where(eq(runs.id, PROTOCOL + ":" + day))
+          .where(eq(runs.day, day))
       ).length;
     if (options.discover !== false)
       await discoverDue(store, clock, samplePending, options.discovery);
@@ -361,7 +361,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
     for (const run of await store.db
       .select()
       .from(runs)
-      .where(and(eq(runs.protocol, PROTOCOL), eq(runs.status, "collecting")))) {
+      .where(eq(runs.status, "collecting"))) {
       const rows = await store.db
         .select({
           provider: attempts.provider,
@@ -507,7 +507,7 @@ async function selectSample(
     await tx.execute(sql`select pg_advisory_xact_lock(74012492)`);
     const runId = PROTOCOL + ":" + day;
     if (
-      (await tx.select({ id: runs.id }).from(runs).where(eq(runs.id, runId)))
+      (await tx.select({ id: runs.id }).from(runs).where(eq(runs.day, day)))
         .length
     )
       return;
