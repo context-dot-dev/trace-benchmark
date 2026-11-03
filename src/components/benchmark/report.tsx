@@ -978,7 +978,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               then retrieve the previously untested pages in that sample.
             </p>
           )}
-          {(source === "all" || source === "wikipedia") && (
+          {source === "wikipedia" && (
             <p className="bench-note">
               The original 1,041-page Wikipedia study from October 29 remains
               available alongside the daily results as a separate historical sample.
@@ -997,8 +997,13 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ) : (
               "No daily sample available"
             ))}
-            {source === "all" && " · "}
-            {(source === "all" || source === "wikipedia") && "Original Wikipedia study: October 29, 2026"}
+            {source === "all" && (
+              <> · <a href="#wikipedia" onClick={() => {
+                const archive = document.querySelector<HTMLDetailsElement>("#wikipedia");
+                if (archive) archive.open = true;
+              }}>Includes archived results</a></>
+            )}
+            {source === "wikipedia" && "Original Wikipedia study: October 29, 2026"}
             {loading && " · Updating…"}
           </p>
           <div className="sample-actions">
@@ -1051,7 +1056,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               <dd>{integer(dailyCount)}</dd>
             </div>
             <div>
-              <dt>Original study pages</dt>
+              <dt>Archived pages</dt>
               <dd>{integer(wikiCount)}</dd>
             </div>
             <div>
@@ -1071,7 +1076,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           {source === "wikipedia_daily" && selected.length === 0 && (
             <p className="bench-column bench-note" role="status">
               No daily Wikipedia pages match this sample and these filters.
-              Choose another date or select the original Wikipedia study.
+              Choose another sample date to see available results.
             </p>
           )}
           <Section
@@ -1176,13 +1181,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             />
           }
         />
-        <BenchmarkSources pages={dataset.pages} onViewDailyWikipedia={() => {
+        <BenchmarkSources onViewDailyWikipedia={() => {
           setSource("wikipedia_daily");
-          setCategory("all");
-          setValidation("all");
-          document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
-        }} onViewWikipedia={() => {
-          setSource("wikipedia");
           setCategory("all");
           setValidation("all");
           document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
@@ -1209,23 +1209,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               inspect each provider’s counts in the results table.
             </p>
           )}
-          <p>
-            The combined view brings together the selected daily sample and the
-            fixed Wikipedia study. We align their legal and finance categories
-            and keep arts, sports, and reference pages in a separate category.
-            A URL appears only once, ignoring page fragments; when both studies
-            contain it, we use the daily result.
-          </p>
-          <p>
-            The two studies used different collection settings, so the combined
-            score describes this particular mix of pages. Use the Source filter
-            to compare providers within one study. The Wikipedia study was
-            measured on October 29 with its original Python adapters and
-            identity-content-jev-v2 grading, with Context requesting the full
-            page rather than main content only. Its scores here use equal
-            category weights, so they differ from the original study chart,
-            which gave every page equal weight.
-          </p>
           <h3>Reading the daily history</h3>
           <p>
             Historical scores keep the scoring rules used at the time and do
@@ -1326,37 +1309,78 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               .{data.health.error && ` ${data.health.error}`}
             </p>
           </details>
-          <h3 id="wikipedia-methodology">Wikipedia validation</h3>
-          {wikiCount > 0 && (
+          <details id="wikipedia">
+            <summary>Wikipedia methodology history</summary>
             <p>
-              A basic HTTP fetch with Trafilatura, an article-text extractor,
-              recovered useful content from {integer(selected.filter(
-                (page) => page.source === "wikipedia" && page.plainHttp === true,
-              ).length)} of {integer(wikiCount)} selected pages linked from
-              Wikipedia. This baseline was not measured for daily pages.
-            </p>
-          )}
-          <details>
-            <summary>Wikipedia screening and reference checks</summary>
-            <p>
-              The scores use each provider’s first attempt. We repeated some
-              requests to check whether failures persisted and identified 73 pages
-              for further study. Because those pages were selected using provider
-              failures, this subset cannot support an unbiased ranking.
+              With protocol v5, Wikipedia discovery moved from a fixed snapshot
+              to daily samples. The earlier study tested 1,041 linked pages on
+              October 29, 2026, using links found in 48 two-minute windows on
+              October 25 and 27, covering 4,777 edits. Those saved results remain
+              available in the Source filter and are included in All sources;
+              they are not refreshed with each daily sample.
             </p>
             <p>
-              Of 20 randomly audited candidates, five were reference checked,
-              three were rejected, and twelve remain unresolved. Some reference
-              checks used public abstracts, so they do not establish whether the
-              full paper was recovered. Two known grading errors are flagged in
-              the data, with their original grades preserved.
+              The combined view brings together the selected daily sample and the
+              fixed Wikipedia study. We align their legal and finance categories
+              and keep arts, sports, and reference pages in a separate category.
+              A URL appears only once, ignoring page fragments; when both studies
+              contain it, we use the daily result.
             </p>
             <p>
-              Daily pages have not received this independent screening and are
-              excluded by the validation filters. A reliable supply of 1,000
-              validated hard pages per day has not been established. The download
-              includes original grades, review notes and provenance hashes.
+              The two studies used different collection settings, so the combined
+              score describes this particular mix of pages. Use the Source filter
+              to compare providers within one study. The Wikipedia study was
+              measured on October 29 with its original Python adapters and
+              identity-content-jev-v2 grading, with Context requesting the full
+              page rather than main content only. Its scores here use equal
+              category weights, so they differ from the original study chart,
+              which gave every page equal weight.
             </p>
+            <p>
+              <a href="/data/wikipedia-study.json" download>
+                Download the archived URLs and results
+              </a>
+            </p>
+            <Button variant="outline-brand" onClick={() => {
+              setSource("wikipedia");
+              setCategory("all");
+              setValidation("all");
+              document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
+            }}>
+              View original Wikipedia results
+            </Button>
+            <h3 id="wikipedia-methodology">Archived study validation</h3>
+            {wikiCount > 0 && (
+              <p>
+                A basic HTTP fetch with Trafilatura, an article-text extractor,
+                recovered useful content from {integer(selected.filter(
+                  (page) => page.source === "wikipedia" && page.plainHttp === true,
+                ).length)} of {integer(wikiCount)} selected pages linked from
+                Wikipedia. This baseline was not measured for daily pages.
+              </p>
+            )}
+            <details>
+              <summary>Wikipedia screening and reference checks</summary>
+              <p>
+                The scores use each provider’s first attempt. We repeated some
+                requests to check whether failures persisted and identified 73 pages
+                for further study. Because those pages were selected using provider
+                failures, this subset cannot support an unbiased ranking.
+              </p>
+              <p>
+                Of 20 randomly audited candidates, five were reference checked,
+                three were rejected, and twelve remain unresolved. Some reference
+                checks used public abstracts, so they do not establish whether the
+                full paper was recovered. Two known grading errors are flagged in
+                the data, with their original grades preserved.
+              </p>
+              <p>
+                Daily pages have not received this independent screening and are
+                excluded by the validation filters. A reliable supply of 1,000
+                validated hard pages per day has not been established. The download
+                includes original grades, review notes and provenance hashes.
+              </p>
+            </details>
           </details>
         </SiteSection>
         <SiteSection id="citation" lines className="bench-citation">
