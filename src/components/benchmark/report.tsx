@@ -193,7 +193,6 @@ function Bars({ rows }: { rows: ProviderMetric[] }) {
       {providers.map((p, index) => {
         const value = rows.find((r) => r.id === p.id)?.rate;
         const filled = Math.round((value ?? 0) * columns);
-        const tone = p.id === "context" ? "border-brand bg-brand" : "border-neutral-40 bg-neutral-40";
         return (
           <div className="bench-bar-row" key={p.id}>
             <Name id={p.id} />
@@ -205,7 +204,12 @@ function Bars({ rows }: { rows: ProviderMetric[] }) {
             >
               {Array.from({ length: columns * 2 }, (_, cell) => (
                 <span className="meter-cell" key={cell}>
-                  <span className={`meter-dot ${Math.floor(cell / 2) < filled ? tone : ""}`} />
+                  <span
+                    className="meter-dot"
+                    style={Math.floor(cell / 2) < filled
+                      ? { backgroundColor: p.color, borderColor: p.color }
+                      : undefined}
+                  />
                 </span>
               ))}
             </div>
@@ -877,7 +881,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         JSON.stringify(
           {
             scoring:
-              "Equal weight per represented category, equal weight per page within each category. Unresolved and pending outcomes remain in denominators.",
+              "The score averages the useful-page rate of each represented category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts.",
             filters: { source, category, validation },
             dailyRun: run?.id,
             scores: rows,
@@ -915,12 +919,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
       <main id="main">
         <Hero
           id="overview"
-          title="Measuring web scraping quality"
-          accent="scraping quality"
-          description="Four providers, the same pages. Compare useful content across daily feeds, public registries, and Wikipedia citations, with the evidence behind every result."
+          title="How reliably can web scrapers read a page?"
+          accent="read a page?"
+          description="We compare Context, Exa, Firecrawl, and Keenable on the same web pages to see how often they return useful content. The results cover daily web samples and a fixed study of pages cited on Wikipedia."
           background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
           contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
-          actions={<a href="#methodology" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">How we measure</a>}
+          actions={<a href="#methodology" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">Read the methodology</a>}
         />
         <div id="results" aria-busy={loading}>
         <SiteSection id="sample" lines>
@@ -963,7 +967,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ? "External pages linked from Wikipedia edits. This is a fixed study measured on October 29, 2026."
             : source === "daily"
               ? "Pages discovered through publisher feeds, public record APIs and website sitemaps. A new sample is collected each day."
-              : "Two samples: a daily web collection and a fixed study of pages linked from Wikipedia."}{" "}
+              : "These results combine the daily web sample with a fixed study of pages cited on Wikipedia."}{" "}
           <a href="#sources">Where the pages come from</a>.
         </p>
         <div className="bench-sample">
@@ -1048,9 +1052,9 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         </SiteSection>
           <Section
             id="useful-content"
-            accent="content"
-            title="Useful content"
-            note={`Each represented category has equal weight; pages within a category have equal weight. ${unknown ? integer(unknown) + " unresolved results stay in the denominator." : "Failed results stay in the denominator."}${pending ? " " + integer(pending) + " pending results make these scores provisional lower bounds." : ""}`}
+            accent="useful content"
+            title="Pages with useful content"
+            note={`We calculate the share of pages that returned useful content in each category, then average those rates so larger categories do not dominate the score. Failed requests${unknown ? " and " + integer(unknown) + " unresolved results" : ""} count against the score.${pending ? " Another " + integer(pending) + " results are still pending and count against it until collection finishes." : ""}`}
             chart={<Bars rows={rows} />}
             table={
               <Table
@@ -1077,14 +1081,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <div className="bench-column bench-support">
           <p className="bench-note">
             {dailyCount > 0 && wikiCount > 0
-              ? "The overall score combines two collection protocols. Use Source to inspect each separately. "
+              ? "The combined score includes studies with different collection settings; use the Source filter to compare providers within either study. "
               : ""}
             Context operates this benchmark and is one of the providers
-            evaluated. <a href="#methodology">Scoring and limitations</a>.
+            evaluated. Read about <a href="#methodology">how scores are calculated and what they can tell you</a>.
           </p>
           {wikiCount > 0 && (
             <p className="bench-note">
-              Plain HTTP + Trafilatura recovered useful content from{" "}
+              A basic HTTP fetch with Trafilatura, an article-text extractor, recovered useful content from{" "}
               {integer(
                 selected.filter(
                   (p) => p.source === "wikipedia" && p.plainHttp === true,
@@ -1099,7 +1103,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             id="categories"
             accent="category"
             title="Results by category"
-            note="Every provider is evaluated on the same filtered pages. Missing measurements appear as an em dash. The table shows exact rates and page counts."
+            note="Compare how often each provider returns useful content from the same pages within a category. Switch to the table for exact percentages and page counts; a dash means no score is available."
             chart={
               chartCategories.length >= 3 ? (
                 <Radar rows={rows} chartCategories={chartCategories} />
@@ -1128,7 +1132,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="history"
           accent="over time"
           title="Daily quality over time"
-          note="Complete daily history, using each run’s original scoring rules. These historical scores are not recalculated by the filters above and do not include the fixed Wikipedia study. Different protocols are not directly comparable; missing categories withhold the overall daily score."
+          note="Follow each provider’s daily results under the scoring rules used at the time. This history excludes the fixed Wikipedia study and stays the same when you change the filters above. Gaps mark missing scores, and separate line segments show where the scoring rules changed."
           chart={<Trend history={history} />}
           table={
             <Table
@@ -1168,25 +1172,31 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <SectionHeading title="Methodology" />
           <SectionHeaderRule />
           <p>
-            The overall view pools the selected daily sample and the fixed
-            Wikipedia citation study. Each represented category has equal
-            weight; pages within a category have equal weight. Legal and finance
-            labels are normalized across sources, and arts, sports &amp;
-            reference remains its own category. Failed, unresolved, and pending
-            results stay in the denominator. Duplicate URLs, ignoring fragments,
-            count once; the daily observation takes precedence when both sources
-            contain a URL.
+            A page counts as useful when the response contains substantive
+            content that matches the requested page. We calculate the percentage
+            of useful pages within each category, then average those percentages.
+            This gives every category the same influence on the final score,
+            regardless of how many pages it contains. Failed requests, unresolved
+            judgments, and pending results remain in the page count and lower the
+            score, so it reflects more than the quality of successfully returned
+            content.
           </p>
           <p>
-            Pooling does not harmonize the collection protocols. The Wikipedia
-            study was measured on October 29 using identity-content-jev-v2
-            grading and frozen Python adapters, with Context requesting
-            mainContentOnly=false. Daily collection uses the protocol recorded
-            below. Treat the overall score as a descriptive comparison of this
-            mixed sample; use the source filter for a protocol-specific
-            comparison. Wikipedia-only scores now use the same category
-            weighting as the overall view, so they differ from the earlier
-            page-weighted study chart.
+            The combined view brings together the selected daily sample and the
+            fixed Wikipedia study. We align their legal and finance categories
+            and keep arts, sports, and reference pages in a separate category.
+            A URL appears only once, ignoring page fragments; when both studies
+            contain it, we use the daily result.
+          </p>
+          <p>
+            The two studies used different collection settings, so the combined
+            score describes this particular mix of pages. Use the Source filter
+            to compare providers within one study. The Wikipedia study was
+            measured on October 29 with its original Python adapters and
+            identity-content-jev-v2 grading, with Context requesting the full
+            page rather than main content only. Its scores here use equal
+            category weights, so they differ from the original study chart,
+            which gave every page equal weight.
           </p>
           <h3>Daily collection</h3>
           {run && run.pages < run.target && (
@@ -1202,8 +1212,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             same frozen sample with fresh content requested and a 30-second
             request deadline. An automated judge evaluates whether returned
             content is substantive and belongs to the requested page, without
-            seeing the provider name. The score measures useful content rather
-            than factual accuracy or complete recall.
+            seeing the provider name. A useful result does not establish that
+            every fact is correct or that all of the page’s content was recovered.
           </p>
           <details>
             <summary>Collection, grading, and limitations</summary>
@@ -1220,16 +1230,17 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               each of the eight categories.
             </p>
             <p>
-              Fresh-fetch settings do not guarantee an uncached response.
-              Response time is therefore not compared. Source availability,
-              provider rate limits, and request budgets can reduce the daily
+              Although we request fresh content, providers may still return
+              cached responses, so response times would not be directly
+              comparable and are not ranked here. The number of available pages,
+              provider rate limits, and request budgets can also reduce the daily
               sample.
             </p>
             <p>
-              Vercel Cron checks for work every fifteen minutes, and results are
-              stored in Neon through Drizzle. Interrupted provider requests are
-              not automatically repeated. Each provider is limited to 4,000
-              requests per UTC day, and grading has a separate input budget.
+              Collection runs every fifteen minutes, with a limit of 4,000
+              requests per provider per UTC day and a separate grading budget.
+              Interrupted requests are not automatically repeated, which avoids
+              giving a provider extra attempts at the same page.
             </p>
             <p>
               Individual results are retained for 30 days. Private grading
@@ -1317,8 +1328,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         </SiteSection>
       </main>
       <footer className="bench-footer bench-column">
-        Published by <a href="https://context.dev">Context.dev</a>, with the
-        same pages for every provider within each source sample.
+        Published by <a href="https://context.dev">Context.dev</a> to compare how
+        reliably scraping APIs return content from a shared sample of web pages.
       </footer>
     </Surface>
   );

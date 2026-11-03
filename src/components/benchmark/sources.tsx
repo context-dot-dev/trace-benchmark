@@ -77,7 +77,7 @@ export function BenchmarkSources({
       <SiteSection id="sources" lines className="bench-sources">
         <SectionHeading
           title="Where the pages come from"
-          description="The benchmark combines two collections. Source tells you how a page was found; category describes the kind of page."
+          description="The Source filter separates daily discoveries from the fixed Wikipedia study, while Category groups pages by subject, such as news, research, or commerce."
         />
         <div className="grid gap-10 mt-10 md:grid-cols-2">
           <div>
@@ -89,8 +89,9 @@ export function BenchmarkSources({
               pages in each of eight categories per day.
             </p>
             <p>
-              Newly discovered does not necessarily mean newly published. Each
-              page inherits the category assigned to its discovery source.
+              We assign each page the category of the source that supplied it.
+              These pages are new to the benchmark, but may have been published
+              earlier.
             </p>
             <a
               href="#daily-sources"
@@ -106,9 +107,9 @@ export function BenchmarkSources({
           <div>
             <h3>Wikipedia-linked pages</h3>
             <p>
-              A separate, fixed study of 1,041 external URLs added to English
-              Wikipedia articles. The providers scrape those linked websites—not
-              the Wikipedia articles that cite them.
+              This fixed study tests 1,041 external pages that editors added as
+              links to English Wikipedia articles. We use the edits to discover
+              pages, then ask each provider to scrape the linked website.
             </p>
             <p>
               Links were sampled on October 25 and 27, 2026, and measured on
@@ -120,8 +121,9 @@ export function BenchmarkSources({
         <details id="daily-sources" className="mt-10">
           <summary>Daily source examples by category</summary>
           <p>
-            These endpoints supply candidate URLs. Providers are tested on the
-            pages they link to, rather than on the feed or API response itself.
+            These feeds, APIs, and sitemaps supply the URLs for the daily sample.
+            We follow those links and test whether each provider can recover
+            content from the destination page.
           </p>
           <dl className="grid gap-x-10 gap-y-6 sm:grid-cols-2 mt-6">
             {dailyExamples.map((source) => (
@@ -204,16 +206,17 @@ export function BenchmarkSources({
         <details className="mt-8">
           <summary>Screening, reference checks and limitations</summary>
           <p>
-            The full study uses first-run grades. Repeat tests only inform
-            screening. 73 pages survived repeatability and quality screening;
-            this subset was selected using provider failures, so it is not an
-            unbiased provider ranking.
+            The scores use each provider’s first attempt. We repeated some
+            requests to check whether failures persisted and identified 73 pages
+            for further study. Because those pages were selected using provider
+            failures, this subset cannot support an unbiased ranking.
           </p>
           <p>
             Of 20 randomly audited candidates, five were reference checked,
-            three rejected and twelve unresolved. Reference checks include
-            public abstracts and do not establish full-paper recovery. Two known
-            grader errors remain flagged with their original grades.
+            three were rejected, and twelve remain unresolved. Some reference
+            checks used public abstracts, so they do not establish whether the
+            full paper was recovered. Two known grading errors are flagged in
+            the data, with their original grades preserved.
           </p>
           <p>
             Daily pages have not received this independent screening and are
