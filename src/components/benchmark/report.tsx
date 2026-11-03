@@ -823,7 +823,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const selected = uniquePages(
     dataset.pages.filter(
       (p) =>
-        (source === "all" || p.source === source) &&
+        (source === "all" || (source === "daily" ? p.source !== "wikipedia" : p.source === source)) &&
         (category === "all" || p.category === category) &&
         (validation === "all" ||
           (validation === "hard"
@@ -836,7 +836,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     source === "daily" &&
     category === "all" &&
     validation === "all"
-      ? categories.map((c) => c.id)
+      ? [...categories.map((c) => c.id), ...(observedCategories.includes("other") ? ["other"] : [])]
       : observedCategories;
   const rows = scorePages(selected, categoryIds);
   const pending = rows.reduce((sum, r) => sum + r.pending, 0);
@@ -847,9 +847,9 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const history = [...data.history]
     .reverse()
     .sort((a, b) => a.day.localeCompare(b.day));
-  const dailyCount = selected.filter((p) => p.source === "daily").length;
+  const dailyCount = selected.filter((p) => p.source !== "wikipedia").length;
   const retainedDaily = dataset.pages.filter(
-    (p) => p.source === "daily",
+    (p) => p.source !== "wikipedia",
   ).length;
   const wikiCount = selected.filter((p) => p.source === "wikipedia").length;
   const categoryTable = (
@@ -936,7 +936,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             options={[
               { value: "all", label: "All sources" },
               { value: "daily", label: "Daily web sample" },
-              { value: "wikipedia", label: "Pages linked from Wikipedia" },
+              { value: "wikipedia_daily", label: "Daily Wikipedia discoveries" },
+              { value: "wikipedia", label: "Original Wikipedia study (Oct 29)" },
             ]}
           />
           <Filter
@@ -963,19 +964,24 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           />
         </div>
         <div className="mt-6">
-          {source !== "wikipedia" && (
+          {(source === "all" || source === "daily") && (
             <p className="bench-note">
               Each day, we find pages through publisher feeds that announce new
               articles, public databases that list records such as company filings
               and job openings, and sitemaps that list a website’s pages.
             </p>
           )}
-          {source !== "daily" && (
+          {source !== "wikipedia" && (
             <p className="bench-note">
-              The Wikipedia sample contains external pages that editors linked
-              from English Wikipedia articles. We test the linked websites, not
-              the Wikipedia articles themselves. This fixed sample was tested on
-              October 29, 2026, and does not refresh daily.
+              Before building each daily sample, we check the previous day’s
+              English Wikipedia edits for new external links. All four providers
+              then retrieve the previously untested pages in that sample.
+            </p>
+          )}
+          {(source === "all" || source === "wikipedia") && (
+            <p className="bench-note">
+              The original 1,041-page Wikipedia study from October 29 remains
+              available alongside the daily results as a separate historical sample.
             </p>
           )}
           <p className="bench-note">
@@ -992,7 +998,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               "No daily sample available"
             ))}
             {source === "all" && " · "}
-            {source !== "daily" && "Wikipedia-linked pages: measured October 29, 2026"}
+            {(source === "all" || source === "wikipedia") && "Original Wikipedia study: October 29, 2026"}
             {loading && " · Updating…"}
           </p>
           <div className="sample-actions">
@@ -1045,7 +1051,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               <dd>{integer(dailyCount)}</dd>
             </div>
             <div>
-              <dt>Pages linked from Wikipedia</dt>
+              <dt>Original study pages</dt>
               <dd>{integer(wikiCount)}</dd>
             </div>
             <div>
@@ -1062,6 +1068,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             </p>
           )}
         </SiteSection>
+          {source === "wikipedia_daily" && selected.length === 0 && (
+            <p className="bench-column bench-note" role="status">
+              No daily Wikipedia pages match this sample and these filters.
+              Choose another date or select the original Wikipedia study.
+            </p>
+          )}
           <Section
             id="useful-content"
             accent="useful content"
@@ -1164,7 +1176,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             />
           }
         />
-        <BenchmarkSources pages={dataset.pages} onViewWikipedia={() => {
+        <BenchmarkSources pages={dataset.pages} onViewDailyWikipedia={() => {
+          setSource("wikipedia_daily");
+          setCategory("all");
+          setValidation("all");
+          document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
+        }} onViewWikipedia={() => {
           setSource("wikipedia");
           setCategory("all");
           setValidation("all");
@@ -1234,6 +1251,23 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             seeing the provider name. A useful result does not establish that
             every fact is correct or that all of the page’s content was recovered.
           </p>
+          <p>
+            Wikipedia discovery runs once before the daily sample is created,
+            using up to 1,200 non-bot article edits spread across the previous
+            UTC day. We compare the old and new revision text. Only new
+            external URLs are eligible; previously tested URLs and the original
+            study pages are excluded. The daily sample includes up to 300 of
+            these pages in the Other category, without inferring their subject
+            from the citing article. This is a sample of edits, not every link
+            added to Wikipedia. If discovery fails, the other sources can still
+            form the daily sample, and Wikipedia is checked again the next day.
+          </p>
+          <p>
+            Protocol v5 adds this group to the daily sample. It receives the same
+            weight as each other category when present; missing Wikipedia pages
+            do not suppress the eight-category daily score. Historical results
+            retain their original scoring rules.
+          </p>
           <details>
             <summary>Collection, grading, and limitations</summary>
             <p>
@@ -1246,7 +1280,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               can establish useful content, while a negative judgment from an
               incomplete excerpt remains unresolved. Failed, unresolved, and
               pending results stay in the denominator, with equal weight for
-              each of the eight categories.
+              each scored category.
             </p>
             <p>
               Although we request fresh content, providers may still return

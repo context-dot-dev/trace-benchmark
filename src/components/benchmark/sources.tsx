@@ -59,9 +59,11 @@ const dailyExamples = [
 export function BenchmarkSources({
   pages,
   onViewWikipedia,
+  onViewDailyWikipedia,
 }: {
   pages: BenchmarkPage[];
   onViewWikipedia: () => void;
+  onViewDailyWikipedia: () => void;
 }) {
   const wikipedia = pages.filter((page) => page.source === "wikipedia");
   const examples = ["news", "research", "arts_sports_reference"].flatMap(
@@ -77,7 +79,7 @@ export function BenchmarkSources({
       <SiteSection id="sources" lines className="bench-sources">
         <SectionHeading
           title="Where the pages come from"
-          description="The Source filter separates daily discoveries from the fixed Wikipedia study, while Category groups pages by subject, such as news, research, or commerce."
+          description="The daily sample brings together pages from feeds, public databases, sitemaps, and new Wikipedia links. The Source filter lets you inspect daily Wikipedia discoveries or the original October study separately."
         />
         <div className="grid gap-10 mt-10 md:grid-cols-2">
           <div>
@@ -105,17 +107,18 @@ export function BenchmarkSources({
             </a>
           </div>
           <div>
-            <h3>Wikipedia-linked pages</h3>
+            <h3>Daily Wikipedia discoveries</h3>
             <p>
-              This fixed study tests 1,041 external pages that editors added as
-              links to English Wikipedia articles. We use the edits to discover
-              pages, then ask each provider to scrape the linked website.
+              Once a day, before building the sample, we compare revisions from
+              the previous day’s English Wikipedia edits to find new external
+              links. We include previously untested URLs in that day’s sample
+              and ask all four providers to retrieve the linked pages. These pages
+              are grouped under Other because their subjects have not been classified.
             </p>
-            <p>
-              Links were sampled on October 25 and 27, 2026, and measured on
-              October 29. This collection does not refresh daily.
-            </p>
-            <a href="#wikipedia">About the Wikipedia study</a>
+            <Button variant="outline-brand" onClick={onViewDailyWikipedia}>
+              View daily Wikipedia results
+            </Button>
+            <p><a href="#wikipedia">About the original Wikipedia study</a></p>
           </div>
         </div>
         <details id="daily-sources" className="mt-10">
@@ -147,8 +150,8 @@ export function BenchmarkSources({
       </SiteSection>
       <SiteSection id="wikipedia" lines className="bench-sources">
         <SectionHeading
-          title="Wikipedia-linked pages"
-          description="Follow a citation from a Wikipedia edit to the external page we tested."
+          title="Original Wikipedia study"
+          description="This historical sample contains 1,041 pages tested on October 29, 2026. Its saved results remain separate from the daily Wikipedia discoveries."
         />
         <dl className="grid gap-6 mt-10 sm:grid-cols-3">
           <div>
@@ -197,7 +200,7 @@ export function BenchmarkSources({
         </ul>
         <div className="flex flex-wrap items-center gap-6 mt-8">
           <Button variant="outline-brand" onClick={onViewWikipedia}>
-            View Wikipedia results
+            View original Wikipedia results
           </Button>
           <a href="/data/wikipedia-study.json" download>
             Download all 1,041 URLs and results ↓

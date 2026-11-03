@@ -36,11 +36,18 @@ export const categories = [
 ] as const;
 export type Provider = (typeof providers)[number]["id"];
 export type Target = { url: string; title: string; category: string };
+export type WikipediaProvenance = {
+  source: "wikipedia";
+  article: string;
+  revision: number;
+  timestamp: string;
+};
 export type Candidate = Target & {
   id: string;
   organization: string;
   sourceId: string;
   discoveredAt: Date;
+  provenance?: WikipediaProvenance | null;
 };
 export type Receipt = {
   text: string;
@@ -119,4 +126,4 @@ export type PublicResult = {
   hash: string | null;
   day: string;
 };
-export const PROTOCOL = "scraping-bench-v4";
+export const PROTOCOL = "scraping-bench-v5";

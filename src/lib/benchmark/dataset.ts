@@ -24,6 +24,7 @@ const dailyPages = unstable_cache(
         success: attempts.success,
         error: attempts.error,
         day: attempts.day,
+        provenance: attempts.provenance,
       })
       .from(attempts)
       .where(eq(attempts.runId, runId))
@@ -38,7 +39,13 @@ const dailyPages = unstable_cache(
         category: normalizeCategory(row.category),
         day: row.day,
         protocol,
-        source: "daily" as const,
+        source:
+          row.provenance?.source === "wikipedia"
+            ? ("wikipedia_daily" as const)
+            : ("daily" as const),
+        article: row.provenance?.article,
+        revision: row.provenance?.revision,
+        citedAt: row.provenance?.timestamp,
         results: {},
       };
       page.results[provider.id] = {
@@ -50,7 +57,7 @@ const dailyPages = unstable_cache(
     }
     return [...pages.values()];
   },
-  ["benchmark-daily-pages-v1"],
+  ["benchmark-daily-pages-v2"],
   { revalidate: 900 },
 );
 

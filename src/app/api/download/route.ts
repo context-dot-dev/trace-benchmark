@@ -23,6 +23,7 @@ export async function GET(request: Request) {
             day: attempts.day,
             url: attempts.url,
             category: attempts.category,
+            provenance: attempts.provenance,
             provider: attempts.provider,
             state: attempts.state,
             success: attempts.success,

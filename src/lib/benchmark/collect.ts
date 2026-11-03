@@ -9,6 +9,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   or,
   sql,
 } from "drizzle-orm";
@@ -54,6 +55,7 @@ type TickOptions = {
   now?: () => Date;
   readers?: Readers;
   discover?: boolean;
+  discovery?: { registry: Source[]; discover: typeof discoverSource };
   perCategory?: number;
   maxPages?: number;
   deadlineMs?: number;
@@ -103,8 +105,17 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       .where(
         and(eq(attempts.state, "grading"), lt(attempts.leaseUntil, clock)),
       );
-    if (options.discover !== false) await discoverDue(store, clock);
-    if (clock.toISOString().slice(11, 16) >= "00:15")
+    const samplePending =
+      clock.toISOString().slice(11, 16) >= "00:15" &&
+      !(
+        await store.db
+          .select({ id: runs.id })
+          .from(runs)
+          .where(eq(runs.day, day))
+      ).length;
+    if (options.discover !== false)
+      await discoverDue(store, clock, samplePending, options.discovery);
+    if (samplePending)
       await selectSample(store, day, options.perCategory ?? 300, clock);
     const maxPages = options.maxPages ?? 100;
     while (
@@ -350,7 +361,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
     for (const run of await store.db
       .select()
       .from(runs)
-      .where(and(eq(runs.protocol, PROTOCOL), eq(runs.status, "collecting")))) {
+      .where(eq(runs.status, "collecting"))) {
       const rows = await store.db
         .select({
           provider: attempts.provider,
@@ -393,32 +404,73 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       .where(and(eq(worker.id, "collector"), eq(worker.claim, token)));
   }
 }
-async function discoverDue(store: Store, clock: Date) {
+async function discoverDue(
+  store: Store,
+  clock: Date,
+  samplePending: boolean,
+  discovery?: TickOptions["discovery"],
+) {
+  const sourceRegistry = discovery?.registry ?? registry;
+  const discover = discovery?.discover ?? discoverSource;
   await store.db
     .insert(sources)
-    .values(registry.map((s) => ({ id: s.source_id, nextPoll: new Date(0) })))
+    .values(
+      sourceRegistry.map((s) => ({ id: s.source_id, nextPoll: new Date(0) })),
+    )
     .onConflictDoNothing();
   const due = await store.db
     .select()
     .from(sources)
-    .where(lt(sources.nextPoll, clock))
+    .where(
+      and(
+        lt(sources.nextPoll, clock),
+        inArray(
+          sources.id,
+          sourceRegistry
+            .filter((s) => s.kind !== "wikipedia")
+            .map((s) => s.source_id),
+        ),
+      ),
+    )
     .orderBy(sources.nextPoll)
     .limit(48);
+  if (samplePending)
+    due.push(
+      ...(await store.db
+        .select()
+        .from(sources)
+        .where(
+          and(
+            lte(sources.nextPoll, clock),
+            inArray(
+              sources.id,
+              sourceRegistry
+                .filter((s) => s.kind === "wikipedia")
+                .map((s) => s.source_id),
+            ),
+          ),
+        )),
+    );
+  const nextDailySample = new Date(clock);
+  nextDailySample.setUTCHours(24, 15, 0, 0);
   await Promise.all(
     due.map(async (due) => {
-      const source = registry.find((s) => s.source_id === due.id) as
+      const source = sourceRegistry.find((s) => s.source_id === due.id) as
         Source | undefined;
       if (!source) return;
       try {
-        const rows = await discoverSource(source);
+        const rows = await discover(source, { now: clock });
         await store.seedCandidates(rows);
         await store.db
           .update(sources)
           .set({
             lastPoll: clock,
-            nextPoll: new Date(
-              clock.getTime() + source.poll_interval_hours * 3600000,
-            ),
+            nextPoll:
+              source.kind === "wikipedia"
+                ? nextDailySample
+                : new Date(
+                    clock.getTime() + source.poll_interval_hours * 3600000,
+                  ),
             count: rows.length,
             error: null,
           })
@@ -427,11 +479,14 @@ async function discoverDue(store: Store, clock: Date) {
         await store.db
           .update(sources)
           .set({
-            lastPoll: clock,
-            nextPoll: new Date(
-              clock.getTime() +
-                Math.max(1, source.poll_interval_hours) * 3600000,
-            ),
+            ...(source.kind === "wikipedia" ? {} : { lastPoll: clock }),
+            nextPoll:
+              source.kind === "wikipedia"
+                ? nextDailySample
+                : new Date(
+                    clock.getTime() +
+                      Math.max(1, source.poll_interval_hours) * 3600000,
+                  ),
             error:
               error instanceof Error
                 ? error.message.slice(0, 120)
@@ -452,7 +507,7 @@ async function selectSample(
     await tx.execute(sql`select pg_advisory_xact_lock(74012492)`);
     const runId = PROTOCOL + ":" + day;
     if (
-      (await tx.select({ id: runs.id }).from(runs).where(eq(runs.id, runId)))
+      (await tx.select({ id: runs.id }).from(runs).where(eq(runs.day, day)))
         .length
     )
       return;
@@ -464,14 +519,14 @@ async function selectSample(
     );
     perCategory = Math.min(
       perCategory,
-      Math.max(0, Math.floor(remaining / categories.length)),
+      Math.max(0, Math.floor(remaining / (categories.length + 1))),
     );
     if (!perCategory) return;
     const selected: Candidate[] = [];
     const prior = new Set<string>();
     const orgCounts = new Map<string, number>();
     const hostCounts = new Map<string, number>();
-    for (const category of categories) {
+    for (const category of [...categories, { id: "other" }]) {
       const pool = await tx
         .select()
         .from(candidates)
@@ -526,7 +581,17 @@ async function selectSample(
       const unpolled = await tx
         .select({ id: sources.id })
         .from(sources)
-        .where(isNull(sources.lastPoll))
+        .where(
+          and(
+            isNull(sources.lastPoll),
+            inArray(
+              sources.id,
+              registry
+                .filter((source) => source.kind !== "wikipedia")
+                .map((source) => source.source_id),
+            ),
+          ),
+        )
         .limit(1);
       if (unpolled.length) return;
     }
@@ -540,6 +605,7 @@ async function selectSample(
         url: c.url,
         title: c.title,
         category: c.category,
+        provenance: c.provenance,
         state: "queued",
       })),
     );
@@ -549,11 +615,11 @@ async function selectSample(
       protocol: PROTOCOL,
       status: selected.length ? "collecting" : "insufficient_supply",
       pages: selected.length,
-      target: perCategory * 8,
+      target: perCategory * (categories.length + 1),
       finishedAt: null,
       providers: [],
       categories: Object.fromEntries(
-        categories.map((c) => [
+        [...categories, { id: "other" }].map((c) => [
           c.id,
           selected.filter((p) => p.category === c.id).length,
         ]),
