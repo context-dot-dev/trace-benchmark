@@ -54,6 +54,7 @@ type TickOptions = {
   now?: () => Date;
   readers?: Readers;
   discover?: boolean;
+  discovery?: { registry: Source[]; discover: typeof discoverSource };
   perCategory?: number;
   maxPages?: number;
   deadlineMs?: number;
@@ -103,7 +104,8 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       .where(
         and(eq(attempts.state, "grading"), lt(attempts.leaseUntil, clock)),
       );
-    if (options.discover !== false) await discoverDue(store, clock);
+    if (options.discover !== false)
+      await discoverDue(store, clock, options.discovery);
     if (clock.toISOString().slice(11, 16) >= "00:15")
       await selectSample(store, day, options.perCategory ?? 300, clock);
     const maxPages = options.maxPages ?? 100;
@@ -393,10 +395,18 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       .where(and(eq(worker.id, "collector"), eq(worker.claim, token)));
   }
 }
-async function discoverDue(store: Store, clock: Date) {
+async function discoverDue(
+  store: Store,
+  clock: Date,
+  discovery?: TickOptions["discovery"],
+) {
+  const sourceRegistry = discovery?.registry ?? registry;
+  const discover = discovery?.discover ?? discoverSource;
   await store.db
     .insert(sources)
-    .values(registry.map((s) => ({ id: s.source_id, nextPoll: new Date(0) })))
+    .values(
+      sourceRegistry.map((s) => ({ id: s.source_id, nextPoll: new Date(0) })),
+    )
     .onConflictDoNothing();
   const due = await store.db
     .select()
@@ -406,11 +416,11 @@ async function discoverDue(store: Store, clock: Date) {
     .limit(48);
   await Promise.all(
     due.map(async (due) => {
-      const source = registry.find((s) => s.source_id === due.id) as
+      const source = sourceRegistry.find((s) => s.source_id === due.id) as
         Source | undefined;
       if (!source) return;
       try {
-        const rows = await discoverSource(source);
+        const rows = await discover(source, { now: clock });
         await store.seedCandidates(rows);
         await store.db
           .update(sources)
@@ -427,10 +437,12 @@ async function discoverDue(store: Store, clock: Date) {
         await store.db
           .update(sources)
           .set({
-            lastPoll: clock,
+            ...(source.kind === "wikipedia" ? {} : { lastPoll: clock }),
             nextPoll: new Date(
               clock.getTime() +
-                Math.max(1, source.poll_interval_hours) * 3600000,
+                (source.kind === "wikipedia"
+                  ? 15 * 60000
+                  : Math.max(1, source.poll_interval_hours) * 3600000),
             ),
             error:
               error instanceof Error
@@ -464,14 +476,14 @@ async function selectSample(
     );
     perCategory = Math.min(
       perCategory,
-      Math.max(0, Math.floor(remaining / categories.length)),
+      Math.max(0, Math.floor(remaining / (categories.length + 1))),
     );
     if (!perCategory) return;
     const selected: Candidate[] = [];
     const prior = new Set<string>();
     const orgCounts = new Map<string, number>();
     const hostCounts = new Map<string, number>();
-    for (const category of categories) {
+    for (const category of [...categories, { id: "other" }]) {
       const pool = await tx
         .select()
         .from(candidates)
@@ -526,7 +538,17 @@ async function selectSample(
       const unpolled = await tx
         .select({ id: sources.id })
         .from(sources)
-        .where(isNull(sources.lastPoll))
+        .where(
+          and(
+            isNull(sources.lastPoll),
+            inArray(
+              sources.id,
+              registry
+                .filter((source) => source.kind !== "wikipedia")
+                .map((source) => source.source_id),
+            ),
+          ),
+        )
         .limit(1);
       if (unpolled.length) return;
     }
@@ -540,6 +562,7 @@ async function selectSample(
         url: c.url,
         title: c.title,
         category: c.category,
+        provenance: c.provenance,
         state: "queued",
       })),
     );
@@ -549,11 +572,11 @@ async function selectSample(
       protocol: PROTOCOL,
       status: selected.length ? "collecting" : "insufficient_supply",
       pages: selected.length,
-      target: perCategory * 8,
+      target: perCategory * (categories.length + 1),
       finishedAt: null,
       providers: [],
       categories: Object.fromEntries(
-        categories.map((c) => [
+        [...categories, { id: "other" }].map((c) => [
           c.id,
           selected.filter((p) => p.category === c.id).length,
         ]),

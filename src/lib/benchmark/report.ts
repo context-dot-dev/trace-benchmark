@@ -19,8 +19,12 @@ export function summarize(
   target: number,
   finishedAt: Date | null,
 ): RunSummary {
+  const scoredCategories = [
+    ...categories,
+    ...(rows.some((r) => r.category === "other") ? [{ id: "other" }] : []),
+  ];
   const counts = Object.fromEntries(
-    categories.map((c) => [
+    scoredCategories.map((c) => [
       c.id,
       new Set(rows.filter((r) => r.category === c.id).map((r) => r.pageId))
         .size,
@@ -47,7 +51,7 @@ export function summarize(
     providers: providers.map((provider) => {
       const records = rows.filter((r) => r.provider === provider.id);
       const groups = Object.fromEntries(
-        categories.map((c) => {
+        scoredCategories.map((c) => {
           const group = records.filter((r) => r.category === c.id);
           return [
             c.id,
@@ -90,7 +94,7 @@ export function summarize(
             ? Object.values(groups).reduce(
                 (sum, g) => sum + g.useful / g.total,
                 0,
-              ) / 8
+              ) / scoredCategories.length
             : null,
         p50: percentile(timed, 0.5),
         p95: percentile(timed, 0.95),

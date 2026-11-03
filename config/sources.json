@@ -1,5 +1,13 @@
 [
   {
+    "source_id": "wikipedia_recent_links",
+    "url": "https://en.wikipedia.org/w/api.php",
+    "kind": "wikipedia",
+    "category": "other",
+    "organization": "Wikipedia",
+    "poll_interval_hours": 1
+  },
+  {
     "category": "news",
     "source_id": "bbc",
     "organization": "BBC",

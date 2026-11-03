@@ -20,7 +20,7 @@ export type BenchmarkPage = {
   id: string;
   url: string;
   category: string;
-  source: "daily" | "wikipedia";
+  source: "daily" | "wikipedia_daily" | "wikipedia";
   day: string;
   protocol: string;
   results: Partial<Record<Provider, PageOutcome>>;
@@ -29,6 +29,7 @@ export type BenchmarkPage = {
   auditReason?: string;
   article?: string;
   revision?: number;
+  citedAt?: string;
   plainHttp?: boolean | null;
 };
 export type BenchmarkDataset = { report: Report; pages: BenchmarkPage[] };

@@ -34,4 +34,6 @@ jobs:
         if: always()
         with:
           name: benchmark-e2e
-          path: artifacts/rebuild/e2e.json
+          path: |
+            artifacts/rebuild/e2e.json
+            artifacts/daily-wikipedia/e2e.json

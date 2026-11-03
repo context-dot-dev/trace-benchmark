@@ -8,6 +8,13 @@
       "when": 1793250894716,
       "tag": "0000_spotty_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793675066293,
+      "tag": "0001_safe_doomsday",
+      "breakpoints": true
     }
   ]
 }

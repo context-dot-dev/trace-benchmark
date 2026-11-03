@@ -10,7 +10,7 @@ import {
   primaryKey,
   customType,
 } from "drizzle-orm/pg-core";
-import type { RunSummary } from "./types";
+import type { RunSummary, WikipediaProvenance } from "./types";
 export const schema = pgSchema("scraping_bench");
 const bytes = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
@@ -35,6 +35,7 @@ export const candidates = schema.table(
     category: text("category").notNull(),
     organization: text("organization").notNull(),
     sourceId: text("source_id").notNull(),
+    provenance: jsonb("provenance").$type<WikipediaProvenance>(),
     discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull(),
   },
   (t) => [index("candidate_category_idx").on(t.category, t.discoveredAt)],
@@ -56,6 +57,7 @@ export const attempts = schema.table(
     url: text("url").notNull(),
     title: text("title").notNull(),
     category: text("category").notNull(),
+    provenance: jsonb("provenance").$type<WikipediaProvenance>(),
     state: text("state").notNull(),
     claim: text("claim"),
     leaseUntil: timestamp("lease_until", { withTimezone: true }),

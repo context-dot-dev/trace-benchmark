@@ -222,7 +222,7 @@ try {
         .click();
       assert.equal(new URL(page.url()).hash, "#sources");
       await page
-        .getByRole("link", { name: "About the Wikipedia study" })
+        .getByRole("link", { name: "About the original Wikipedia study" })
         .click();
       assert.equal(new URL(page.url()).hash, "#wikipedia");
       assert.match(await page.locator("#wikipedia").textContent(), /1,041/);
@@ -231,7 +231,7 @@ try {
         3,
       );
       await page
-        .getByRole("button", { name: "View Wikipedia results" })
+        .getByRole("button", { name: "View original Wikipedia results" })
         .click();
       assert.match(
         await page
@@ -271,6 +271,28 @@ try {
         `${width}px: source anchors, linked revisions, filter action and layout work`,
       );
     }
+    const dailyWiki = {
+      id: "daily-wiki-fixture", url: "https://example.org/newly-cited", title: "",
+      source: "wikipedia_daily", category: "other", day: "2026-11-01",
+      protocol: "scraping-bench-v5", article: "Example article", revision: 123,
+      citedAt: "2026-11-01T00:10:00Z",
+      results: Object.fromEntries(providers.map(id => [id, { success: true, state: "done", error: null }])),
+    };
+    dataset.pages.push(dailyWiki);
+    await page.goto(base, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "View daily Wikipedia results", exact: true }).click();
+    assert.equal(await page.locator("[data-sample-count]").textContent(), "1");
+    assert.equal(await page.getByRole("combobox", { name: "Sample date (UTC)" }).isDisabled(), false);
+    assert.equal(await page.locator("[data-score]").count(), 4);
+    for (const text of await page.locator("[data-score]").allTextContents()) assert.equal(text, "100.0%");
+    await capture("daily-wikipedia-after", "#sample");
+    dataset.pages = dataset.pages.filter(p => p.source !== "wikipedia_daily");
+    await page.goto(base, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "View daily Wikipedia results", exact: true }).click();
+    assert.match(await page.locator("#results").textContent(), /No daily Wikipedia pages/);
+    await page.getByRole("button", { name: "View original Wikipedia results", exact: true }).click();
+    assert.equal(await page.locator("[data-sample-count]").textContent(), "1,041");
+    checks.push("Daily Wikipedia uses the selected date, shows only fresh records and has a truthful empty state; the original study remains separate");
     assert.deepEqual(errors, []);
     console.log(checks.join("\n"));
   }
