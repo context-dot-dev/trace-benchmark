@@ -366,7 +366,8 @@ try {
   await runTick(store, options);
   assert.equal(wikipediaCalls(), upgradeDiscoveryCalls, "A protocol upgrade must preserve today's frozen sample");
   data = await report(store);
-  assert.equal(data.history.length, 1, "An upgrade must not create a second sample for the same day");
+  const upgradeRuns = await store.db.execute(sql`select id from scraping_bench.runs where day='2026-11-08'`);
+  assert.equal(upgradeRuns.rows.length, 1, "An upgrade must not create a second sample for the same day");
   assert.equal(data.latest?.protocol, "scraping-bench-v4");
   assert.equal(data.latest?.status, "completed", "An in-flight run from the previous protocol must finish");
   assert.ok(data.latest?.providers.every((p) => p.total === 8 && p.rate === 1));
@@ -383,6 +384,32 @@ try {
   assert.equal(data.latest?.status, "completed");
   assert.ok(wikipediaCalls() > upgradeDiscoveryCalls);
   checks.push("A mid-day protocol upgrade completes the existing run without duplicating discovery or billing, then starts v5 with Wikipedia the next day");
+  await store.db.execute(sql`
+    insert into scraping_bench.runs (id,day,protocol,status,created_at,summary)
+    select 'scraping-bench-v4:2026-11-09',day,'scraping-bench-v4','collecting',created_at - interval '1 hour',
+      summary || '{"id":"scraping-bench-v4:2026-11-09","protocol":"scraping-bench-v4","status":"collecting"}'::jsonb
+    from scraping_bench.runs where id='scraping-bench-v5:2026-11-09'
+  `);
+  data = await report(store);
+  assert.deepEqual(data.history.map((r) => r.id), [
+    "scraping-bench-v5:2026-11-09",
+    "scraping-bench-v4:2026-11-08",
+  ], "History must show only the newest sample for each day while retaining earlier protocols on earlier days");
+  assert.equal(data.collecting, null, "A superseded protocol must not appear as the public collecting sample");
+  assert.equal((await report(store, { run: "scraping-bench-v4:2026-11-09" })).latest?.protocol, "scraping-bench-v4", "Explicit historical run IDs must remain accessible");
+  await store.db.execute(sql`
+    update scraping_bench.runs set status='completed',summary=summary || '{"status":"completed"}'::jsonb
+    where id='scraping-bench-v4:2026-11-09'
+  `);
+  await store.db.execute(sql`
+    update scraping_bench.runs set status='collecting',summary=summary || '{"status":"collecting"}'::jsonb
+    where id='scraping-bench-v5:2026-11-09'
+  `);
+  data = await report(store);
+  assert.equal(data.collecting?.id, "scraping-bench-v5:2026-11-09");
+  assert.equal(data.history.filter((r) => r.day === "2026-11-09").length, 1);
+  assert.equal(data.latest?.id, "scraping-bench-v4:2026-11-08", "The completed-sample default must not fall back to a superseded protocol on the same day");
+  checks.push("History exposes one active sample per day, preserves earlier days and explicit run access, and excludes superseded collecting runs");
   await mkdir("artifacts/daily-wikipedia", { recursive: true });
   await writeFile(
     "artifacts/daily-wikipedia/e2e.json",

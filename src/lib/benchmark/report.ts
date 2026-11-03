@@ -109,15 +109,21 @@ export async function report(
   store: Store,
   options: { run?: string; provider?: string; page?: number } = {},
 ): Promise<Report> {
-  const history = (
+  const samples = (
     await store.db
       .select()
       .from(runs)
       .orderBy(desc(runs.day), desc(runs.createdAt))
   ).map((r) => r.summary);
+  const days = new Set<string>();
+  const history = samples.filter((sample) => {
+    if (days.has(sample.day)) return false;
+    days.add(sample.day);
+    return true;
+  });
   const latest =
     (options.run
-      ? history.find((r) => r.id === options.run)
+      ? samples.find((r) => r.id === options.run)
       : (history.find((r) => r.status === "completed") ?? history[0])) ?? null;
   const conditions = [eq(attempts.runId, latest?.id ?? "")];
   if (providers.some((p) => p.id === options.provider))
