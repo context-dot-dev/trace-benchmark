@@ -1,6 +1,8 @@
 "use client";
 
 import { Copy, Check, X } from "lucide-react";
+import { useQueryStates } from "nuqs";
+import { benchmarkQueryParsers } from "@/lib/benchmark/query";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Surface } from "@/lib/surface";
@@ -121,7 +123,7 @@ function Section({
         />
         <SectionHeaderRule />
         {controls ? (
-          <div className="bench-history-controls mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="bench-result-controls mb-6 flex flex-wrap items-center justify-between gap-3">
             {viewTabs}
             {controls}
           </div>
@@ -761,15 +763,23 @@ function Filter({
 }
 export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const [dataset, setDataset] = useState(initial);
-  const [selection, setSelection] = useState("latest");
-  const [source, setSource] = useState("all");
-  const [category, setCategory] = useState("all");
+  const [{ source, category, run: selection }, setFilters] = useQueryStates(
+    benchmarkQueryParsers,
+    { history: "push", shallow: true, scroll: false },
+  );
+  const setSource = (value: string) => void setFilters({ source: benchmarkQueryParsers.source.parse(value) ?? "all" });
+  const setCategory = (value: string) => void setFilters({ category: benchmarkQueryParsers.category.parse(value) ?? "all" });
+  const setSelection = (run: string) => void setFilters({ run });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const data = dataset.report;
-  const run = data.latest && data.latest.day >= firstSampleDay ? data.latest : null;
-  const accessRun = run?.protocol === ACCESS_PROTOCOL;
+  const visibleHistory = data.history.filter((run) => run.day >= firstSampleDay);
+  const requestedRun = selection === "latest"
+    ? visibleHistory.find((run) => run.status === "completed") ?? visibleHistory[0]
+    : visibleHistory.find((run) => run.id === selection);
+  const run = data.latest?.id === requestedRun?.id ? data.latest : null;
+  const accessRun = requestedRun?.protocol === ACCESS_PROTOCOL;
   const accessOnly = accessRun;
   useEffect(() => {
     if (copyStatus !== "Copied") return;
@@ -787,7 +797,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         .then((response) => {
           if (!response.ok) {
             throw new Error(
-              "Results could not be refreshed. The last successful sample is still shown.",
+              "Results could not be refreshed. Please try again.",
             );
           }
           return response.json() as Promise<BenchmarkDataset>;
@@ -844,16 +854,41 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const sourceLabel = source === "all" ? "All daily sources" : "Daily Wikipedia discoveries";
   const categoryLabel = benchmarkCategories.find((c) => c.id === category)?.name ?? "All categories";
   const filterLabel = `${sourceLabel} · ${categoryLabel}`;
-  function clearHistoryFilter(filter: "source" | "category") {
-    const section = document.getElementById("history");
+  function clearFilter(filter: "source" | "category", section: HTMLElement | null) {
     const remaining = filter === "source" ? "category" : "source";
-    const next = section?.querySelector<HTMLButtonElement>(`[data-history-filter="${remaining}"]`)
+    const next = section?.querySelector<HTMLButtonElement>(`[data-result-filter="${remaining}"]`)
       ?? section?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]');
     next?.focus({ preventScroll: true });
-    if (filter === "source") setSource("all");
-    else setCategory("all");
+    void setFilters(filter === "source" ? { source: null } : { category: null });
   }
-  const visibleHistory = data.history.filter((run) => run.day >= firstSampleDay);
+  const filterControls = (
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Applied filters">
+      {source !== "all" && (
+        <Button
+          variant="outline-brand"
+          size="sm"
+          className="rounded-pill bg-blue-10 max-sm:min-h-11"
+          data-result-filter="source"
+          aria-label={`Remove ${sourceLabel} source filter`}
+          onClick={(event) => clearFilter("source", event.currentTarget.closest("section"))}
+        >
+          {sourceLabel}<X aria-hidden="true" strokeWidth={1.5} />
+        </Button>
+      )}
+      {category !== "all" && (
+        <Button
+          variant="outline-brand"
+          size="sm"
+          className="rounded-pill bg-blue-10 max-sm:min-h-11"
+          data-result-filter="category"
+          aria-label={`Remove ${categoryLabel} category filter`}
+          onClick={(event) => clearFilter("category", event.currentTarget.closest("section"))}
+        >
+          {categoryLabel}<X aria-hidden="true" strokeWidth={1.5} />
+        </Button>
+      )}
+    </div>
+  );
   const filteredHistory = filterHistory(visibleHistory, { source, category }, dataset.wikipediaHistory);
   const history = [...filteredHistory]
     .reverse()
@@ -880,8 +915,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     />
   );
   function reset() {
-    setSource("all");
-    setCategory("all");
+    void setFilters({ source: null, category: null });
   }
   function download() {
     const blob = new Blob(
@@ -981,14 +1015,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         </div>
         <div className="bench-sample">
           <p aria-live="polite">
-            {run ? (
+            {requestedRun ? (
               <>
-                Daily sample: <strong>{run.day}</strong> UTC
+                Daily sample: <strong>{requestedRun.day}</strong> UTC
               </>
             ) : (
               "No daily sample available"
             )}
-            {loading && " · Updating…"}
+            {(loading || (!run && requestedRun && !error)) && " · Updating…"}
           </p>
           <div className="sample-actions">
             <Select
@@ -1053,6 +1087,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             note={accessOnly
               ? "The score measures whether page data loaded, rather than only a block, error, or empty shell. Partial content and populated landing pages count. Relevance, identity, completeness, and extraction quality are not graded."
               : "The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."}
+            controls={filterControls}
             chart={<Bars rows={rows} />}
             table={
               <Table
@@ -1091,6 +1126,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             id="categories"
             accent="category"
             title="Results by category"
+            controls={filterControls}
             note="Compare how reliably each provider returns content from different kinds of pages, including news articles, research papers, and product listings."
             chart={
               chartCategories.length >= 3 ? (
@@ -1110,6 +1146,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               variant="outline"
               className="sample-download"
               data-download-results
+              disabled={!run}
               onClick={download}
             >
               Download filtered results ↓
@@ -1121,34 +1158,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           accent="over time"
           title="Daily results over time"
           note="Daily results from November 4, 2026 onward."
-          controls={
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Applied filters">
-              {source !== "all" && (
-                <Button
-                  variant="outline-brand"
-                  size="sm"
-                  className="rounded-pill bg-blue-10 max-sm:min-h-11"
-                  data-history-filter="source"
-                  aria-label={`Remove ${sourceLabel} source filter`}
-                  onClick={() => clearHistoryFilter("source")}
-                >
-                  {sourceLabel}<X aria-hidden="true" strokeWidth={1.5} />
-                </Button>
-              )}
-              {category !== "all" && (
-                <Button
-                  variant="outline-brand"
-                  size="sm"
-                  className="rounded-pill bg-blue-10 max-sm:min-h-11"
-                  data-history-filter="category"
-                  aria-label={`Remove ${categoryLabel} category filter`}
-                  onClick={() => clearHistoryFilter("category")}
-                >
-                  {categoryLabel}<X aria-hidden="true" strokeWidth={1.5} />
-                </Button>
-              )}
-            </div>
-          }
+          controls={filterControls}
           chart={<Trend history={history} filtered={hasFilters} />}
           table={
             <Table
@@ -1177,8 +1187,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           }
         />
         <BenchmarkSources onViewDailyWikipedia={() => {
-          setSource("wikipedia_daily");
-          setCategory("all");
+          void setFilters({ source: "wikipedia_daily", category: null });
           document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
         }} />
         <SiteSection id="methodology" lines className="bench-method">
