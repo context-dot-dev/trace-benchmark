@@ -26,10 +26,7 @@ const fixture = createServer(async (req, res) => {
   if (req.url === "/judge") {
     res.end(
       JSON.stringify({
-        answers: {
-          content: { choice: "substantive", confidence: 0.98 },
-          identity: { choice: "match", confidence: 0.99 },
-        },
+        answers: { access: { choice: "accessed", confidence: 0.98 } },
         usage: { input_tokens: 100 },
       }),
     );
@@ -167,11 +164,7 @@ try {
   assert.equal(requests.filter((r) => r.path != "/judge").length, 32);
   checks.push("Repeated ticks do not repeat billed requests");
   for (const request of requests.filter((r) => r.path === "/judge")) {
-    assert.deepEqual(Object.keys(request.body.state.target).sort(), [
-      "category",
-      "title",
-      "url",
-    ]);
+    assert.deepEqual(Object.keys(request.body.state).sort(), ["sampled", "text"]);
     assert.ok(!JSON.stringify(request.body.state).includes("fixture-key"));
   }
   const settled = await store.db.execute(

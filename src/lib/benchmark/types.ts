@@ -65,7 +65,7 @@ export type Grade = {
   inputTokens: number | null;
   success: boolean | null;
   content: string;
-  identity: string;
+  identity: string | null;
   confidence: number | null;
   error: string | null;
 };
@@ -126,4 +126,5 @@ export type PublicResult = {
   hash: string | null;
   day: string;
 };
-export const PROTOCOL = "scraping-bench-v5";
+export const ACCESS_PROTOCOL = "scraping-bench-v6";
+export const PROTOCOL = ACCESS_PROTOCOL;

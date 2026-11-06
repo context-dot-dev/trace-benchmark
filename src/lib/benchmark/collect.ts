@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   inArray,
+  getTableColumns,
   isNotNull,
   isNull,
   lt,
@@ -157,8 +158,9 @@ export async function runTick(store: Store, options: TickOptions = {}) {
         .limit(8);
       const queued = pages.length
         ? await store.db
-            .select()
+            .select({ ...getTableColumns(attempts), protocol: runs.protocol })
             .from(attempts)
+            .innerJoin(runs, eq(attempts.runId, runs.id))
             .where(
               and(
                 inArray(
@@ -315,10 +317,14 @@ export async function runTick(store: Store, options: TickOptions = {}) {
               return true;
             });
             if (!claimed) return;
-            const grade = await readers.grade(row, {
-              text,
-              chars: row.chars ?? 0,
-            });
+            const grade = await readers.grade(
+              row,
+              {
+                text,
+                chars: row.chars ?? 0,
+              },
+              row.protocol,
+            );
             const { inputTokens, ...judgment } = grade;
             await store.db.transaction(async (tx) => {
               const saved = await tx
