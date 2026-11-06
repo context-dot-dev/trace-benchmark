@@ -49,7 +49,7 @@ try {
   {
   fixtureStatus = 429;
   const before = requests.length;
-  await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+  await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
   const clock = new Date("2026-11-06T00:20:00Z");
   await store.seedCandidates(Array.from({ length: 32 }, (_, i) => ({
     id: "shared-pause-" + String(i).padStart(3, "0"), url: "https://example.org/shared-pause/" + i,
@@ -80,7 +80,7 @@ try {
   for (const status of [429, 401, 402]) {
     fixtureStatus = status;
     const before = requests.length;
-    await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+    await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
     const clock = new Date("2026-11-06T00:20:00Z");
     await store.seedCandidates(Array.from({ length: 16 }, (_, i) => ({
       id: "pause-" + String(i).padStart(3, "0"), url: "https://example.org/pause/" + i,

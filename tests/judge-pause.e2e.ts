@@ -69,7 +69,7 @@ try {
     hasFailed = false;
     failedAt = 0;
     const before = calls.length;
-    await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+    await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
     const clock = new Date("2026-11-06T00:20:00Z");
     await store.seedCandidates(Array.from({ length: 16 }, (_, i) => ({
       id: "judge-pause-" + String(i).padStart(3, "0"), url: "https://example.org/judge-pause/" + i,

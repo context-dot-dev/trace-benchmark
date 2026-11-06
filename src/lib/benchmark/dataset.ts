@@ -3,43 +3,75 @@ import { serverEnv } from "../env.server";
 import { eq } from "drizzle-orm";
 import { cachedReport } from "./cached-report";
 import { database } from "./store";
-import { attempts } from "./schema";
-import { providers, type RunSummary } from "./types";
+import { attempts, grades } from "./schema";
+import { ACCESS_PROTOCOL, providers, type RunSummary } from "./types";
 import { sourceHistory } from "./source-history";
+import { redirected } from "./outcomes";
+import { missingSchemaFallback } from "./report";
 import {
   normalizeCategory,
   type BenchmarkDataset,
   type BenchmarkPage,
+  type PageOutcome,
 } from "./combined";
 import study from "../../../public/data/wikipedia-study.json";
 
+const baseColumns = {
+  id: attempts.id,
+  pageId: attempts.pageId,
+  url: attempts.url,
+  category: attempts.category,
+  provider: attempts.provider,
+  state: attempts.state,
+  success: attempts.success,
+  error: attempts.error,
+  day: attempts.day,
+  provenance: attempts.provenance,
+  elapsedMs: attempts.elapsedMs,
+  content: attempts.content,
+  identity: attempts.identity,
+  chars: attempts.chars,
+};
+
 const dailyPages = unstable_cache(
   async (runId: string, protocol: string) => {
-    const rows = await database()
-      .db.select({
-        pageId: attempts.pageId,
-        url: attempts.url,
-        category: attempts.category,
-        provider: attempts.provider,
-        state: attempts.state,
-        success: attempts.success,
-        error: attempts.error,
-        day: attempts.day,
-        provenance: attempts.provenance,
-      })
-      .from(attempts)
-      .where(eq(attempts.runId, runId))
-      .orderBy(attempts.pageId, attempts.provider);
+    const { db } = database();
+    const query = (withFinalUrl: boolean) =>
+      db
+        .select(withFinalUrl ? { ...baseColumns, finalUrl: attempts.finalUrl } : baseColumns)
+        .from(attempts)
+        .where(eq(attempts.runId, runId))
+        .orderBy(attempts.pageId, attempts.provider);
+    const rows: (Awaited<ReturnType<typeof query>>[number] & { finalUrl?: string | null })[] =
+      await missingSchemaFallback(() => query(true), null) ?? await query(false);
+    // Grades added after collection: v6 access regrades and document/content quality grades.
+    const extra = await missingSchemaFallback(
+      () =>
+        db
+          .select({
+            attemptId: grades.attemptId,
+            rubric: grades.rubric,
+            success: grades.success,
+            access: grades.access,
+            content: grades.content,
+            identity: grades.identity,
+          })
+          .from(grades)
+          .where(eq(grades.runId, runId)),
+      [],
+    );
+    const regrade = new Map(extra.filter((g) => g.rubric === "access").map((g) => [g.attemptId, g]));
+    const quality = new Map(extra.filter((g) => g.rubric === "quality").map((g) => [g.attemptId, g]));
+    const accessRun = protocol === ACCESS_PROTOCOL;
     const pages = new Map<string, BenchmarkPage>();
     for (const row of rows) {
       const provider = providers.find((p) => p.id === row.provider);
       if (!provider) continue;
-      const page = pages.get(row.pageId) ?? {
-        id: row.pageId,
+      // Day and protocol are the same for every page of a run; normalizePages restores them.
+      const page = pages.get(row.pageId) ?? ({
+        id: row.pageId.slice(0, 16),
         url: row.url,
         category: normalizeCategory(row.category),
-        day: row.day,
-        protocol,
         source:
           row.provenance?.source === "wikipedia"
             ? ("wikipedia_daily" as const)
@@ -48,19 +80,44 @@ const dailyPages = unstable_cache(
         revision: row.provenance?.revision,
         citedAt: row.provenance?.timestamp,
         results: {},
-      };
-      page.results[provider.id] = {
+      } as unknown as BenchmarkPage);
+      const q = quality.get(row.id);
+      const r = regrade.get(row.id);
+      const outcome: PageOutcome = {
         success: row.success,
         state: row.state,
         error: row.error,
+        ms: row.elapsedMs,
+        // In v6 the collection grade's content column holds the access label.
+        access: accessRun ? row.content : (r?.access ?? null),
+        quality: accessRun ? (q?.content ?? null) : row.content,
+        identity: accessRun ? (q?.identity ?? null) : row.identity,
+        v6: accessRun ? undefined : r ? r.success : undefined,
+        chars: row.chars,
+        moved: redirected(row.url, row.finalUrl),
       };
+      page.results[provider.id] = compact(outcome);
       pages.set(row.pageId, page);
     }
     return [...pages.values()];
   },
-  ["benchmark-daily-pages-v2"],
+  ["benchmark-daily-pages-v4"],
   { revalidate: 900 },
 );
+
+/**
+ * Drops default and empty fields so the cached data and the page payload stay small:
+ * state "done", a null error, and a null success are restored by normalizePages.
+ */
+function compact(outcome: PageOutcome): PageOutcome {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(outcome)) {
+    if (value === null || value === undefined) continue;
+    if (key === "state" && value === "done") continue;
+    result[key] = value;
+  }
+  return result as PageOutcome;
+}
 
 const wikipediaPages: BenchmarkPage[] = study.pages.map((p) => ({
   id: p.id,

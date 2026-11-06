@@ -7,6 +7,7 @@ import {
   type Receipt,
   type Target,
 } from "./types";
+import { PROVIDER_FAILURE_ERRORS } from "./outcomes";
 const endpoints: Record<Provider, string> = {
   context: "https://api.context.dev/v1/web/scrape",
   exa: "https://api.exa.ai/contents",
@@ -204,11 +205,17 @@ export function createReaders(
             receipt.success = false;
             throw new Error("ORIGIN_ERROR");
           }
-          if (data.data?.metadata?.source === "cache")
+          // Firecrawl documents cache status as metadata.cacheState ("hit" or "miss").
+          if (
+            data.data?.metadata?.cacheState === "hit" ||
+            data.data?.metadata?.source === "cache"
+          )
             throw new Error("CACHED_RESPONSE");
           text = data.data?.markdown;
           receipt.credits = number(data.data?.metadata?.creditsUsed);
-          receipt.finalUrl = data.data?.metadata?.sourceURL ?? null;
+          // metadata.url is where the scrape ended; sourceURL is what we asked for.
+          receipt.finalUrl =
+            data.data?.metadata?.url ?? data.data?.metadata?.sourceURL ?? null;
         } else if (provider === "exa") {
           if (
             data.results?.length !== 1 ||
@@ -226,7 +233,13 @@ export function createReaders(
           receipt.finalUrl = data.results[0].url ?? null;
           receipt.costUsd = number(data.costDollars?.total);
         } else {
+          // Keenable bills a live fetch as "fetch.live" and an indexed copy as "fetch".
+          // Anything other than a live fetch was not read fresh from the source.
+          const sku = data.usage?.sku;
+          if (typeof sku === "string" && sku !== "fetch.live")
+            throw new Error("CACHED_RESPONSE");
           text = data.content;
+          receipt.credits = number(data.usage?.credits);
           receipt.finalUrl = data.url ?? null;
         }
         if (typeof text !== "string")
@@ -244,6 +257,9 @@ export function createReaders(
           error instanceof Error && /^[A-Z_]+$/.test(error.message)
             ? error.message
             : "REQUEST_FAILED";
+        // The provider itself reported that it could not return the page: a failure, not an
+        // unresolved result. Cached responses and our own errors stay unresolved.
+        if (PROVIDER_FAILURE_ERRORS.has(receipt.error)) receipt.success = false;
         if (
           error instanceof Error &&
           ["TimeoutError", "AbortError"].includes(error.name)

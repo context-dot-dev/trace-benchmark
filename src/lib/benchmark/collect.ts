@@ -430,8 +430,20 @@ async function selectSample(
         .onConflictDoNothing();
   });
 }
+function retentionDays(name: string, fallback: number) {
+  const value = Number(process.env[name] ?? fallback);
+  return Number.isFinite(value) && value >= 1 ? value : fallback;
+}
+// Grading evidence is kept long enough to regrade and audit published samples, and page-level
+// records long enough to recheck history. Both are configurable; see README.
+export const retention = () => ({
+  evidenceDays: retentionDays("TRACE_EVIDENCE_DAYS", 30),
+  evidenceBytes: retentionDays("TRACE_EVIDENCE_MAX_MB", 900) * 1_000_000,
+  recordDays: retentionDays("TRACE_RECORD_DAYS", 180),
+});
 async function retainEvidence(store: Store, clock: Date) {
-  const cutoff = new Date(clock.getTime() - 7 * 86400000)
+  const { evidenceDays, evidenceBytes, recordDays } = retention();
+  const cutoff = new Date(clock.getTime() - evidenceDays * 86400000)
     .toISOString()
     .slice(0, 10);
   await store.db
@@ -449,9 +461,9 @@ async function retainEvidence(store: Store, clock: Date) {
       bytes: sql<number>`coalesce(sum(${attempts.evidenceBytes}),0)::int`,
     })
     .from(attempts);
-  if (bytes > 256_000_000)
+  if (bytes > evidenceBytes)
     await store.db.execute(
-      sql`with oldest as (select id,sum(evidence_bytes) over(order by day,id) as size from scraping_bench.attempts where state='done' and evidence_bytes>0) update scraping_bench.attempts set evidence=null,evidence_bytes=0 where id in(select id from oldest where size<=${bytes - 240_000_000})`,
+      sql`with oldest as (select id,sum(evidence_bytes) over(order by day,id) as size from scraping_bench.attempts where state='done' and evidence_bytes>0) update scraping_bench.attempts set evidence=null,evidence_bytes=0 where id in(select id from oldest where size<=${bytes - Math.floor(evidenceBytes * 0.94)})`,
     );
   await store.db
     .delete(attempts)
@@ -467,7 +479,9 @@ async function retainEvidence(store: Store, clock: Date) {
         eq(attempts.state, "done"),
         lt(
           attempts.day,
-          new Date(clock.getTime() - 30 * 86400000).toISOString().slice(0, 10),
+          new Date(clock.getTime() - recordDays * 86400000)
+            .toISOString()
+            .slice(0, 10),
         ),
       ),
     );

@@ -76,11 +76,55 @@ export const attempts = schema.table(
     judgeCalls: integer("judge_calls").notNull().default(0),
     credits: doublePrecision("credits"),
     costUsd: doublePrecision("cost_usd"),
+    finalUrl: text("final_url"),
   },
   (t) => [
     index("attempt_queue_idx").on(t.state, t.day),
     index("attempt_day_idx").on(t.day, t.provider),
   ],
+);
+// Grades produced after collection: v6 access regrades of older samples and
+// separate document/content-quality grades. Collection grades stay untouched.
+export const grades = schema.table(
+  "grades",
+  {
+    id: text("id").primaryKey(),
+    attemptId: text("attempt_id")
+      .notNull()
+      .references(() => attempts.id, { onDelete: "cascade" }),
+    runId: text("run_id").notNull(),
+    rubric: text("rubric").notNull(),
+    success: boolean("success"),
+    access: text("access"),
+    content: text("content"),
+    identity: text("identity"),
+    confidence: doublePrecision("confidence"),
+    error: text("error"),
+    inputTokens: integer("input_tokens"),
+    gradedAt: timestamp("graded_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("grade_run_idx").on(t.runId, t.rubric)],
+);
+// Human labels for a random sample of judged pages, used to publish how often
+// people agree with the automated judge.
+export const audits = schema.table(
+  "audits",
+  {
+    id: text("id").primaryKey(),
+    attemptId: text("attempt_id").notNull(),
+    runId: text("run_id").notNull(),
+    provider: text("provider").notNull(),
+    rubric: text("rubric").notNull(),
+    label: text("label").notNull(),
+    reviewer: text("reviewer").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("audit_run_idx").on(t.runId, t.rubric)],
 );
 export const sources = schema.table("sources", {
   id: text("id").primaryKey(),

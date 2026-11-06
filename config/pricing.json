@@ -1,0 +1,34 @@
+{
+  "checked": "2026-11-05",
+  "note": "Each provider's published monthly price for roughly 100,000 pages, billed monthly. Volume discounts, annual billing, and free tiers change the result.",
+  "providers": {
+    "context": {
+      "plan": "Pro",
+      "price": "$99 for 125,000 pages",
+      "per1k": 0.792,
+      "billsFailures": false,
+      "source": "https://www.context.dev/pricing"
+    },
+    "exa": {
+      "plan": "Contents",
+      "price": "$1 per 1,000 pages",
+      "per1k": 1.0,
+      "billsFailures": null,
+      "source": "https://exa.ai/pricing"
+    },
+    "firecrawl": {
+      "plan": "Standard",
+      "price": "$99 for 100,000 pages",
+      "per1k": 0.99,
+      "billsFailures": null,
+      "source": "https://www.firecrawl.dev/pricing"
+    },
+    "keenable": {
+      "plan": "Pay as you go",
+      "price": "$4 per 1,000 requests after 100,000 free each month",
+      "per1k": 4.0,
+      "billsFailures": false,
+      "source": "https://keenable.ai/pricing"
+    }
+  }
+}

@@ -147,7 +147,7 @@ let collectionStartedAt: number | undefined;
 const started = Date.now();
 try {
   await migrateStore(store);
-  await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+  await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
   const clock = new Date();
   clock.setUTCHours(0, 20, 0, 0);
   const day = clock.toISOString().slice(0, 10);

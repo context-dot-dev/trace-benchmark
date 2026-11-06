@@ -17,7 +17,7 @@ const checks: string[] = [];
 let failure: string | undefined;
 try {
   await migrateStore(store);
-  await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+  await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
   const pages = [
     { id: "wiki-news-pass", category: "news", wiki: true, state: "done", success: true },
     { id: "wiki-news-fail", category: "news", wiki: true, state: "done", success: false },

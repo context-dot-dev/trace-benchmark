@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { SiteSection, SectionHeading } from "@/components/site/section";
-const dailyExamples = [
+export const dailyExamples = [
   {
     category: "News",
     description: "Publisher articles",

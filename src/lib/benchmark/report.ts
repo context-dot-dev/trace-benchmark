@@ -2,6 +2,7 @@ import { and, desc, eq, count, sql } from "drizzle-orm";
 import { attempts, runs, sources, worker } from "./schema";
 import { categories, providers, type Report, type RunSummary } from "./types";
 import type { Store } from "./store";
+import { isAccountLimited, providerFailed } from "./outcomes";
 export function summarize(
   id: string,
   day: string,
@@ -49,7 +50,10 @@ export function summarize(
     finishedAt: finishedAt?.toISOString() ?? null,
     categories: counts,
     providers: providers.map((provider) => {
-      const records = rows.filter((r) => r.provider === provider.id);
+      const all = rows.filter((r) => r.provider === provider.id);
+      // Rejections from our own account limits say nothing about the provider; leave them
+      // out of the score and report them separately.
+      const records = all.filter((r) => !isAccountLimited(r.error));
       const groups = Object.fromEntries(
         scoredCategories.map((c) => {
           const group = records.filter((r) => r.category === c.id);
@@ -64,6 +68,13 @@ export function summarize(
           ];
         }),
       );
+      const scored =
+        Object.values(groups).every((g) => g.total > 0) &&
+        records.some((r) => r.state === "done");
+      const variance = Object.values(groups).reduce((sum, g) => {
+        const p = g.total ? g.useful / g.total : 0;
+        return sum + (g.total ? (p * (1 - p)) / g.total : 0);
+      }, 0);
       const rateLimits = ["HTTP_429", "RATE_LIMIT_EXCEEDED", "RATE_LIMITED"];
       const timed = records
         .filter(
@@ -76,51 +87,93 @@ export function summarize(
               "NO_MORE_CREDITS",
               "account_blocked_not_attempted",
               "INTERRUPTED_REQUEST",
+              "CACHED_RESPONSE",
             ].includes(r.error ?? ""),
         )
         .map((r) => r.elapsedMs!)
         .sort((a, b) => a - b);
+      const failed = records.filter(
+        (r) => r.state === "done" && r.success !== true && providerFailed(r),
+      ).length;
       return {
         id: provider.id,
         total: records.length,
         useful: records.filter((r) => r.success === true).length,
-        failed: records.filter((r) => r.success === false).length,
-        unknown: records.filter((r) => r.state === "done" && r.success === null)
-          .length,
+        failed,
+        unknown:
+          records.filter((r) => r.state === "done" && r.success !== true).length -
+          failed,
         pending: records.filter((r) => r.state !== "done").length,
-        rate:
-          Object.values(groups).every((g) => g.total > 0) &&
-          records.some((r) => r.state === "done")
-            ? Object.values(groups).reduce(
-                (sum, g) => sum + g.useful / g.total,
-                0,
-              ) / scoredCategories.length
-            : null,
+        rate: scored
+          ? Object.values(groups).reduce(
+              (sum, g) => sum + g.useful / g.total,
+              0,
+            ) / scoredCategories.length
+          : null,
+        ci: scored ? (1.96 * Math.sqrt(variance)) / scoredCategories.length : null,
         p50: percentile(timed, 0.5),
+        p90: percentile(timed, 0.9),
         p95: percentile(timed, 0.95),
-        rateLimited: records.filter((r) => rateLimits.includes(r.error ?? ""))
+        p99: percentile(timed, 0.99),
+        rateLimited: all.filter((r) => rateLimits.includes(r.error ?? ""))
           .length,
+        excluded: all.length - records.length,
         categories: groups,
       };
     }),
   };
 }
+/**
+ * Reads that depend on migration 0002 fall back until it has been applied, so a deploy that
+ * lands before the migration keeps serving the existing results.
+ */
+export async function missingSchemaFallback<T>(read: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    const code = (error as { code?: string; cause?: { code?: string } })?.code ??
+      (error as { cause?: { code?: string } })?.cause?.code;
+    if (code === "42P01" || code === "42703") return fallback;
+    throw error;
+  }
+}
+type AuditRow = { rubric: string; pages: number; agreed: number; reviewers: number; since: string | null };
 export async function report(
   store: Store,
   options: { run?: string; provider?: string; page?: number } = {},
 ): Promise<Report> {
-  const samples = (
-    await store.db
-      .select()
-      .from(runs)
-      .orderBy(desc(runs.day), desc(runs.createdAt))
-  ).map((r) => r.summary);
+  const runRows = await store.db
+    .select()
+    .from(runs)
+    .orderBy(desc(runs.day), desc(runs.createdAt));
+  const samples = runRows.map((r) => r.summary);
+  // One run per day is charted: the most recently created one. Every run stays listed.
   const days = new Set<string>();
   const history = samples.filter((sample) => {
     if (days.has(sample.day)) return false;
     days.add(sample.day);
     return true;
   });
+  const charted = new Set(history.map((r) => r.id));
+  const auditRows = await missingSchemaFallback<{ rows: AuditRow[] }>(
+    () =>
+      store.db.execute<{
+        rubric: string;
+        pages: number;
+        agreed: number;
+        reviewers: number;
+        since: string | null;
+      }>(sql`
+    select a.rubric, count(*)::int as pages,
+      count(*) filter (where a.label = case when t.success is true then 'pass'
+        when t.success is false then 'fail' else 'unclear' end)::int as agreed,
+      count(distinct a.reviewer)::int as reviewers, min(a.created_at)::text as since
+    from scraping_bench.audits a
+    join scraping_bench.attempts t on t.id = a.attempt_id
+    where a.label <> 'unclear'
+    group by a.rubric`),
+    { rows: [] },
+  );
   const latest =
     (options.run
       ? samples.find((r) => r.id === options.run)
@@ -171,6 +224,21 @@ export async function report(
     collecting: history.find((r) => r.status === "collecting") ?? null,
     latest,
     history,
+    runs: runRows.map((r) => ({
+      id: r.id,
+      day: r.day,
+      protocol: r.protocol,
+      status: r.status,
+      createdAt: r.createdAt.toISOString(),
+      charted: charted.has(r.id),
+    })),
+    audits: auditRows.rows.map((row) => ({
+      rubric: row.rubric,
+      pages: Number(row.pages),
+      agreed: Number(row.agreed),
+      reviewers: Number(row.reviewers),
+      since: row.since,
+    })),
     records,
     totalRecords: total,
     page,

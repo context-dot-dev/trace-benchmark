@@ -58,6 +58,7 @@ export async function saveReceipts(
       http_status: receipt.httpStatus, credits: receipt.credits, cost_usd: receipt.costUsd,
       chars: receipt.chars, hash: receipt.hash, evidence: evidence?.toString("base64") ?? null,
       evidence_bytes: evidence?.length ?? 0,
+      final_url: typeof receipt.finalUrl === "string" ? receipt.finalUrl.slice(0, 2048) : null,
     };
   });
   const result = await store.db.execute(sql`
@@ -65,11 +66,11 @@ export async function saveReceipts(
       state=d.state, success=d.success, error=d.error, elapsed_ms=d.elapsed_ms,
       http_status=d.http_status, credits=d.credits, cost_usd=d.cost_usd,
       chars=d.chars, hash=d.hash, evidence=decode(d.evidence,'base64'),
-      evidence_bytes=d.evidence_bytes, claim=null, lease_until=null
+      evidence_bytes=d.evidence_bytes, final_url=d.final_url, claim=null, lease_until=null
     from jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) as d(
       id text, state text, success boolean, error text, elapsed_ms integer,
       http_status integer, credits double precision, cost_usd double precision,
-      chars integer, hash text, evidence text, evidence_bytes integer)
+      chars integer, hash text, evidence text, evidence_bytes integer, final_url text)
     where attempts.id=d.id and attempts.state='fetching' and attempts.claim=${token}
     returning ${returning}`);
   return result.rows.map((row) => ({

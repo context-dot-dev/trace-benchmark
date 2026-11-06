@@ -164,7 +164,7 @@ const options = {
 try {
   await migrateStore(store);
   await store.db.execute(
-    sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
+    sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
   );
   const found = await discovery.discover(source, { now: clock });
   assert.equal(
@@ -348,7 +348,7 @@ try {
     "A first-poll Wikipedia failure does not block daily collection when a core category has insufficient supply",
   );
   await store.db.execute(
-    sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
+    sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
   );
   fail = false;
   revision = 5;
