@@ -41,3 +41,9 @@ jobs:
             artifacts/continuous/e2e.json
             artifacts/continuous/retry-e2e.json
             artifacts/continuous/server.log
+            artifacts/continuous/batch-store-e2e.json
+            artifacts/parallel/e2e.json
+            artifacts/parallel/pause-e2e.json
+            artifacts/parallel/server.log
+            artifacts/parallel/judge-pause-e2e.json
+            artifacts/parallel/pacing-deadline-e2e.json

@@ -357,14 +357,15 @@ export function createReaders(
           confidence: Math.min(c.confidence, i.confidence),
           error: null,
         };
-      } catch {
+      } catch (error) {
         return {
           inputTokens: null,
           success: null,
           content: "unclear",
           identity: accessOnly ? null : "unknown",
           confidence: null,
-          error: "JUDGE_FAILED",
+          error: error instanceof Error && /^JUDGE_HTTP_(401|402|429)$/.test(error.message)
+            ? error.message : "JUDGE_FAILED",
         };
       }
     },

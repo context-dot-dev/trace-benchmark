@@ -75,8 +75,17 @@ try {
   const options = { now: () => clock, readers, discover: false, maxPages: 8, deadlineMs: 20000 };
   await assert.rejects(runTick(store, options));
   activeAtRejection = { ...active };
+  await runTick(store, { ...options, maxPages: 0 });
+  const health = await store.db.execute(sql`select error from scraping_bench.worker where id='collector'`);
+  assert.ok(health.rows[0].error, "Preparation must preserve a visible collector error while a provider worker remains failed");
   // Reproduce immediate durable retry while any abandoned siblings are still running.
   await runTick(store, options);
+  // Paced calls cancelled before dispatch return to the queue without a charge.
+  for (let remainingTicks = 0; remainingTicks < 3; remainingTicks++) {
+    const pending = await store.db.execute(sql`select count(*)::int as count from scraping_bench.attempts where state in ('queued','fetched')`);
+    if (!pending.rows[0].count) break;
+    await runTick(store, options);
+  }
   for (const provider of providers) {
     const calls = requests.filter((r) => r.provider === provider.id);
     assert.equal(calls.length, 16);

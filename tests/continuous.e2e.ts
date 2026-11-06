@@ -12,9 +12,8 @@ import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { categories, providers } from "../src/lib/benchmark/types.ts";
 import registry from "../config/sources.json";
 
-// Failures covered: unauthorized dispatch, duplicate workflows, an occupied lease,
-// stopping at a step boundary, duplicate billing, excessive concurrency, rate-limit
-// misclassification, and aborting slow bodies or failing to abort stalled bodies.
+// Covers cron authentication, duplicate workflows, an occupied lease, provider
+// capacity limits, independent progress, duplicate billing, and body deadlines.
 const databaseUrl = process.env.DATABASE_URL;
 assert.ok(databaseUrl && ["localhost", "127.0.0.1"].includes(new URL(databaseUrl).hostname),
   "Use a disposable local database; this test truncates scraping_bench");
@@ -25,9 +24,16 @@ const blockedPath = path.join(artifactDir, "blocked-fetches.log");
 await writeFile(blockedPath, "");
 await writeFile(path.join(artifactDir, "server.log"), "");
 const checks: string[] = [];
+const defaultLimits: Record<string, { concurrency: number; requestsPerSecond: number }> = {
+  context: { concurrency: 512, requestsPerSecond: 10 },
+  exa: { concurrency: 512, requestsPerSecond: 5 },
+  firecrawl: { concurrency: 50, requestsPerSecond: 100 },
+  keenable: { concurrency: 100, requestsPerSecond: 8 },
+};
 const requests: { provider: string; url: string; started: number; ended?: number; mode: string }[] = [];
 const active: Record<string, number> = {};
 const maximum: Record<string, number> = {};
+const maximumPerSecond: Record<string, number> = {};
 const children: ChildProcess[] = [];
 let serverLog = "";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -56,7 +62,6 @@ const fixture = createServer(async (req, res) => {
   assert.ok(providers.some((p) => p.id === provider));
   const authorization = req.headers.authorization ?? req.headers["x-api-key"];
   assert.ok(authorization === "fixture-key" || authorization === "Bearer fixture-key");
-  if (mode === "rate") { res.statusCode = 429; res.end("{}"); return; }
   if (mode === "stall") { res.write("{"); return; }
   const text = "The requested document contains substantive target information. ".repeat(30);
   const result = provider === "context"
@@ -97,6 +102,11 @@ delete childEnv.VERCEL_URL;
 delete childEnv.VERCEL_DEPLOYMENT_ID;
 delete childEnv.VERCEL_OIDC_TOKEN;
 delete childEnv.WORKFLOW_VERCEL_AUTH_TOKEN;
+delete childEnv.TRACE_JUDGE_RPS;
+for (const provider of providers) {
+  delete childEnv["TRACE_" + provider.id.toUpperCase() + "_CONCURRENCY"];
+  delete childEnv["TRACE_" + provider.id.toUpperCase() + "_RPS"];
+}
 async function startServer() {
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
@@ -128,7 +138,6 @@ async function startServer() {
 let failure: string | undefined;
 let launch: unknown;
 let duplicate: unknown;
-let interStepGapMs: number | undefined;
 const started = Date.now();
 try {
   await migrateStore(store);
@@ -138,7 +147,7 @@ try {
   const day = clock.toISOString().slice(0, 10);
   const candidates = Array.from({ length: 112 }, (_, i) => ({
     id: "continuous-" + String(i).padStart(3, "0"),
-    url: "https://example.org/continuous/" + i + "?mode=" + (i === 0 ? "rate" : i === 1 ? "slow" : i === 2 ? "stall" : "normal"),
+    url: "https://example.org/continuous/" + i + "?mode=" + (i === 1 ? "slow" : i === 2 ? "stall" : "normal"),
     title: "Target document " + i, category: categories[i % categories.length].id,
     organization: "fixture-publisher-" + i, sourceId: "fixture", discoveredAt: clock,
   }));
@@ -185,27 +194,36 @@ try {
   for (const row of outcomes.rows) {
     assert.equal(row.state, "done");
     const mode = new URL(String(row.url)).searchParams.get("mode");
-    if (mode === "rate") { assert.equal(row.error, "HTTP_429"); assert.equal(row.success, null); }
-    else if (mode === "stall") {
+    if (mode === "stall") {
       assert.equal(row.error, "REQUEST_TIMEOUT");
       assert.equal(row.success, false);
       assert.ok(Number(row.elapsed_ms) >= 29000 && Number(row.elapsed_ms) < 35000);
     } else { assert.equal(row.error, null); assert.equal(row.success, true); }
   }
-  checks.push("All four clients retain 30s full-body deadlines; slow streamed successes pass and 429 stays unresolved");
+  checks.push("All four clients retain 30s full-body deadlines; slow streamed successes pass");
   for (const provider of providers) {
     const calls = requests.filter((r) => r.provider === provider.id);
     assert.equal(calls.length, 112);
     assert.equal(new Set(calls.map((r) => r.url)).size, 112);
-    assert.ok(maximum[provider.id] <= 8 && maximum[provider.id] > 1);
+    assert.ok(maximum[provider.id] <= defaultLimits[provider.id].concurrency && maximum[provider.id] > 1);
+    const starts = calls.map((r) => r.started).sort((a, b) => a - b);
+    let left = 0;
+    for (let right = 0; right < starts.length; right++) {
+      while (starts[right] - starts[left] >= 1000) left++;
+      maximumPerSecond[provider.id] = Math.max(maximumPerSecond[provider.id] ?? 0, right - left + 1);
+    }
+    assert.ok(maximumPerSecond[provider.id] <= defaultLimits[provider.id].requestsPerSecond + 4,
+      provider.id + " exceeded its default aggregate request pacing");
   }
-  assert.equal(requests.filter((r) => r.provider === "judge").length, 440);
-  checks.push("Exactly one read per provider/page with bounded overlapping concurrency <=8 per provider");
-  const lastFirstStep = requests.filter((r) => r.provider !== "judge" && new URL(r.url).pathname.endsWith("/103"));
-  const firstNextStep = requests.filter((r) => r.provider !== "judge" && new URL(r.url).pathname.endsWith("/104"));
-  interStepGapMs = Math.min(...firstNextStep.map((r) => r.started)) - Math.max(...lastFirstStep.map((r) => r.ended!));
-  assert.ok(interStepGapMs >= 0 && interStepGapMs < 15000, "Next durable step should start promptly, not on a 15-minute cron");
-  checks.push("Next step begins within 15 seconds of the previous step's last page");
+  assert.equal(requests.filter((r) => r.provider === "judge").length, 444);
+  checks.push("Exactly one read per provider/page within production-default provider concurrency and QPS limits");
+  for (const provider of providers) {
+    const calls = requests.filter((r) => r.provider === provider.id);
+    const stalled = calls.find((r) => r.mode === "stall")!;
+    assert.ok(calls.filter((r) => r.mode === "normal" && r.started < stalled.ended!).length >= 100,
+      provider.id + " must continue dispatching while its stalled response is pending");
+  }
+  checks.push("Provider pools continue dispatching unrelated pages during a stalled response");
   assert.equal(await readFile(blockedPath, "utf8"), "");
   checks.push("No public-network requests; the actual production provider clients use local HTTP fixtures");
 } catch (error) {
@@ -223,10 +241,10 @@ try {
   await store.close();
   await writeFile(path.join(artifactDir, "server.log"), serverLog);
   await writeFile(path.join(artifactDir, "e2e.json"), JSON.stringify({
-    ok: !failure, failure, checks, launch, duplicate, maximum, interStepGapMs,
+    ok: !failure, failure, checks, launch, duplicate, maximum, maximumPerSecond, defaultLimits,
     elapsedMs: Date.now() - started, requests,
     limitations: "Local Next/Turbopack + PostgreSQL + Workflow development world with HTTP fixtures; not live provider load or Vercel production execution.",
     repeat: "DATABASE_URL=postgresql://...@127.0.0.1/... npx tsx tests/continuous.e2e.ts",
   }, null, 2));
 }
-console.log(JSON.stringify({ ok: true, checks, maximum, interStepGapMs, artifact: path.join(artifactDir, "e2e.json") }, null, 2));
+console.log(JSON.stringify({ ok: true, checks, maximum, maximumPerSecond, artifact: path.join(artifactDir, "e2e.json") }, null, 2));

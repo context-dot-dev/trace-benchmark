@@ -38,9 +38,13 @@ The backend runs in Vercel Functions and stores data in Neon PostgreSQL through 
 
 In the Vercel production environment, set the four provider keys and `TYPESAFE_API_KEY` listed in `.env.example`, generate a random `CRON_SECRET`, and set `TRACE_WORKER_ENABLED=1`. Vercel Cron calls `/api/cron` every 15 minutes using that secret. The route rejects unauthenticated requests and preview deployments. Sample dates use UTC.
 
-Cron starts one deduplicated Vercel Workflow that continues eligible work immediately across bounded batches. The cron remains for discovery and recovery. Each batch keeps the existing eight-page concurrency, staggered dispatch, 30-second provider deadline, and daily budgets. A busy database lease waits 30 seconds before retrying; a failed batch drains its in-flight requests before releasing the lease. Interrupted attempts can still wait for lease expiration and the recovery cron.
+Cron starts one deduplicated Vercel Workflow. After discovery and sample selection, independent provider workers drain the queue with rolling concurrency. Judging runs in a separate pool, and database claims and results are saved in batches. Slow responses do not hold up other pages or providers. Bounded steps continue immediately; the cron remains for discovery and recovery. Provider requests retain their 30-second deadline, judging retains its 60-second deadline, and daily budgets remain unchanged.
 
-Vercel stores workflow execution state; benchmark data stays in Neon. Continuous collection increases sustained traffic without increasing peak concurrency, and Vercel Workflow adds usage costs.
+`TRACE_<PROVIDER>_CONCURRENCY` and `TRACE_<PROVIDER>_RPS` set aggregate limits across that provider's shards; `TRACE_JUDGE_RPS` sets the aggregate judge dispatch rate. Defaults are in `.env.example`. HTTP 401, 402, and 429 pause the affected provider across shards; judge rejections pause grading across providers while retrieved evidence stays available. Unsent reservations return to the queue. In-flight requests finish normally. Interrupted paid requests are not automatically repeated.
+
+A 30–60-second collection requires account capacity for the entire sample. The current defaults reflect observed constraints: Context's benchmark key allows 700 requests/minute, Firecrawl allows 50 concurrent browsers, and Keenable publishes 10 requests/second. Exa rejected a 90-request/second probe, so its default is 5 pending confirmation of the account allowance. Jev's sustained account allowance has not been verified. Raising these settings without provider capacity can create rate errors and queue timeouts. Collection time also excludes discovery and sample preparation.
+
+Vercel stores workflow execution state; benchmark data stays in Neon. Parallel collection increases peak traffic, database connections, and Workflow usage costs. Retrieval latency under this load may differ from historical runs even though grading and scoring rules are unchanged.
 
 ## Verification
 
@@ -52,4 +56,4 @@ npm run lint
 npm run build
 ```
 
-The E2E runs write repeatable check results to `artifacts/rebuild/e2e.json`, `artifacts/daily-wikipedia/e2e.json`, and `artifacts/continuous/`, which CI retains. The continuous collection tests run Next.js with Turbopack and verify batch handoffs, duplicate starts, slow and stalled provider responses, and concurrency after an injected database failure. These checks verify collection behavior, not live provider quality or hosted scheduler delivery.
+The E2E runs write repeatable results to `artifacts/rebuild/`, `artifacts/daily-wikipedia/`, `artifacts/continuous/`, and `artifacts/parallel/`, which CI retains. Tests use real PostgreSQL and Next.js with Turbopack to exercise workflow deduplication, provider isolation, stalled bodies, rate-limit pauses, claim ownership, budgets, and injected database failures. The full-scale fixture explicitly grants 1,024 concurrent requests and 200 requests/second per provider, plus 1,000 judge requests/second, to verify the 60-second collection target. This measures pipeline capacity with local HTTP fixtures, not live provider capacity, discovery time, quality, or hosted scheduler delivery.
