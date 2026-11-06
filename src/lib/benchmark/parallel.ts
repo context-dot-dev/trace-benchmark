@@ -96,8 +96,11 @@ function pacer(requestsPerSecond: number, stopAt: number) {
   const slot = limiter(1);
   let next = performance.now();
   return (admit?: () => Promise<boolean>) => slot(async () => {
-    const wait = Math.min(next - performance.now(), stopAt - Date.now());
-    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, Math.ceil(wait)));
+    while (performance.now() < next && Date.now() < stopAt) {
+      const wait = Math.min(next - performance.now(), stopAt - Date.now());
+      await new Promise((resolve) => setTimeout(resolve, Math.max(1, Math.ceil(wait))));
+    }
+    if (Date.now() >= stopAt) return false;
     if (admit && !await admit()) return false;
     next = performance.now() + 1000 / requestsPerSecond;
     return true;
