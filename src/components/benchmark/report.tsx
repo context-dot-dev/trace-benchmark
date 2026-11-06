@@ -38,9 +38,9 @@ import { dailyExamples } from "./sources";
 
 export type SourceSummary = { total: number; categories: { id: string; count: number; examples: string[] }[] };
 
-const citation = `@misc{scrapingbench2026,
+const citation = `@misc{trace2026,
   author = {{context.dev}},
-  title = {{Scraping Bench}: A Live Scraping Benchmark},
+  title = {{TRACE}: A Live TRACEmark},
   year = {2026},
   url = {https://trace.context.dev/}
 }`;
@@ -1242,7 +1242,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             accent="benchmark"
             lede={
               <>
-                Scraping Bench is maintained by <a href="https://context.dev">context.dev</a>. If you use these results in
+                TRACE is maintained by <a href="https://context.dev">context.dev</a>. If you use these results in
                 your work, please cite the benchmark and include the sample date and scoring rules.
               </>
             }
