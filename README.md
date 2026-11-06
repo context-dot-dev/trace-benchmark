@@ -6,6 +6,8 @@
 
 <h1>TRACE</h1>
 
+<p>Transparent Real-world Assessment of Content Extraction</p>
+
 <p><strong>A live, open-source scrape benchmark for AI agents.</strong></p>
 <p>Fresh pages every day. The same sample for every provider. Results you can inspect.</p>
 

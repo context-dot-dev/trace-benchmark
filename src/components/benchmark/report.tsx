@@ -464,7 +464,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             id="overview"
             index={1}
             as="h1"
-            eyebrow="Daily web scraping benchmark"
+            eyebrow="TRACE (Transparent Real-world Assessment of Content Extraction)"
             title="How reliably can web scrapers"
             accent="read a page?"
           >
