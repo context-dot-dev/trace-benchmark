@@ -1031,7 +1031,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ) : (
               "No daily sample available"
             )}
-            {sampleUnavailable ? ` · ${sampleStatus}` : loading && " · Updating…"}
+            {sampleUnavailable ? ` · ${sampleLoading ? "Loading…" : sampleStatus}` : loading && " · Updating…"}
           </p>
           <div className="sample-actions">
             <Select
