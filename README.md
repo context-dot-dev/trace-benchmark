@@ -38,6 +38,10 @@ The backend runs in Vercel Functions and stores data in Neon PostgreSQL through 
 
 In the Vercel production environment, set the four provider keys and `TYPESAFE_API_KEY` listed in `.env.example`, generate a random `CRON_SECRET`, and set `TRACE_WORKER_ENABLED=1`. Vercel Cron calls `/api/cron` every 15 minutes using that secret. The route rejects unauthenticated requests and preview deployments. Sample dates use UTC.
 
+Cron starts one deduplicated Vercel Workflow that continues eligible work immediately across bounded batches. The cron remains for discovery and recovery. Each batch keeps the existing eight-page concurrency, staggered dispatch, 30-second provider deadline, and daily budgets. A busy database lease waits 30 seconds before retrying; a failed batch drains its in-flight requests before releasing the lease. Interrupted attempts can still wait for lease expiration and the recovery cron.
+
+Vercel stores workflow execution state; benchmark data stays in Neon. Continuous collection increases sustained traffic without increasing peak concurrency, and Vercel Workflow adds usage costs.
+
 ## Verification
 
 Use a disposable local PostgreSQL database: the E2E tests clear the benchmark tables and use HTTP fixtures instead of paid provider calls.
@@ -48,4 +52,4 @@ npm run lint
 npm run build
 ```
 
-The E2E runs write repeatable check results to `artifacts/rebuild/e2e.json` and `artifacts/daily-wikipedia/e2e.json`, which CI retains. These checks verify collection behavior, not live provider quality or scheduler delivery.
+The E2E runs write repeatable check results to `artifacts/rebuild/e2e.json`, `artifacts/daily-wikipedia/e2e.json`, and `artifacts/continuous/`, which CI retains. The continuous collection tests run Next.js with Turbopack and verify batch handoffs, duplicate starts, slow and stalled provider responses, and concurrency after an injected database failure. These checks verify collection behavior, not live provider quality or hosted scheduler delivery.

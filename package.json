@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "overrides": {
+    "zod": "4.6.7"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +13,7 @@
     "lint": "eslint src/app src/components/benchmark src/lib/benchmark",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts"
+    "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts && tsx tests/collector-retry.e2e.ts && tsx tests/continuous.e2e.ts"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.4.1",
@@ -30,7 +33,8 @@
     "react-dom": "19.3.0",
     "tailwind-merge": "^3.7.0",
     "tsx": "^4.23.15",
-    "undici": "^7.30.1"
+    "undici": "^7.30.1",
+    "workflow": "5.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

@@ -174,7 +174,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
         : [];
       if (!queued.length) break;
       let advanced = 0;
-      await Promise.all(
+      const results = await Promise.allSettled(
         queued.map(async (row, index) => {
           if (!options.deadlineMs)
             await new Promise((resolve) =>
@@ -361,6 +361,8 @@ export async function runTick(store: Store, options: TickOptions = {}) {
           }
         }),
       );
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) throw failed.reason;
       if (!advanced) break;
       processed += new Set(queued.map((r) => r.pageId)).size;
     }
