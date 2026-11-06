@@ -12,6 +12,9 @@ import { resolve } from "node:path";
 // filters, preserve empty intersections as gaps, and restore overall data on reset.
 // Removable chips must clear exactly one global filter, preserve keyboard focus,
 // stay beside Chart/Table, and disappear completely when no filters are active.
+// URL failures: lost deep links on SSR/reload, replaced browser history, unrelated
+// query/hash deletion, invalid values, stale date responses, or chips scoped to
+// only one section instead of clearing the global filters.
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const evidence = resolve("artifacts/history-sources");
@@ -59,7 +62,7 @@ const filteredHistory = [
   };
 });
 function dataset(runId) {
-  const latest = history.find(run => run.id === runId) ?? history[0] ?? null;
+  const latest = runId ? history.find(run => run.id === runId) ?? null : history[0] ?? null;
   return {
     ...(filteredScenario && includeWikipediaHistory ? { wikipediaHistory: filteredHistory.map(run => ({
       ...run, pages: run.categories.other, categories: { other: run.categories.other },
@@ -78,9 +81,16 @@ function dataset(runId) {
     ],
   };
 }
-const fixture = createServer((req, res) => {
+let slowRun = false;
+let slowRunCompleted = false;
+const fixture = createServer(async (req, res) => {
+  const run = new URL(req.url, "http://localhost").searchParams.get("run");
+  if (slowRun && run === "2026-11-04") {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    slowRunCompleted = true;
+  }
   res.setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(dataset(new URL(req.url, "http://localhost").searchParams.get("run"))));
+  res.end(JSON.stringify(dataset(run)));
 });
 await new Promise(resolve => fixture.listen(0, "127.0.0.1", resolve));
 const port = process.env.TEST_PORT || "3186";
@@ -155,6 +165,104 @@ try {
   await page.keyboard.press("Escape");
   checks.push("The history table and date selector expose exactly the three retained dates");
 
+  const shared = ["useful-content", "categories", "history"];
+  const deepLink = base + "?source=wikipedia_daily&category=commerce&run=2026-11-04&utm_source=e2e&tag=one&tag=two#history";
+  await page.goto(deepLink, { waitUntil: "networkidle" });
+  assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /Commerce/);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Daily Wikipedia discoveries/);
+  assert.equal(await page.locator(".bench-sample strong").textContent(), "2026-11-04");
+  for (const id of shared) {
+    const chip = page.locator(`#${id}`).getByRole("button", { name: "Remove Commerce category filter", exact: true });
+    assert.equal(await chip.count(), 1);
+    assert.match(await chip.innerText(), /Commerce/);
+  }
+  await page.reload({ waitUntil: "networkidle" });
+  assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /Commerce/);
+  assert.equal(await page.locator(".bench-sample strong").textContent(), "2026-11-04");
+  checks.push("Commerce/source/date deep links and reloads retain selection, with visible Commerce chips on every chart section");
+  async function query(expected) {
+    await page.waitForURL(url => Object.entries(expected).every(([key, value]) => url.searchParams.get(key) === value));
+    const url = new URL(page.url());
+    assert.equal(url.searchParams.get("utm_source"), "e2e");
+    assert.deepEqual(url.searchParams.getAll("tag"), ["one", "two"]);
+    assert.equal(url.hash, "#history");
+  }
+  await select("Category", "News");
+  await query({ category: "news", source: "wikipedia_daily", run: "2026-11-04" });
+  await select("Source", "All daily sources");
+  await query({ category: "news", source: null, run: "2026-11-04" });
+  await sampleCount(1);
+  await page.goBack();
+  await query({ category: "news", source: "wikipedia_daily" });
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Daily Wikipedia discoveries/);
+  await sampleCount(0);
+  await page.goBack();
+  await query({ category: "commerce", source: "wikipedia_daily" });
+  assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /Commerce/);
+  await page.goForward();
+  await query({ category: "news", source: "wikipedia_daily" });
+  await page.getByRole("button", { name: "Reset filters", exact: true }).click();
+  await query({ category: null, source: null, run: "2026-11-04" });
+  await sampleCount(2);
+  checks.push("Dropdown changes push browser history; Back/Forward restore filters and reset preserves date, unrelated repeated parameters, and hash");
+  for (const id of shared) {
+    await page.goto(deepLink.replace("category=commerce", "category=news"), { waitUntil: "networkidle" });
+    const section = page.locator(`#${id}`);
+    const categoryChip = section.getByRole("button", { name: "Remove News category filter", exact: true });
+    const sourceChip = section.getByRole("button", { name: "Remove Daily Wikipedia discoveries source filter", exact: true });
+    await section.getByRole("tab", { name: "Table", exact: true }).click();
+    await categoryChip.focus();
+    await page.keyboard.press("Enter");
+    await query({ category: null, source: "wikipedia_daily", run: "2026-11-04" });
+    assert.ok(await sourceChip.evaluate(button => document.activeElement === button));
+    assert.equal(await page.getByRole("button", { name: "Remove News category filter", exact: true }).count(), 0);
+    await sampleCount(1);
+    await sourceChip.focus();
+    await page.keyboard.press("Space");
+    await query({ category: null, source: null, run: "2026-11-04" });
+    assert.ok(await section.getByRole("tab", { name: "Table", exact: true }).evaluate(tab => document.activeElement === tab));
+    await sampleCount(2);
+    checks.push(`${id}: keyboard chip removal updates the URL and all sections while retaining focus in its own toolbar`);
+  }
+  await select("Sample date (UTC)", "Latest completed sample");
+  await query({ run: null, source: null, category: null });
+  await page.waitForFunction(() => document.querySelector(".bench-sample strong")?.textContent === "2026-11-06");
+  slowRun = true;
+  await select("Sample date (UTC)", "2026-11-04");
+  await query({ run: "2026-11-04" });
+  assert.notEqual(await page.evaluate(() => document.querySelector(".bench-sample strong")?.textContent ?? null), "2026-11-06",
+    "A pending date selection must not display the previous date's scores");
+  await select("Sample date (UTC)", "2026-11-05");
+  await query({ run: "2026-11-05" });
+  await page.waitForFunction(() => document.querySelector(".bench-sample strong")?.textContent === "2026-11-05");
+  const slowDeadline = Date.now() + 5000;
+  while (!slowRunCompleted && Date.now() < slowDeadline) await new Promise(resolve => setTimeout(resolve, 25));
+  assert.ok(slowRunCompleted);
+  assert.equal(await page.locator(".bench-sample strong").textContent(), "2026-11-05");
+  slowRun = false;
+  await page.goBack();
+  await query({ run: "2026-11-04" });
+  await page.waitForFunction(() => document.querySelector(".bench-sample strong")?.textContent === "2026-11-04");
+  await page.goForward();
+  await query({ run: "2026-11-05" });
+  await page.waitForFunction(() => document.querySelector(".bench-sample strong")?.textContent === "2026-11-05");
+  checks.push("Date changes push history, omit latest defaults, hide stale results while loading, and reject late responses after a newer selection");
+  await page.goto(base + "?source=invalid&category=invalid&run=2026-11-04", { waitUntil: "networkidle" });
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /All daily sources/);
+  assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /All categories/);
+  assert.equal(await page.getByRole("button", { name: /^Remove .* filter$/ }).count(), 0);
+  for (const invalid of ["missing-run", "2026-11-03"]) {
+    await page.goto(base + `?source=wikipedia_daily&category=commerce&run=${invalid}&utm_source=e2e&tag=one&tag=two`, { waitUntil: "networkidle" });
+    const url = new URL(page.url());
+    assert.equal(url.searchParams.get("run"), null);
+    assert.equal(url.searchParams.get("source"), "wikipedia_daily");
+    assert.equal(url.searchParams.get("category"), "commerce");
+    assert.equal(url.searchParams.get("utm_source"), "e2e");
+    assert.deepEqual(url.searchParams.getAll("tag"), ["one", "two"]);
+    assert.equal(await page.locator(".bench-sample strong").textContent(), "2026-11-06");
+  }
+  checks.push("Invalid source/category values use defaults; unknown or pre-cutoff runs redirect to latest without losing other parameters");
+  await page.goto(base, { waitUntil: "networkidle" });
   for (const day of ["2026-11-04", "2026-11-05", "2026-11-06"]) {
     await select("Sample date (UTC)", day);
     await page.waitForFunction(day => document.querySelector(".bench-sample strong")?.textContent === day, day);
