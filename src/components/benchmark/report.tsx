@@ -30,7 +30,6 @@ import { BenchmarkSources } from "./sources";
 import {
   categories,
   providers,
-  PROTOCOL,
   ACCESS_PROTOCOL,
   type ProviderMetric,
   type RunSummary,
@@ -367,6 +366,7 @@ function Radar({
   );
 }
 const dayMs = 86400000;
+const firstSampleDay = "2026-11-04";
 const dateLabel = (time: number, long = false) =>
   new Date(time).toLocaleDateString("en-US", {
     month: long ? "long" : "short",
@@ -374,8 +374,6 @@ const dateLabel = (time: number, long = false) =>
     ...(long ? { year: "numeric" as const } : {}),
     timeZone: "UTC",
   });
-const protocolLabel = (protocol: string) =>
-  `Protocol ${protocol.match(/v\d+$/)?.[0] ?? protocol}`;
 const scoringLabel = (protocol: string) =>
   protocol === ACCESS_PROTOCOL ? "Page access" : "Useful content";
 function historyResult(run: RunSummary, provider: string) {
@@ -446,10 +444,10 @@ function Trend({ history }: { history: RunSummary[] }) {
     );
   };
   const y = (value: number) => 280 - value * 240;
-  const tickStep = Math.max(
-    1,
-    Math.ceil((dayCount - 1) / (width < 500 ? 3 : 6) / 7) * 7,
-  );
+  const tickIntervals = width < 500 ? 3 : 6;
+  const tickStep = dayCount <= 7
+    ? Math.max(1, Math.ceil((dayCount - 1) / tickIntervals))
+    : Math.max(1, Math.ceil((dayCount - 1) / tickIntervals / 7) * 7);
   const ticks = [firstDay];
   for (
     let t = firstDay + tickStep * dayMs;
@@ -542,33 +540,6 @@ function Trend({ history }: { history: RunSummary[] }) {
               />
             </g>
           ))}
-          {protocols.map((protocol, i) => {
-            const start = Date.parse(
-              daily.find((r) => r.protocol === protocol)!.day,
-            );
-            return (
-              <g key={protocol}>
-                <text
-                  x={i === 0 ? plotLeft : position(start) + 5}
-                  y="18"
-                  textAnchor="start"
-                >
-                  {i === 0
-                    ? protocolLabel(protocol)
-                    : (protocol.match(/v\d+$/)?.[0] ?? protocol)}
-                </text>
-                {i > 0 && (
-                  <line
-                    className="bench-protocol-boundary"
-                    x1={position(start)}
-                    x2={position(start)}
-                    y1="25"
-                    y2="290"
-                  />
-                )}
-              </g>
-            );
-          })}
           <line
             className="bench-history-cursor"
             x1={position(inspectedDay)}
@@ -619,7 +590,7 @@ function Trend({ history }: { history: RunSummary[] }) {
                           r={Date.parse(r.day) === inspectedDay ? 4 : 3}
                           fill={p.color}
                         >
-                          <title>{`${r.day} · ${r.protocol}: ${p.name} ${percent(value)}`}</title>
+                          <title>{`${r.day}: ${p.name} ${percent(value)}`}</title>
                         </circle>
                       </g>
                     );
@@ -715,7 +686,7 @@ function Trend({ history }: { history: RunSummary[] }) {
               {samples.map((r) => (
                 <div key={r.id} className="bench-history-sample">
                   <p>
-                    {protocolLabel(r.protocol)} · {scoringLabel(r.protocol)} · {integer(r.pages)} pages
+                    {scoringLabel(r.protocol)} · {integer(r.pages)} pages
                     {r.pages === 0 ? " · No pages were collected" : r.status !== "completed" ? " · Collection in progress" : ""}
                   </p>
                   {r.status === "completed" &&
@@ -775,14 +746,13 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const [selection, setSelection] = useState("latest");
   const [source, setSource] = useState("all");
   const [category, setCategory] = useState("all");
-  const [validation, setValidation] = useState("all");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const data = dataset.report;
-  const run = data.latest;
+  const run = data.latest && data.latest.day >= firstSampleDay ? data.latest : null;
   const accessRun = run?.protocol === ACCESS_PROTOCOL;
-  const accessOnly = source !== "wikipedia" && accessRun;
+  const accessOnly = accessRun;
   useEffect(() => {
     if (copyStatus !== "Copied") return;
     const timer = setTimeout(() => setCopyStatus(""), 2000);
@@ -835,21 +805,15 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const selected = uniquePages(
     dataset.pages.filter(
       (p) =>
-        (source === "all"
-          ? !accessRun || p.source !== "wikipedia"
-          : source === "daily" ? p.source !== "wikipedia" : p.source === source) &&
-        (category === "all" || p.category === category) &&
-        (validation === "all" ||
-          (validation === "hard"
-            ? p.screened
-            : p.audit === "reference_checked")),
+        p.source !== "wikipedia" && p.day >= firstSampleDay &&
+        p.day === run?.day &&
+        (source === "all" || p.source === source) &&
+        (category === "all" || p.category === category),
     ),
   );
   const observedCategories = [...new Set(selected.map((p) => p.category))];
   const categoryIds =
-    (source === "daily" || (source === "all" && accessRun)) &&
-    category === "all" &&
-    validation === "all"
+    source === "all" && category === "all"
       ? [...categories.map((c) => c.id), ...(observedCategories.includes("other") ? ["other"] : [])]
       : observedCategories;
   const rows = scorePages(selected, categoryIds);
@@ -858,15 +822,13 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const chartCategories = benchmarkCategories.filter((c) =>
     categoryIds.includes(c.id),
   );
-  const visibleHistory = data.history.filter((run) => run.day >= "2026-11-05");
+  const visibleHistory = data.history.filter((run) => run.day >= firstSampleDay);
   const history = [...visibleHistory]
     .reverse()
     .sort((a, b) => a.day.localeCompare(b.day));
-  const dailyCount = selected.filter((p) => p.source !== "wikipedia").length;
   const retainedDaily = dataset.pages.filter(
-    (p) => p.source !== "wikipedia",
+    (p) => p.source !== "wikipedia" && p.day === run?.day,
   ).length;
-  const wikiCount = selected.filter((p) => p.source === "wikipedia").length;
   const categoryTable = (
     <Table
       label="Category results"
@@ -888,7 +850,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   function reset() {
     setSource("all");
     setCategory("all");
-    setValidation("all");
   }
   function download() {
     const blob = new Blob(
@@ -896,8 +857,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         JSON.stringify(
           {
             scoring:
-              `The score averages the ${accessOnly ? "accessed" : "useful"}-page rate of each scored category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts. ${accessOnly ? "Access does not measure relevance, identity, completeness, or extraction quality." : "Historical results retain their original useful-content criteria."}`,
-            filters: { source, category, validation },
+              `The score averages the ${accessOnly ? "accessed" : "useful"}-page rate of each scored category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts. ${accessOnly ? "Access does not measure relevance, identity, completeness, or extraction quality." : "A useful result contains substantive content matching the requested page."}`,
+            filters: { source, category },
             dailyRun: run?.id,
             scores: rows,
             pages: selected,
@@ -936,7 +897,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="overview"
           title="How reliably can web scrapers read a page?"
           accent="read a page?"
-          description="We ask Context, Exa, Firecrawl, and Keenable to retrieve the same web pages. New samples check whether page data loaded or access failed. Earlier samples retain their original useful-content scores."
+          description="We ask Context, Exa, Firecrawl, and Keenable to retrieve the same fresh sample of web pages each day, then compare their results."
           background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
           contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
           actions={<a href="#sources" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">See where the pages come from</a>}
@@ -946,13 +907,11 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         <div className="sample-filters" aria-label="Benchmark filters">
           <Filter
             label="Source"
-            value={accessRun && source === "daily" ? "all" : source}
+            value={source}
             onChange={setSource}
             options={[
-              { value: "all", label: accessRun ? "All daily sources" : "All sources" },
-              ...(!accessRun ? [{ value: "daily", label: "Daily web sample" }] : []),
+              { value: "all", label: "All daily sources" },
               { value: "wikipedia_daily", label: "Daily Wikipedia discoveries" },
-              { value: "wikipedia", label: "Original Wikipedia study (Oct 29)" },
             ]}
           />
           <Filter
@@ -961,78 +920,45 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             onChange={setCategory}
             options={[
               { value: "all", label: "All categories" },
-              ...benchmarkCategories.map((c) => ({
+              ...benchmarkCategories.filter((c) => c.id !== "arts_sports_reference").map((c) => ({
                 value: c.id,
                 label: c.name,
               })),
             ]}
           />
-          <Filter
-            label="Validation"
-            value={validation}
-            onChange={setValidation}
-            options={[
-              { value: "all", label: "All pages" },
-              { value: "hard", label: "Screened hard candidates" },
-              { value: "reference", label: "Reference checked" },
-            ]}
-          />
         </div>
         <div className="mt-6">
-          {(source === "all" || source === "daily") && (
+          {source === "all" && (
             <p className="bench-note">
               Each day, we find pages through publisher feeds that announce new
               articles, public databases that list records such as company filings
               and job openings, and sitemaps that list a website’s pages.
             </p>
           )}
-          {source !== "wikipedia" && (
-            <p className="bench-note">
-              Before building each daily sample, we check the previous day’s
-              English Wikipedia edits for new external links. All four providers
-              then retrieve the previously untested pages in that sample.
-            </p>
-          )}
-          {source === "wikipedia" && (
-            <p className="bench-note">
-              The original 1,041-page Wikipedia study from October 29 remains
-              available alongside the daily results as a separate historical sample.
-            </p>
-          )}
-          {accessRun && source !== "wikipedia" && (
-            <p className="bench-note">
-              This sample measures page access only. The original Wikipedia study
-              uses useful-content grades and is available separately in the Source
-              filter; its results are excluded from access scores.
-            </p>
-          )}
+          <p className="bench-note">
+            Before building each daily sample, we check the previous day’s
+            English Wikipedia edits for new external links. All four providers
+            then retrieve the previously untested pages in that sample.
+          </p>
           <p className="bench-note">
             <a href="#sources">Explore the sources and example pages</a>.
           </p>
         </div>
         <div className="bench-sample">
           <p aria-live="polite">
-            {source !== "wikipedia" && (run ? (
+            {run ? (
               <>
                 Daily sample: <strong>{run.day}</strong> UTC
               </>
             ) : (
               "No daily sample available"
-            ))}
-            {source === "all" && !accessRun && (
-              <> · <a href="#wikipedia" onClick={() => {
-                const archive = document.querySelector<HTMLDetailsElement>("#wikipedia");
-                if (archive) archive.open = true;
-              }}>Includes archived results</a></>
             )}
-            {source === "wikipedia" && "Original Wikipedia study: October 29, 2026"}
             {loading && " · Updating…"}
           </p>
           <div className="sample-actions">
             <Select
               value={selection}
               onValueChange={setSelection}
-              disabled={source === "wikipedia"}
               label="Sample date (UTC)"
               className="rounded-pill px-5"
               icon={
@@ -1043,10 +969,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               }
               options={[
                 { value: "latest", label: "Latest completed sample" },
-                ...data.history.map((run) => ({
+                ...visibleHistory.map((run) => ({
                   value: run.id,
                   label: run.day,
-                  description: `${run.protocol}${run.status !== "completed" ? " · In progress" : ""}`,
+                  description: run.status !== "completed" ? "In progress" : undefined,
                 })),
               ]}
             />
@@ -1060,7 +986,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             {error}
           </p>
         )}
-        {run && source !== "wikipedia" && retainedDaily < run.pages && (
+        {run && retainedDaily < run.pages && (
           <p className="bench-notice" role="status" data-retention-notice>
             Only {integer(retainedDaily)} of {integer(run.pages)} daily page
             records are available for {run.day}. Individual records expire after
@@ -1074,27 +1000,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               <dd data-sample-count>{integer(selected.length)}</dd>
             </div>
             <div>
-              <dt>Daily pages</dt>
-              <dd>{integer(dailyCount)}</dd>
-            </div>
-            <div>
-              <dt>Archived pages</dt>
-              <dd>{integer(wikiCount)}</dd>
-            </div>
-            <div>
               <dt>Categories represented</dt>
               <dd>{integer(observedCategories.length)}</dd>
             </div>
           </dl>
-          {validation !== "all" && (
-            <p className="bench-notice">
-              {validation === "hard"
-                ? "This subset was selected using provider failures and is not an unbiased ranking. Independent validation is incomplete."
-                : "Five pages were reference checked against visible article bodies or public abstracts. This small subset is not representative."}{" "}
-              Daily pages have not been independently screened and are excluded.
-              {accessRun && source !== "wikipedia" && " Select the original Wikipedia study in the Source filter to see reviewed pages."}
-            </p>
-          )}
         </SiteSection>
           {source === "wikipedia_daily" && selected.length === 0 && (
             <p className="bench-column bench-note" role="status">
@@ -1160,7 +1069,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <div className="bench-section-head bench-column bench-download">
             <p className="bench-note">
               {integer(selected.length)} pages match these filters. Downloads
-              include source, protocol, original grades and review notes.
+              include the source, sample date, scoring rules, and grades.
             </p>
             <Button
               variant="outline"
@@ -1176,21 +1085,19 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="history"
           accent="over time"
           title="Daily results over time"
-          note="Protocol v6 measures page access; earlier protocols measure useful content. Scores across these rules are not directly comparable. This chart excludes the fixed Wikipedia study."
+          note="Daily results from November 4, 2026 onward. Each point compares providers on the same day’s sample."
           chart={<Trend history={history} />}
           table={
             <Table
               label="Daily results history"
               headers={[
                 "Date (UTC)",
-                "Protocol",
                 "Status",
                 "Pages",
                 ...providers.map((p) => p.name),
               ]}
               rows={visibleHistory.map((r) => ({ id: r.id, cells: [
                 r.day,
-                `${r.protocol} · ${scoringLabel(r.protocol)}`,
                 r.status !== "completed"
                   ? "In progress"
                   : r.providers.every((p) => p.rate == null)
@@ -1205,7 +1112,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         <BenchmarkSources onViewDailyWikipedia={() => {
           setSource("wikipedia_daily");
           setCategory("all");
-          setValidation("all");
           document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
         }} />
         <SiteSection id="methodology" lines className="bench-method">
@@ -1215,7 +1121,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <p>
             {accessOnly
               ? "A page counts as accessed when actual page data or file content loaded. A partial preview, populated listing, publication landing page, or raw file can pass. Blocks, mandatory login screens, main-page errors, and empty shells fail when they contain no page data. Relevance, document identity, completeness, and extraction quality are not graded."
-              : "A page counts as useful when the response contains substantive content that matches the requested page. These historical results retain their original grading rules."}{" "}
+              : "A page counts as useful when the response contains substantive content that matches the requested page."}{" "}
             We calculate the percentage of {accessOnly ? "accessed" : "useful"} pages
             within each category, then average those percentages. This gives every
             category the same influence, regardless of its page count. Failed
@@ -1232,10 +1138,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           )}
           <h3>Reading the daily history</h3>
           <p>
-            Historical scores keep the scoring rules used at the time and do
-            not change with the filters above. Gaps mark missing scores, and
-            separate line segments show where the scoring rules changed. Scores
-            from different collection protocols are not directly comparable.
+            Each point is a saved daily result and does not change with the
+            filters above. Gaps mark missing scores; they are not estimated.
             A dash in a results table means no score is available.
           </p>
           <h3>Daily collection</h3>
@@ -1250,41 +1154,33 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             Public feeds, registries, and sitemaps supply up to 300 previously
             unseen pages per category each day. All four providers receive the
             same frozen sample with fresh content requested and a 30-second
-            request deadline. Under protocol v6, an automated judge checks only
-            whether page data loaded or access failed, without seeing the provider
-            name or target metadata. Earlier protocols checked for substantive
-            content matching the requested page. Historical grades are preserved,
-            including unfinished runs that started under an earlier protocol.
+            request deadline. {accessOnly
+              ? "An automated judge checks whether page data loaded or access failed, without seeing the provider name or target metadata."
+              : "An automated judge checks for substantive content matching the requested page without seeing the provider name."}
           </p>
           <p>
             Wikipedia discovery runs once before the daily sample is created,
             using up to 1,200 non-bot article edits spread across the previous
             UTC day. We compare the old and new revision text. Only new
-            external URLs are eligible; previously tested URLs and the original
-            study pages are excluded. The daily sample includes up to 300 of
+            external URLs that have not been tested before are eligible. The daily sample includes up to 300 of
             these pages in the Other category, without inferring their subject
             from the citing article. This is a sample of edits, not every link
             added to Wikipedia. If discovery fails, the other sources can still
             form the daily sample, and Wikipedia is checked again the next day.
           </p>
           <p>
-            Protocol v5 added this group to the daily sample. It receives the same
-            weight as each other category when present; missing Wikipedia pages
-            do not suppress the eight-category daily score. Historical results
-            retain their original scoring rules.
+            This group receives the same weight as each other category when
+            present; missing Wikipedia pages do not suppress the eight-category
+            daily score.
           </p>
           <details>
             <summary>Collection, grading, and limitations</summary>
             <p>
-              {run && run.protocol !== PROTOCOL
-                ? `The selected historical sample uses ${run.protocol}, while new collections use ${PROTOCOL}.`
-                : `Collection uses ${PROTOCOL}.`}{" "}
               Context and Firecrawl request main content; all outputs are
               limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
-              characters from the beginning, middle, and end. In protocol v6,
-              accessed and not-accessed judgments are scored directly; unclear
-              sampled evidence or a judge failure remains unresolved. Earlier
-              protocols keep negative judgments from incomplete excerpts unresolved.
+              characters from the beginning, middle, and end. {accessOnly
+                ? "Accessed and not-accessed judgments are scored directly; unclear sampled evidence or a judge failure remains unresolved."
+                : "Negative judgments from incomplete excerpts remain unresolved, as do judge failures."}{" "}
               Failed, unresolved, and pending results stay in the denominator,
               with equal weight for each scored category.
             </p>
@@ -1296,18 +1192,19 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               sample.
             </p>
             <p>
-              Collection runs every fifteen minutes, with a limit of 4,000
-              requests per provider per UTC day and a separate grading budget.
+              Scheduled collection checks every fifteen minutes, and workers
+              continue through the queued sample. Limits are 4,000 requests per
+              provider per UTC day, plus a separate grading budget.
               Interrupted requests are not automatically repeated, which avoids
               giving a provider extra attempts at the same page.
             </p>
             <p>
               Individual results are retained for 30 days. Private grading
               excerpts are compressed and retained for up to seven days within a
-              256 MB budget; daily summaries remain available. Historical
-              records retain their original protocol and grading decisions.
+              256 MB budget; daily summaries remain available. Saved
+              records retain their original grading decisions.
             </p>
-            {data.collecting && data.collecting.id !== run?.id && (
+            {data.collecting && data.collecting.day >= firstSampleDay && data.collecting.id !== run?.id && (
               <p>
                 Collection for {data.collecting.day} is in progress, with{" "}
                 {integer(
@@ -1332,81 +1229,6 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               .{data.health.error && ` ${data.health.error}`}
             </p>
           </details>
-          <details id="wikipedia">
-            <summary>Wikipedia methodology history</summary>
-            <p>
-              With protocol v5, Wikipedia discovery moved from a fixed snapshot
-              to daily samples. The earlier study tested 1,041 linked pages on
-              October 29, 2026, using links found in 48 two-minute windows on
-              October 25 and 27, covering 4,777 edits. Those saved results remain
-              available in the Source filter and are not refreshed. They are
-              excluded from protocol v6 access scores because they measure useful
-              content; earlier daily samples still offer the original combined view.
-            </p>
-            <p>
-              For earlier protocols, the combined view brings together the selected
-              daily sample and the fixed Wikipedia study. We align their legal and
-              finance categories
-              and keep arts, sports, and reference pages in a separate category.
-              A URL appears only once, ignoring page fragments; when both studies
-              contain it, we use the daily result.
-            </p>
-            <p>
-              The two studies used different collection settings, so the combined
-              score describes this particular mix of pages. Use the Source filter
-              to compare providers within one study. The Wikipedia study was
-              measured on October 29 with its original Python adapters and
-              identity-content-jev-v2 grading, with Context requesting the full
-              page rather than main content only. Its scores here use equal
-              category weights, so they differ from the original study chart,
-              which gave every page equal weight.
-            </p>
-            <p>
-              <a href="/data/wikipedia-study.json" download>
-                Download the archived URLs and results
-              </a>
-            </p>
-            <Button variant="outline-brand" onClick={() => {
-              setSource("wikipedia");
-              setCategory("all");
-              setValidation("all");
-              document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
-            }}>
-              View original Wikipedia results
-            </Button>
-            <h3 id="wikipedia-methodology">Archived study validation</h3>
-            {wikiCount > 0 && (
-              <p>
-                A basic HTTP fetch with Trafilatura, an article-text extractor,
-                recovered useful content from {integer(selected.filter(
-                  (page) => page.source === "wikipedia" && page.plainHttp === true,
-                ).length)} of {integer(wikiCount)} selected pages linked from
-                Wikipedia. This baseline was not measured for daily pages.
-              </p>
-            )}
-            <details>
-              <summary>Wikipedia screening and reference checks</summary>
-              <p>
-                The scores use each provider’s first attempt. We repeated some
-                requests to check whether failures persisted and identified 73 pages
-                for further study. Because those pages were selected using provider
-                failures, this subset cannot support an unbiased ranking.
-              </p>
-              <p>
-                Of 20 randomly audited candidates, five were reference checked,
-                three were rejected, and twelve remain unresolved. Some reference
-                checks used public abstracts, so they do not establish whether the
-                full paper was recovered. Two known grading errors are flagged in
-                the data, with their original grades preserved.
-              </p>
-              <p>
-                Daily pages have not received this independent screening and are
-                excluded by the validation filters. A reliable supply of 1,000
-                validated hard pages per day has not been established. The download
-                includes original grades, review notes and provenance hashes.
-              </p>
-            </details>
-          </details>
         </SiteSection>
         <SiteSection id="citation" lines className="bench-citation">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
@@ -1416,7 +1238,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             Scraping Bench is maintained by{" "}
             <a href="https://context.dev">Context.dev</a>. If you use these
             results in your work, please cite the benchmark and
-            include the sample date and protocol.
+            include the sample date and scoring rules.
           </p>
           </div>
           <div className="flex min-w-0 flex-col gap-10">

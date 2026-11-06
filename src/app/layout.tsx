@@ -8,10 +8,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Scraping Bench · Context.dev",
-  description: "Compare page access across Context, Exa, Firecrawl, and Keenable on the same daily sample, with historical useful-content results preserved.",
+  description: "Compare Context, Exa, Firecrawl, and Keenable on the same fresh sample of web pages each day.",
   openGraph: {
     title: "Scraping Bench · Context.dev",
-    description: "Compare page access across Context, Exa, Firecrawl, and Keenable on the same daily sample, with historical useful-content results preserved.",
+    description: "Compare Context, Exa, Firecrawl, and Keenable on the same fresh sample of web pages each day.",
     type: "website",
   },
 };
