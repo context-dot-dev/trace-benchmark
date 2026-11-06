@@ -2665,6 +2665,11 @@ body:has(.bench-page)::after {
   .bench-nav-group + .bench-nav-group {
     margin-top: var(--ds-space-2);
   }
+  @media (max-height: 44rem) {
+    .bench-rail-nav a {
+      height: var(--ds-space-8);
+    }
+  }
 }
 .bench-verdict.is-called,
 .bench-chip.is-called {

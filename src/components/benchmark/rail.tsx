@@ -92,6 +92,7 @@ export function BenchRail({
   const [sheet, setSheet] = useState(false);
   const pill = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const saved = localStorage.getItem(RAIL_KEY);
     // Restoring a saved preference after hydration avoids a server/client mismatch.
@@ -101,6 +102,23 @@ export function BenchRail({
   useEffect(() => {
     document.documentElement.dataset.rail = rail;
   }, [rail]);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const revealActive = () => {
+      if (!nav.clientHeight || getComputedStyle(nav).overflowY !== "auto") return;
+      const link = nav.querySelector<HTMLElement>("a[aria-current]");
+      if (!link) return;
+      const bounds = nav.getBoundingClientRect();
+      const item = link.getBoundingClientRect();
+      if (item.top < bounds.top) nav.scrollTop += item.top - bounds.top;
+      else if (item.bottom > bounds.bottom) nav.scrollTop += item.bottom - bounds.bottom;
+    };
+    revealActive();
+    const observer = new ResizeObserver(revealActive);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [active, rail]);
   const toggleRail = useCallback(() => {
     setRail((current) => {
       const collapsed =
@@ -223,7 +241,7 @@ export function BenchRail({
               </button>
             </div>
           </div>
-          <nav className="bench-rail-nav" aria-label="Sections">{nav("rail")}</nav>
+          <nav ref={navRef} className="bench-rail-nav" aria-label="Sections">{nav("rail")}</nav>
           <div className="bench-rail-glance">{glance}</div>
           <div className="bench-rail-foot">
             <a href="https://github.com/context-dot-dev/trace-benchmark">Source on GitHub</a>

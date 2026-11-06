@@ -10,6 +10,9 @@ import { resolve } from "node:path";
 // are clipped; short screens hide lower links or the theme control; responsive
 // auto-collapse differs from manual collapse; navigation loses filters/sample;
 // persisted collapse, expanded labels, or the mobile section sheet regress.
+// Short-screen failures: 600px height silently clips a destination; on smaller
+// screens the active destination stays outside the nav viewport; revealing it
+// scrolls the page away from the section the reader chose.
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const evidence = resolve("artifacts/compact-rail/browser");
@@ -109,6 +112,49 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForFunction(() => document.documentElement.dataset.rail === "collapsed");
   checks.push("Section navigation preserves category and sample, and reload restores collapsed preference");
+  await page.setViewportSize({ width: 1440, height: 600 });
+  await page.goto(url, { waitUntil: "networkidle" });
+  const shortScreenFailures = [];
+  const allFit = await rail.locator(".bench-rail-nav").evaluate(nav => {
+    const bounds = nav.getBoundingClientRect();
+    return { clientHeight: nav.clientHeight, scrollHeight: nav.scrollHeight,
+      visible: [...nav.querySelectorAll("a")].filter(link => {
+        const rect = link.getBoundingClientRect();
+        return rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1;
+      }).length };
+  });
+  try {
+    assert.ok(allFit.scrollHeight <= allFit.clientHeight + 1 && allFit.visible === 14,
+      `600px viewport shows all 14 destinations without nav scrolling: ${JSON.stringify(allFit)}`);
+    checks.push("600px viewport exposes all 14 section icons without requiring nav scrolling");
+  } catch (error) { shortScreenFailures.push(error); }
+  await page.setViewportSize({ width: 1440, height: 450 });
+  await page.evaluate(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    document.querySelector(".bench-rail-nav").scrollTop = 0;
+  });
+  await page.waitForFunction(() => document.querySelector('.bench-rail-nav a[aria-current]')?.getAttribute("href") === "#overview");
+  const selectedScrollY = await page.evaluate(() => {
+    document.getElementById("citation").scrollIntoView({ behavior: "instant" });
+    return window.scrollY;
+  });
+  await page.waitForFunction(() => document.querySelector('.bench-rail-nav a[aria-current]')?.getAttribute("href") === "#citation");
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const activeGeometry = await rail.locator(".bench-rail-nav").evaluate(nav => {
+    const bounds = nav.getBoundingClientRect();
+    const link = nav.querySelector("a[aria-current]").getBoundingClientRect();
+    return { navTop: bounds.top, navBottom: bounds.bottom, linkTop: link.top, linkBottom: link.bottom,
+      navScroll: nav.scrollTop, pageScroll: window.scrollY };
+  });
+  try {
+    assert.ok(activeGeometry.linkTop >= activeGeometry.navTop - 1 && activeGeometry.linkBottom <= activeGeometry.navBottom + 1,
+      `450px viewport reveals the active Citation link within the nav: ${JSON.stringify(activeGeometry)}`);
+    assert.equal(activeGeometry.pageScroll, selectedScrollY, "Revealing the active rail link must not move the page away from Citation");
+    checks.push("450px viewport keeps the active Citation link visible by scrolling only the rail, preserving the reader's page position");
+  } catch (error) { shortScreenFailures.push(error); }
+  writeFileSync(resolve(evidence, "short-screen-geometry.json"), JSON.stringify({ allFit, selectedScrollY, activeGeometry }, null, 2));
+  if (shortScreenFailures.length) throw new AggregateError(shortScreenFailures, shortScreenFailures.map(error => error.message).join("\n"));
+  await page.screenshot({ path: resolve(evidence, "short-active-citation.png") });
   await page.setViewportSize({ width: 1440, height: 600 });
   await page.goto(url, { waitUntil: "networkidle" });
   await compact("1440×600 manual collapse", 600);
