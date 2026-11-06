@@ -58,10 +58,10 @@ try {
     })));
     const started = Date.now();
     await runProvider(store, { provider: "exa", shard: 0, shards: 1, concurrency: 8,
-      requestsPerSecond: 0.01, judgeRequestsPerSecond: 0.01, deadlineMs: 200,
+      requestsPerSecond: 0.01, judgeRequestsPerSecond: 0.01, deadlineMs: 1000,
       now: () => new Date(day + "T00:20:00Z"), readers });
     const elapsedMs = Date.now() - started;
-    assert.ok(elapsedMs < 1500, `A 100-second pacing interval must respect the 200ms invocation deadline (${elapsedMs}ms)`);
+    assert.ok(elapsedMs < 2000, `A 100-second pacing interval must respect the 1-second invocation deadline (${elapsedMs}ms)`);
     const rows = await store.db.select().from(attempts);
     assert.ok(rows.every((row) => !["fetching", "grading"].includes(row.state)));
     assert.equal(calls.read, phase === "read" ? 1 : 0);

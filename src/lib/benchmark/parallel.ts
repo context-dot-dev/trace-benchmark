@@ -73,7 +73,7 @@ function batcher<I, O>(
     pending.push({ input, resolve, reject });
     if (running) return;
     if (pending.length >= 128) void drain();
-    else timer ??= setTimeout(() => void drain(), 25);
+    else timer ??= setTimeout(() => void drain(), 100);
   });
 }
 
