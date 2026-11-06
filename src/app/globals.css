@@ -671,7 +671,7 @@ body::after,
 
 .sample-filters {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ds-space-4);
   margin: var(--ds-space-8) 0 var(--ds-space-5);
 }
@@ -708,7 +708,7 @@ body::after,
 }
 .sample-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ds-space-6);
   margin: var(--ds-space-8) 0;
 }
