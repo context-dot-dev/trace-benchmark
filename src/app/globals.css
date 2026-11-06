@@ -2354,7 +2354,7 @@ body:has(.bench-page)::after {
     padding-bottom: var(--ds-space-24);
   }
   .bench-matrix-row {
-    grid-template-columns: 5.5rem repeat(4, minmax(0, 1fr));
+    grid-template-columns: 6rem repeat(4, minmax(0, 1fr));
     column-gap: var(--ds-space-2);
   }
   .bench-matrix-corner span {

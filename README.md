@@ -1,6 +1,6 @@
 # TRACE
 
-Daily comparison of Context, Exa, Firecrawl, and Keenable on the same pages, with category scores, historical results, and downloadable page-level outcomes.
+Daily comparison of context.dev, Exa, Firecrawl, and Keenable on a new sample of pages each day, with category scores, historical results, and downloadable page-level outcomes.
 
 [View the live report](https://trace.context.dev/)
 
@@ -37,7 +37,7 @@ Every request asks for fresh content, and every response is checked for the prov
 
 | Provider | Request | Response check |
 |---|---|---|
-| Context | `maxAgeMs: 0` | `cache_metadata.status`, `cache_metadata.age_ms` |
+| context.dev | `maxAgeMs: 0` | `cache_metadata.status`, `cache_metadata.age_ms` |
 | Exa | `maxAgeHours: 0` | `statuses[].source` |
 | Firecrawl | `maxAge: 0`, `storeInCache: false` | `metadata.cacheState` |
 | Keenable | `live=true` | `usage.sku` must be `fetch.live` |
@@ -102,7 +102,7 @@ Cron starts one deduplicated Vercel Workflow. After discovery and sample selecti
 
 `TRACE_<PROVIDER>_CONCURRENCY` and `TRACE_<PROVIDER>_RPS` set aggregate limits across that provider's shards; `TRACE_JUDGE_RPS` sets the aggregate judge dispatch rate. Defaults are in `.env.example`. HTTP 401, 402, and 429 pause the affected provider across shards; judge rejections pause grading across providers while retrieved evidence stays available. Unsent reservations return to the queue. In-flight requests finish normally. Interrupted paid requests are not automatically repeated.
 
-A 30–60-second collection requires account capacity for the entire sample. The current defaults reflect observed constraints: Context's benchmark key allows 700 requests/minute, Firecrawl allows 50 concurrent browsers, and Keenable publishes 10 requests/second. Exa rejected a 90-request/second probe, so its default is 5 pending confirmation of the account allowance. Jev's sustained account allowance has not been verified. Raising these settings without provider capacity can create rate errors and queue timeouts. Collection time also excludes discovery and sample preparation.
+A 30–60-second collection requires account capacity for the entire sample. The current defaults reflect observed constraints: context.dev's benchmark key allows 700 requests/minute, Firecrawl allows 50 concurrent browsers, and Keenable publishes 10 requests/second. Exa rejected a 90-request/second probe, so its default is 5 pending confirmation of the account allowance. Jev's sustained account allowance has not been verified. Raising these settings without provider capacity can create rate errors and queue timeouts. Collection time also excludes discovery and sample preparation.
 
 Vercel stores workflow execution state; benchmark data stays in Neon. Parallel collection increases peak traffic, database connections, and Workflow usage costs. Retrieval latency under this load may differ from historical runs even though grading and scoring rules are unchanged.
 

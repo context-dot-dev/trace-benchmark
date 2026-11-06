@@ -17,7 +17,7 @@ export async function GET() {
     const lines = [
       "# TRACE",
       "",
-      "> Daily benchmark of web scraping APIs (Context, Exa, Firecrawl, Keenable). Every day the same fresh sample of about 2,500 never-tested web pages goes to all four providers with caching turned off. A provider-blind automated judge grades each response. Published by Context.dev, which is also one of the providers tested.",
+      "> Daily benchmark of web scraping APIs (context.dev, Exa, Firecrawl, Keenable). Every day a new fresh sample of about 2,500 never-tested web pages goes to all four providers with caching turned off. A provider-blind automated judge grades each response. Published by context.dev, which is also one of the providers tested.",
       "",
       run ? `Latest sample: ${run.day} UTC, scored for ${run.protocol === ACCESS_PROTOCOL ? "page access" : "useful content"}, ${view.selected.length} pages.` : "No sample is available yet.",
       "",
