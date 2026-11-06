@@ -15,7 +15,7 @@ export async function GET() {
     const run = view.run;
     const ranked = [...view.rows].filter((r) => r.rate != null).sort((a, b) => (b.rate ?? 0) - (a.rate ?? 0));
     const lines = [
-      "# Scraping Bench",
+      "# TRACE",
       "",
       "> Daily benchmark of web scraping APIs (Context, Exa, Firecrawl, Keenable). Every day the same fresh sample of about 2,500 never-tested web pages goes to all four providers with caching turned off. A provider-blind automated judge grades each response. Published by Context.dev, which is also one of the providers tested.",
       "",
@@ -42,9 +42,9 @@ export async function GET() {
       "## Questions",
       ...faqItems(view).flatMap((item) => [`### ${item.q}`, item.a, ""]),
       "## Links",
-      "- [Full report](https://trace-benchmark-contextdev.vercel.app/)",
-      "- [Daily summaries API](https://trace-benchmark-contextdev.vercel.app/api/report)",
-      ...(run ? [`- [Page-level records for ${run.day}](https://trace-benchmark-contextdev.vercel.app/api/download?run=${encodeURIComponent(run.id)})`] : []),
+      "- [Full report](https://trace.context.dev/)",
+      "- [Daily summaries API](https://trace.context.dev/api/report)",
+      ...(run ? [`- [Page-level records for ${run.day}](https://trace.context.dev/api/download?run=${encodeURIComponent(run.id)})`] : []),
       "- [Source code](https://github.com/context-dot-dev/trace-benchmark)",
     ];
     return new Response(lines.join("\n") + "\n", {

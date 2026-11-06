@@ -4,6 +4,6 @@ import { database } from "./store";
 
 export const cachedReport = unstable_cache(
   (options: Parameters<typeof report>[1] = {}) => report(database(), options),
-  ["scraping-bench-report-v4"],
+  ["trace-report-v4"],
   { revalidate: 900 },
 );

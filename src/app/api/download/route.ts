@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/x-ndjson",
       "Content-Disposition":
-        'attachment; filename="scraping-bench-results.ndjson"',
+        'attachment; filename="trace-results.ndjson"',
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
     },

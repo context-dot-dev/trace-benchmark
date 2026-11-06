@@ -194,7 +194,7 @@ export function BenchRail({
           <div className="bench-rail-brand">
             <a href="#overview" className="bench-rail-home" onClick={(event) => { event.preventDefault(); go("overview"); }}>
               <ContextMark className="h-[0.95rem] w-auto" />
-              <span className="bench-rail-wordmark">Scraping Bench</span>
+              <span className="bench-rail-wordmark">TRACE</span>
             </a>
             <button type="button" className="bench-rail-toggle" onClick={toggleRail} aria-label="Collapse or expand the section list" title="Collapse or expand ( [ )">
               <PanelLeft aria-hidden="true" className="bench-icon-collapse" />

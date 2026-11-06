@@ -1,8 +1,8 @@
-# Scraping Bench
+# TRACE
 
 Daily comparison of Context, Exa, Firecrawl, and Keenable on the same pages, with category scores, historical results, and downloadable page-level outcomes.
 
-[View the live report](https://trace-benchmark-contextdev.vercel.app/)
+[View the live report](https://trace.context.dev/)
 
 ## How scoring works
 

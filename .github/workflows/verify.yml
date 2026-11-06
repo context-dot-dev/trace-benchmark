@@ -1,4 +1,4 @@
-name: Verify Scraping Bench
+name: Verify TRACE
 on:
   pull_request:
   push:

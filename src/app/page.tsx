@@ -50,12 +50,12 @@ export default async function Page({ searchParams }: PageProps<"/">) {
   // Structured data always describes the unfiltered benchmark.
   const view = buildView(dataset, defaultFilters);
   const run = dataset.report.latest;
-  const site = "https://trace-benchmark-contextdev.vercel.app/";
+  const site = "https://trace.context.dev/";
   const structured = [
     {
       "@context": "https://schema.org",
       "@type": "Dataset",
-      name: "Scraping Bench: daily web scraping API benchmark",
+      name: "TRACE: daily web scraping API benchmark",
       description:
         "Daily comparison of Context, Exa, Firecrawl, and Keenable on the same fresh sample of web pages: page access, latency, document quality, cost, and failure reasons, with page-level records.",
       url: site,

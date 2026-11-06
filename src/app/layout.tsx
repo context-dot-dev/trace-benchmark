@@ -8,10 +8,10 @@ import { dsFontVariables } from "@/lib/ds-fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Scraping Bench · Daily web scraping API benchmark",
+  title: "TRACE · Daily web scraping API benchmark",
   description: "Daily web scraping API benchmark: page access, latency percentiles, document quality, cost per page, and failure reasons for Context, Exa, Firecrawl, and Keenable on the same fresh sample, with confidence intervals and page-level data.",
   openGraph: {
-    title: "Scraping Bench · Context.dev",
+    title: "TRACE · context.dev",
     description: "Daily web scraping API benchmark: page access, latency percentiles, document quality, cost per page, and failure reasons for Context, Exa, Firecrawl, and Keenable on the same fresh sample, with confidence intervals and page-level data.",
     type: "website",
   },

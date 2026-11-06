@@ -38,11 +38,11 @@ import { dailyExamples } from "./sources";
 
 export type SourceSummary = { total: number; categories: { id: string; count: number; examples: string[] }[] };
 
-const citation = `@misc{scrapingbench2026,
+const citation = `@misc{trace2026,
   author = {{Context.dev}},
-  title = {{Scraping Bench}: A Live Scraping Benchmark},
+  title = {{TRACE}: A Live Scraping Benchmark},
   year = {2026},
-  url = {https://trace-benchmark-contextdev.vercel.app/}
+  url = {https://trace.context.dev/}
 }`;
 const repo = "https://github.com/context-dot-dev/trace-benchmark";
 const longDate = (day: string) =>
@@ -300,7 +300,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "scraping-bench-filtered.json";
+    link.download = "trace-filtered.json";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -1214,7 +1214,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               <CodeWindow label="report.sh">
                 <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="API example">
                   <CodeBlock
-                    code={`curl -s https://trace-benchmark-contextdev.vercel.app/api/report \\\n  | jq '.latest.providers[] | {id, rate, ci, p50, p95}'`}
+                    code={`curl -s https://trace.context.dev/api/report \\\n  | jq '.latest.providers[] | {id, rate, ci, p50, p95}'`}
                     className="[&_span]:whitespace-pre-wrap [&_span]:wrap-anywhere"
                   />
                 </div>
@@ -1242,7 +1242,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             accent="benchmark"
             lede={
               <>
-                Scraping Bench is maintained by <a href="https://context.dev">Context.dev</a>. If you use these results in
+                TRACE is maintained by <a href="https://context.dev">context.dev</a>. If you use these results in
                 your work, please cite the benchmark and include the sample date and scoring rules.
               </>
             }
@@ -1256,7 +1256,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               </p>
               <div className="flex min-w-0 flex-col gap-3">
                 <CodeWindow
-                  label="scraping-bench.bib"
+                  label="trace.bib"
                   windowClassName="[&>div:first-child]:flex-wrap"
                   actions={
                     <Button
