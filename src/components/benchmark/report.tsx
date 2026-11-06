@@ -437,7 +437,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
         <div className="bench-status">
           {/* Below the sidebar breakpoint the rail is hidden, so the status row carries the brand. */}
           <a href="#overview" className="bench-status-brand" aria-label="TRACE overview">
-            <ContextMark className="h-[0.95rem] w-auto" />
+            <ContextMark className="h-[1.05rem] w-auto" />
             <span>TRACE</span>
           </a>
           <p>
@@ -454,7 +454,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
           <div className="bench-status-actions">
             <Button variant="pill" size="sm" className="bench-status-download" onClick={download} disabled={!run} data-download-results>
               <Download aria-hidden="true" />
-              <span className="bench-status-download-label">Download data</span>
+              Download data
             </Button>
             <Button variant="ghost" size="icon" className="size-11 rounded-pill text-fg" asChild>
               <a href={repo} aria-label="Trace benchmark on GitHub">

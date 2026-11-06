@@ -1293,8 +1293,9 @@ body:has(.bench-page)::after {
 }
 .bench-status-brand span {
   color: var(--bench-text);
-  font-size: var(--ds-text-body-lg);
+  font-size: var(--ds-text-h5);
   font-weight: var(--ds-font-weight-regular);
+  letter-spacing: var(--ds-tracking-tight);
   white-space: nowrap;
 }
 @media (min-width: 64rem) {
@@ -2456,32 +2457,23 @@ body:has(.bench-page)::after {
   .bench-matrix-label {
     font-size: var(--ds-text-body-sm);
   }
-  /* Header row: brand and actions, then the live status as one line of text. */
+  /* One quiet row: brand on the left, the live badge and GitHub on the right. The schedule
+     sentence stays available to assistive tech; the sample date lives in the section pill. */
   .bench-status {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--ds-space-2) var(--ds-space-3);
-    padding-block: var(--ds-space-3) var(--ds-space-4);
+    gap: var(--ds-space-2);
+    min-height: 4rem;
+    padding-block: var(--ds-space-2);
   }
   .bench-status-brand {
-    grid-row: 1;
-    grid-column: 1;
+    margin-right: auto;
   }
-  .bench-status-actions {
-    grid-row: 1;
-    grid-column: 2;
-  }
-  .bench-status p {
-    display: block;
-    grid-row: 2;
-    grid-column: 1 / -1;
-    font-size: var(--ds-text-body-sm);
-    line-height: 1.75;
-  }
-  .bench-status-chip {
-    margin-right: var(--ds-space-2);
-    vertical-align: 0.05em;
+  .bench-status p > span:not(.bench-status-chip) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .bench-filters button,
   .bench-tabs [role="tab"],
@@ -2805,6 +2797,10 @@ body:has(.bench-page)::after {
   .bench-app {
     padding-inline: 0;
   }
+  /* Phones keep the header to brand, live badge, and GitHub; downloads stay under Data & API. */
+  .bench-status-download {
+    display: none;
+  }
   .bench-status,
   .bench-footer {
     padding-inline: var(--ds-space-4);
@@ -2876,21 +2872,6 @@ body:has(.bench-page)::after {
   }
   .bench-legend {
     row-gap: 0;
-  }
-}
-/* The narrowest phones keep the download action as an icon; its name stays for assistive tech. */
-@media (max-width: 22.499rem) {
-  .bench-status-download {
-    width: 2.75rem;
-    padding-inline: 0;
-  }
-  .bench-status-download-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 }
 
