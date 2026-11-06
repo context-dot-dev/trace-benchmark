@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { gunzipSync } from "node:zlib";
-import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm";
-import { attempts, worker } from "./schema";
+import { and, asc, eq, getTableColumns, isNull, lt, or, sql } from "drizzle-orm";
+import { attempts, runs, worker } from "./schema";
 import { providers, type Grade, type Provider, type Receipt } from "./types";
 import { createReaders, type Readers } from "./providers";
 import { claimReads, claimGrades, releaseReads, releaseGrades, saveReceipts, saveGrades, type Attempt } from "./batch-store";
@@ -174,11 +174,13 @@ export async function runProvider(store: Store, options: ProviderWorker & {
   const grades: Promise<void>[] = [];
   try {
     await providerPaused();
-    const rows = await store.db.select().from(attempts).where(and(
+    const rows = await store.db.select({ ...getTableColumns(attempts), protocol: runs.protocol })
+      .from(attempts).innerJoin(runs, eq(attempts.runId, runs.id)).where(and(
       eq(attempts.provider, options.provider),
       or(eq(attempts.state, "queued"), eq(attempts.state, "fetched")),
       sql`mod(abs(hashtext(${attempts.id})::bigint),${options.shards})=${options.shard}`,
     )).orderBy(asc(attempts.day), asc(attempts.pageId)).limit(options.maxPages ?? 4000);
+    const protocols = new Map(rows.map((row) => [row.runId, row.protocol]));
     const claimRead = batcher<Attempt, Attempt>((row) => row.id, (row) => row.id,
       (batch) => claimReads(store, batch, token, day, lease, workerId));
     const releaseRead = batcher<Attempt, Attempt>((row) => row.id, (row) => row.id,
@@ -202,6 +204,8 @@ export async function runProvider(store: Store, options: ProviderWorker & {
       const task = judgeSlot(async () => {
         if (failure || judgePaused || Date.now() + (options.deadlineMs ? 0 : 65000) >= deadline) return;
         if (await judgePause.paused()) { judgePaused = true; return; }
+        const protocol = protocols.get(row.runId);
+        if (!protocol) throw new Error("Missing benchmark run protocol");
         const claimed = await claimGrade(row);
         if (!claimed) return;
         let admitted: boolean;
@@ -219,7 +223,7 @@ export async function runProvider(store: Store, options: ProviderWorker & {
         const grade = await readers.grade(claimed.row, {
           text: gunzipSync(claimed.row.evidence!).toString("utf8"),
           chars: claimed.row.chars ?? 0,
-        });
+        }, protocol);
         const pauseStatus = grade.error?.match(/^JUDGE_HTTP_(401|402|429)$/)?.[1];
         if (pauseStatus) judgePaused = true;
         await persistGrade({ ...claimed, grade });

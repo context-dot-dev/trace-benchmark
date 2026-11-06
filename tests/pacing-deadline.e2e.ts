@@ -8,7 +8,7 @@ import { runProvider } from "../src/lib/benchmark/parallel.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { attempts, budgets, runs } from "../src/lib/benchmark/schema.ts";
 import { migrateStore, openStore } from "../src/lib/benchmark/store.ts";
-import { providers, type RunSummary } from "../src/lib/benchmark/types.ts";
+import { providers, PROTOCOL, type RunSummary } from "../src/lib/benchmark/types.ts";
 
 // A configured pacing interval longer than the invocation must not hold claims
 // past their lease. Unsent reads and grades must return their budget reservations.
@@ -25,8 +25,9 @@ const fixture = createServer(async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   if (req.url === "/judge") {
     calls.judge++;
+    assert.deepEqual(Object.keys(body.questions), ["access"]);
     res.end(JSON.stringify({ answers: {
-      content: { choice: "substantive", confidence: 1 }, identity: { choice: "match", confidence: 1 },
+      access: { choice: "accessed", confidence: 1 },
     }, usage: { input_tokens: 100 } }));
   } else {
     calls.read++;
@@ -49,7 +50,7 @@ try {
     calls.read = 0; calls.judge = 0;
     await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
     const day = "2026-11-06";
-    await store.db.insert(runs).values({ id: "pacing-run", day, protocol: "fixture", status: "collecting", summary: {} as RunSummary });
+    await store.db.insert(runs).values({ id: "pacing-run", day, protocol: PROTOCOL, status: "collecting", summary: {} as RunSummary });
     await store.db.insert(attempts).values(Array.from({ length: 8 }, (_, index) => ({
       id: `pacing-${index}`, runId: "pacing-run", day, pageId: `page-${index}`, provider: "exa",
       url: `https://example.org/${index}`, title: `Article ${index}`, category: "news",

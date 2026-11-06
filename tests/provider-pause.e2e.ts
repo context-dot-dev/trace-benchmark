@@ -25,8 +25,8 @@ const fixture = createServer(async (req, res) => {
   const body = JSON.parse(raw);
   res.setHeader("Content-Type", "application/json");
   if (body.state) {
-    res.end(JSON.stringify({ answers: { content: { choice: "substantive", confidence: 1 },
-      identity: { choice: "match", confidence: 1 } }, usage: { input_tokens: 100 } }));
+    assert.deepEqual(Object.keys(body.questions), ["access"]);
+    res.end(JSON.stringify({ answers: { access: { choice: "accessed", confidence: 1 } }, usage: { input_tokens: 100 } }));
     return;
   }
   const status = !onlyFailUrl || body.urls[0] === onlyFailUrl ? fixtureStatus : 200;

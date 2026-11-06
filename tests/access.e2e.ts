@@ -307,6 +307,7 @@ try {
   );
   await seed(cases);
   await runTick(store, options);
+  await runTick(store, options);
   const data = await report(store);
   assert.equal(data.latest?.protocol, "scraping-bench-v6");
   assert.equal(data.latest?.status, "completed");

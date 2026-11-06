@@ -23,18 +23,19 @@ const fixture = createServer(async (req, res) => {
   const body = raw ? JSON.parse(raw) : {};
   const incoming = new URL(req.url!, "http://127.0.0.1");
   const provider = incoming.pathname.slice(1);
-  const url = body.url ?? body.urls?.[0] ?? body.state?.target.url ?? incoming.searchParams.get("url");
+  const url = body.url ?? body.urls?.[0] ?? body.state?.text?.match(/^Fixture URL: (\S+)/)?.[1] ?? incoming.searchParams.get("url");
   const record = { provider, url, started: Date.now(), ended: undefined as number | undefined };
   requests.push(record);
   active[provider] = (active[provider] ?? 0) + 1;
   maximum[provider] = Math.max(maximum[provider] ?? 0, active[provider]);
   res.once("close", () => { active[provider]--; record.ended = Date.now(); });
+  if (provider === "judge") assert.deepEqual(Object.keys(body.questions), ["access"]);
   const fast = provider === "judge" || (provider === "context" && url.endsWith("/0"));
   await new Promise((resolve) => setTimeout(resolve, fast ? 50 : 2000));
-  const text = "Substantive requested target article. ".repeat(30);
+  const text = "Fixture URL: " + url + "\n" + "Substantive requested target article. ".repeat(30);
   res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(provider === "judge" ? {
-    answers: { content: { choice: "substantive", confidence: 1 }, identity: { choice: "match", confidence: 1 } },
+    answers: { access: { choice: "accessed", confidence: 1 } },
     usage: { input_tokens: 100 },
   } : provider === "context" ? { markdown: { requested: true, success: true, data: text }, url }
     : provider === "exa" ? { results: [{ text, url }] }

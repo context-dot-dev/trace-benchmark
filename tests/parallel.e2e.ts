@@ -47,7 +47,7 @@ const fixture = createServer(async (req, res) => {
   const body = raw ? JSON.parse(raw) : {};
   const incoming = new URL(req.url!, "http://127.0.0.1");
   const provider = incoming.pathname.slice(1);
-  const url = body.url ?? body.urls?.[0] ?? body.state?.target.url ?? incoming.searchParams.get("url");
+  const url = body.url ?? body.urls?.[0] ?? body.state?.text?.match(/^Fixture URL: (\S+)/)?.[1] ?? incoming.searchParams.get("url");
   const mode = new URL(url).searchParams.get("mode") ?? "normal";
   const request = { provider, url, mode, started: Date.now(), ended: undefined as number | undefined };
   requests.push(request);
@@ -56,10 +56,11 @@ const fixture = createServer(async (req, res) => {
   res.once("close", () => { request.ended = Date.now(); active[provider]--; });
   res.setHeader("Content-Type", "application/json");
   if (provider === "judge") {
+    assert.deepEqual(Object.keys(body.questions), ["access"]);
+    assert.deepEqual(Object.keys(body.state).sort(), ["sampled", "text"]);
     await delay(200);
     res.end(JSON.stringify({ answers: {
-      content: { choice: "substantive", confidence: 0.98 },
-      identity: { choice: "match", confidence: 0.99 },
+      access: { choice: "accessed", confidence: 0.98 },
     }, usage: { input_tokens: 100 } }));
     return;
   }
@@ -67,7 +68,7 @@ const fixture = createServer(async (req, res) => {
   const authorization = req.headers.authorization ?? req.headers["x-api-key"];
   assert.ok(authorization === "fixture-key" || authorization === "Bearer fixture-key");
   if (mode === "stall") { res.write("{"); return; }
-  const text = "The requested document contains substantive target information. ".repeat(30);
+  const text = "Fixture URL: " + url + "\n" + "The requested document contains substantive target information. ".repeat(30);
   const result = provider === "context"
     ? { markdown: { requested: true, success: true, data: text }, url, key_metadata: { credits_consumed: 1 } }
     : provider === "exa" ? { results: [{ text, url }], costDollars: { total: 0.001 } }

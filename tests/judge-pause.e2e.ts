@@ -18,7 +18,7 @@ const databaseUrl = process.env.DATABASE_URL;
 assert.ok(databaseUrl && ["localhost", "127.0.0.1"].includes(new URL(databaseUrl).hostname),
   "Use a disposable local database; this test truncates scraping_bench");
 const store = openStore(databaseUrl);
-const calls: { kind: string; url: string; at: number; status: number }[] = [];
+const calls: { kind: string; at: number; status: number }[] = [];
 const checks: string[] = [];
 let failureStatus = 429;
 let hasFailed = false;
@@ -28,12 +28,13 @@ const fixture = createServer(async (req, res) => {
   for await (const chunk of req) raw += chunk;
   const body = JSON.parse(raw);
   const provider = req.url!.slice(1);
-  const url = body.state?.target.url ?? body.url ?? body.urls?.[0];
+  const url = body.url ?? body.urls?.[0];
   res.setHeader("Content-Type", "application/json");
   if (provider === "judge") {
     const status = hasFailed ? 200 : failureStatus;
     hasFailed = true;
-    calls.push({ kind: "judge", url, at: Date.now(), status });
+    assert.deepEqual(Object.keys(body.state).sort(), ["sampled", "text"]);
+    calls.push({ kind: "judge", at: Date.now(), status });
     if (status !== 200) {
       failedAt = Date.now();
       res.statusCode = status;
@@ -42,12 +43,11 @@ const fixture = createServer(async (req, res) => {
       return;
     }
     res.end(JSON.stringify({ answers: {
-      content: { choice: "substantive", confidence: 1 },
-      identity: { choice: "match", confidence: 1 },
+      access: { choice: "accessed", confidence: 1 },
     }, usage: { input_tokens: 100 } }));
     return;
   }
-  calls.push({ kind: provider, url, at: Date.now(), status: 200 });
+  calls.push({ kind: provider, at: Date.now(), status: 200 });
   const text = "Substantive target article content. ".repeat(30);
   res.end(JSON.stringify(provider === "context"
     ? { markdown: { requested: true, success: true, data: text }, url }
@@ -147,10 +147,11 @@ try {
   assert.ok(reservedRows.rows.every((row) => row.state !== "grading"),
     "Paused workers must release every undispatched grade claim");
   assert.ok(reservedRows.rows.filter((row) => row.state === "fetched" && row.judge_calls === 0).length >= 28);
-  const rejectedCall = reservedCalls.find((call) => call.status === 429)!;
-  const failedIndex = Number(new URL(rejectedCall.url).pathname.split("/").at(-1));
+  const rejectedRows = await store.db.execute(sql`select url,title from scraping_bench.attempts where error='JUDGE_HTTP_429'`);
+  assert.equal(rejectedRows.rows.length, 1);
+  const rejectedRow = rejectedRows.rows[0];
   const failedReservation = Buffer.byteLength("Substantive target article content. ".repeat(30))
-    + Buffer.byteLength(rejectedCall.url) + Buffer.byteLength("Article " + failedIndex) + 8192;
+    + Buffer.byteLength(rejectedRow.url) + Buffer.byteLength(rejectedRow.title) + 8192;
   const judgeBudget = await store.db.execute(sql`select used from scraping_bench.budgets where bucket='judge'`);
   assert.equal(Number(judgeBudget.rows[0].used), failedReservation + (reservedCalls.length - 1) * 100,
     "Only dispatched judgments may retain a token reservation after a shared pause");
