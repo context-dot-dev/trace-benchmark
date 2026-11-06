@@ -15,6 +15,10 @@ import { resolve } from "node:path";
 // URL failures: lost deep links on SSR/reload, replaced browser history, unrelated
 // query/hash deletion, invalid values, stale date responses, or chips scoped to
 // only one section instead of clearing the global filters.
+// Loading failures: a different pending sample masquerades as zero pages/categories,
+// score tables report fabricated zeroes, Wikipedia shows a false empty state,
+// downloads advertise zero records, failed requests look empty, late responses
+// overwrite newer selections, or same-sample refreshes erase already loaded data.
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const evidence = resolve("artifacts/history-sources");
@@ -103,6 +107,7 @@ app.stdout.on("data", data => { log += data; });
 app.stderr.on("data", data => { log += data; });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 1000 }, reducedMotion: "reduce" });
+await page.clock.install();
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 const checks = [];
@@ -150,6 +155,93 @@ try {
   await page.keyboard.press("End");
   await date("November 6, 2026");
   checks.push("History keyboard Home selects November 4 and End selects November 6");
+
+  async function holdSample(run, response) {
+    let release;
+    const ready = new Promise(resolve => { release = resolve; });
+    let requested;
+    const started = new Promise(resolve => { requested = resolve; });
+    let handled;
+    const completed = new Promise(resolve => { handled = resolve; });
+    const pattern = `**/api/benchmark?run=${run}`;
+    await page.route(pattern, async route => {
+      requested();
+      await ready;
+      if (response) await route.fulfill(response);
+      else await route.continue();
+      handled();
+    });
+    return { started, release: async () => {
+      release();
+      await completed;
+      await page.unroute(pattern);
+    } };
+  }
+  async function missingSample(state) {
+    assert.equal(await page.locator("[data-sample-count]").textContent(), "—",
+      "A sample whose records have not loaded must not claim zero pages");
+    assert.deepEqual(await page.locator(".sample-metrics dd").allTextContents(), ["—", "—"]);
+    assert.match(await page.locator("#results").innerText(), state);
+    assert.doesNotMatch(await page.locator("#results").innerText(), /No daily Wikipedia pages|0 pages match/);
+    assert.equal(await page.locator("[data-download-results]").isDisabled(), true);
+    for (const id of ["useful-content", "categories"]) {
+      const section = page.locator(`#${id}`);
+      for (const view of ["Table", "Chart"]) {
+        await section.getByRole("tab", { name: view, exact: true }).click();
+        assert.match(await section.innerText(), state);
+        assert.equal(await section.locator("tbody td").filter({ hasText: /^0(?:\.0)?%?$/ }).count(), 0,
+          `${id} ${view} must not display fabricated zero values`);
+      }
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  }
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(base, { waitUntil: "networkidle" });
+    await select("Source", "Daily Wikipedia discoveries");
+    await sampleCount(1);
+    const pending = await holdSample("2026-11-04");
+    await select("Sample date (UTC)", "2026-11-04");
+    await pending.started;
+    await missingSample(/Loading sample/i);
+    await page.screenshot({ path: resolve(evidence, `loading-${width}.png`), fullPage: true });
+    await pending.release();
+    await sampleCount(1);
+    assert.equal(await page.locator(".bench-sample strong").textContent(), "2026-11-04");
+    assert.deepEqual(await page.locator(".sample-metrics dd").allTextContents(), ["1", "1"]);
+    for (const score of await page.locator("[data-score]").allTextContents()) assert.equal(score, "100.0%");
+    checks.push(`${width}px: delayed samples show loading placeholders across metrics, chart/table and downloads, then accurate results without false empty Wikipedia copy`);
+  }
+  const failed = await holdSample("2026-11-05", {
+    status: 503, contentType: "application/json", body: JSON.stringify({ error: "Fixture unavailable" }),
+  });
+  await select("Sample date (UTC)", "2026-11-05");
+  await failed.started;
+  await failed.release();
+  await page.locator('#results [role="alert"]').waitFor({ state: "visible" });
+  await missingSample(/unavailable|could not be loaded/i);
+  await page.screenshot({ path: resolve(evidence, "sample-unavailable.png"), fullPage: true });
+  const retry = await holdSample("2026-11-06");
+  await select("Sample date (UTC)", "2026-11-06");
+  await retry.started;
+  await missingSample(/Loading sample/i);
+  assert.equal(await page.locator('#results [role="alert"]').count(), 0,
+    "Changing sample clears the previous request's error while loading");
+  await retry.release();
+  await sampleCount(1);
+  checks.push("A failed sample is unavailable rather than empty, and another sample starts cleanly without stale error copy");
+  const refresh = await holdSample("2026-11-06");
+  await page.clock.fastForward(900000);
+  await refresh.started;
+  await sampleCount(1);
+  assert.deepEqual(await page.locator(".sample-metrics dd").allTextContents(), ["1", "1"]);
+  for (const score of await page.locator("[data-score]").allTextContents()) assert.equal(score, "100.0%");
+  assert.equal(await page.locator("[data-download-results]").isDisabled(), false);
+  await refresh.release();
+  await page.waitForFunction(() => document.querySelector("#results")?.getAttribute("aria-busy") === "false");
+  checks.push("An automatic background refresh of the loaded sample preserves its metrics, scores and download availability");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(base, { waitUntil: "networkidle" });
 
   const historySection = page.locator("#history");
   await historySection.getByRole("tab", { name: "Table", exact: true }).click();

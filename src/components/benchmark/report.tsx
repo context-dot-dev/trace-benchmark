@@ -779,6 +779,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     ? visibleHistory.find((run) => run.status === "completed") ?? visibleHistory[0]
     : visibleHistory.find((run) => run.id === selection);
   const run = data.latest?.id === requestedRun?.id ? data.latest : null;
+  const sampleUnavailable = Boolean(requestedRun && !run);
+  const sampleLoading = sampleUnavailable && (loading || !error);
+  const sampleStatus = sampleLoading ? "Loading sample…" : "Sample results unavailable.";
+  const samplePlaceholder = (
+    <div className="flex min-h-64 items-center justify-center text-muted" role="status">
+      {sampleStatus}
+    </div>
+  );
   const accessRun = requestedRun?.protocol === ACCESS_PROTOCOL;
   const accessOnly = accessRun;
   useEffect(() => {
@@ -790,6 +798,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     const controller = new AbortController();
     function refresh() {
       setLoading(true);
+      setError("");
       return fetch(
         `/api/benchmark?${new URLSearchParams({ run: selection === "latest" ? "" : selection })}`,
         { signal: controller.signal },
@@ -968,7 +977,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
           actions={<a href="#sources" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">See where the pages come from</a>}
         />
-        <div id="results" aria-busy={loading}>
+        <div id="results" aria-busy={loading || sampleLoading}>
         <SiteSection id="sample" lines>
         <div className="sample-filters" aria-label="Benchmark filters">
           <Filter
@@ -1022,7 +1031,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ) : (
               "No daily sample available"
             )}
-            {(loading || (!run && requestedRun && !error)) && " · Updating…"}
+            {sampleUnavailable ? ` · ${sampleLoading ? "Loading…" : sampleStatus}` : loading && " · Updating…"}
           </p>
           <div className="sample-actions">
             <Select
@@ -1066,15 +1075,15 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <dl className="sample-metrics" aria-live="polite">
             <div>
               <dt>Pages in sample</dt>
-              <dd data-sample-count>{integer(selected.length)}</dd>
+              <dd data-sample-count>{sampleUnavailable ? "—" : integer(selected.length)}</dd>
             </div>
             <div>
               <dt>Categories represented</dt>
-              <dd>{integer(observedCategories.length)}</dd>
+              <dd>{sampleUnavailable ? "—" : integer(observedCategories.length)}</dd>
             </div>
           </dl>
         </SiteSection>
-          {source === "wikipedia_daily" && selected.length === 0 && (
+          {!sampleUnavailable && source === "wikipedia_daily" && selected.length === 0 && (
             <p className="bench-column bench-note" role="status">
               No daily Wikipedia pages match this sample and these filters.
               Choose another sample date to see available results.
@@ -1088,9 +1097,9 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               ? "The score measures whether page data loaded, rather than only a block, error, or empty shell. Partial content and populated landing pages count. Relevance, identity, completeness, and extraction quality are not graded."
               : "The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."}
             controls={filterControls}
-            chart={<Bars rows={rows} />}
+            chart={sampleUnavailable ? samplePlaceholder : <Bars rows={rows} />}
             table={
-              <Table
+              sampleUnavailable ? samplePlaceholder : <Table
                 label={accessOnly ? "Page access results" : "Useful content results"}
                 headers={[
                   "Provider",
@@ -1129,18 +1138,18 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             controls={filterControls}
             note="Compare how reliably each provider returns content from different kinds of pages, including news articles, research papers, and product listings."
             chart={
-              chartCategories.length >= 3 ? (
+              sampleUnavailable ? samplePlaceholder : chartCategories.length >= 3 ? (
                 <Radar rows={rows} chartCategories={chartCategories} accessOnly={accessOnly} />
               ) : (
                 categoryTable
               )
             }
-            table={categoryTable}
+            table={sampleUnavailable ? samplePlaceholder : categoryTable}
           />
           <div className="bench-section-head bench-column bench-download">
             <p className="bench-note">
-              {integer(selected.length)} pages match these filters. Downloads
-              include the source, sample date, scoring rules, and grades.
+              {sampleUnavailable ? sampleStatus : `${integer(selected.length)} pages match these filters.`}{" "}
+              Downloads include the source, sample date, scoring rules, and grades.
             </p>
             <Button
               variant="outline"
