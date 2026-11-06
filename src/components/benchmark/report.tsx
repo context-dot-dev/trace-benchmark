@@ -858,7 +858,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const chartCategories = benchmarkCategories.filter((c) =>
     categoryIds.includes(c.id),
   );
-  const history = [...data.history]
+  const visibleHistory = data.history.filter((run) => run.day >= "2026-11-05");
+  const history = [...visibleHistory]
     .reverse()
     .sort((a, b) => a.day.localeCompare(b.day));
   const dailyCount = selected.filter((p) => p.source !== "wikipedia").length;
@@ -1187,7 +1188,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 "Pages",
                 ...providers.map((p) => p.name),
               ]}
-              rows={data.history.map((r) => ({ id: r.id, cells: [
+              rows={visibleHistory.map((r) => ({ id: r.id, cells: [
                 r.day,
                 `${r.protocol} · ${scoringLabel(r.protocol)}`,
                 r.status !== "completed"

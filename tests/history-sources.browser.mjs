@@ -38,9 +38,10 @@ const wiki = JSON.parse(
   readFileSync("public/data/wikipedia-study.json", "utf8"),
 );
 const history = [
-  run("2026-11-02", "insufficient_supply", 0),
-  run("2026-11-01", "completed"),
-  run("2026-10-29", "completed"),
+  run("2026-11-07", "insufficient_supply", 0),
+  run("2026-11-06", "completed"),
+  run("2026-11-05", "completed"),
+  run("2026-11-04", "completed"),
 ];
 const original = {
   report: {
@@ -128,11 +129,19 @@ try {
     }, 500);
   });
   await page.goto(base, { waitUntil: "networkidle" });
+  assert.match(await page.locator(".bench-history-range").textContent(), /November 5, 2026 – November 7, 2026/);
+  assert.match(await page.locator(".bench-history-range").textContent(), /3 sampled days/);
+  checks.push("History starts on November 5 inclusive and counts only displayed days");
   for (const width of [1440, 581, 580, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const id of ["useful-content", "categories", "history"]) {
       const section = page.locator(`#${id}`);
       await section.getByRole("tab", { name: "Table", exact: true }).click();
+      if (id === "history") {
+        const tableText = await section.locator("table").textContent();
+        assert.match(tableText, /2026-11-05/);
+        assert.doesNotMatch(tableText, /2026-11-04/);
+      }
       const alignment = await section.locator("table").evaluate(table => {
         const headers = [...table.querySelectorAll("thead th")];
         const cells = [...table.querySelectorAll("tbody tr:first-child > *")];
@@ -163,35 +172,35 @@ try {
     before ? "#methodology" : "#sources",
   );
   if (before) {
-    assert.match(await card.textContent(), /November 2, 2026/);
+    assert.match(await card.textContent(), /November 7, 2026/);
     console.log(
-      "Reproduced: empty November 2 selected instead of completed November 1",
+      "Reproduced: empty November 7 selected instead of completed November 6",
     );
     process.exitCode = 0;
   } else {
     await expectDate(
-      "November 1, 2026",
+      "November 6, 2026",
       "Latest completed sample wins over newer empty run",
     );
     const slider = page.getByRole("slider", { name: "History date" });
     await slider.focus();
     await page.keyboard.press("Home");
     await expectDate(
-      "October 29, 2026",
+      "November 5, 2026",
       "Keyboard inspection preserves historical dates",
     );
     await page.getByRole("button", { name: "Latest completed result" }).click();
     await expectDate(
-      "November 1, 2026",
+      "November 6, 2026",
       "Latest control restores newest completed sample",
     );
     await slider.scrollIntoViewIfNeeded();
     const box = await slider.boundingBox();
     await page.mouse.move(box.x + 46, box.y + 100);
-    await expectDate("October 29, 2026", "Hover inspects an older day");
+    await expectDate("November 5, 2026", "Hover inspects an older day");
     await page.mouse.move(0, 0);
     await expectDate(
-      "November 1, 2026",
+      "November 6, 2026",
       "Leaving hover restores latest result",
     );
     await slider.focus();
@@ -200,7 +209,7 @@ try {
     checks.push("An empty run is labeled without presenting zero scores");
 
     dataset = structuredClone(original);
-    dataset.report.history[0] = run("2026-11-02", "completed");
+    dataset.report.history[0] = run("2026-11-07", "completed");
     dataset.report.latest = dataset.report.history[0];
     await page.route("**/api/benchmark?*", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 400));
@@ -212,23 +221,27 @@ try {
     await page.goto(base, { waitUntil: "domcontentloaded" });
     dataset = refreshed;
     await expectDate(
-      "November 2, 2026",
+      "November 7, 2026",
       "Newly completed day becomes default after delayed refresh",
     );
     await page.unrouteAll({ behavior: "wait" });
 
     dataset = structuredClone(original);
     dataset.report.history = [
-      run("2026-11-02", "insufficient_supply", 0),
-      run("2026-11-01", "collecting"),
+      run("2026-11-07", "insufficient_supply", 0),
+      run("2026-11-06", "collecting"),
     ];
     dataset.report.latest = dataset.report.history[1];
     await page.goto(base, { waitUntil: "networkidle" });
     await expectDate(
-      "November 1, 2026",
+      "November 6, 2026",
       "Without completed runs, newest nonempty sample is shown",
     );
     assert.match(await card.textContent(), /Collection in progress/);
+    dataset.report.history = [run("2026-11-04", "completed")];
+    await page.goto(base, { waitUntil: "networkidle" });
+    assert.match(await page.locator("#history").textContent(), /No historical samples/);
+    checks.push("History with only pre-cutoff samples has a truthful empty state");
     dataset.report.history = [];
     dataset.report.latest = null;
     await page.goto(base, { waitUntil: "networkidle" });
@@ -298,9 +311,9 @@ try {
     }
     const dailyWiki = {
       id: "daily-wiki-fixture", url: "https://example.org/newly-cited", title: "",
-      source: "wikipedia_daily", category: "other", day: "2026-11-01",
+      source: "wikipedia_daily", category: "other", day: "2026-11-06",
       protocol: "scraping-bench-v5", article: "Example article", revision: 123,
-      citedAt: "2026-11-01T00:10:00Z",
+      citedAt: "2026-11-06T00:10:00Z",
       results: Object.fromEntries(providers.map(id => [id, { success: true, state: "done", error: null }])),
     };
     dataset.pages.push(dailyWiki);
