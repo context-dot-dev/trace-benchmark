@@ -77,9 +77,15 @@ export type ProviderMetric = {
   unknown: number;
   pending: number;
   rate: number | null;
+  /** Half-width of the 95% confidence interval for `rate`. Absent in older summaries. */
+  ci?: number | null;
   p50: number | null;
+  p90?: number | null;
   p95: number | null;
+  p99?: number | null;
   rateLimited: number;
+  /** Requests rejected by our own account limits; excluded from `rate`. */
+  excluded?: number;
   categories: Record<
     string,
     { total: number; useful: number; unknown: number; completed: number }
@@ -96,10 +102,20 @@ export type RunSummary = {
   providers: ProviderMetric[];
   categories: Record<string, number>;
 };
+export type AuditSummary = {
+  rubric: string;
+  pages: number;
+  agreed: number;
+  reviewers: number;
+  since: string | null;
+};
 export type Report = {
   collecting: RunSummary | null;
   latest: RunSummary | null;
   history: RunSummary[];
+  /** Every run, including extra runs on days that have more than one. */
+  runs?: { id: string; day: string; protocol: string; status: string; createdAt: string; charted: boolean }[];
+  audits?: AuditSummary[];
   health: {
     lastTick: string | null;
     error: string | null;

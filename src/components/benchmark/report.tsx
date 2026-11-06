@@ -1,794 +1,157 @@
 "use client";
 
-import { Copy, Check, X } from "lucide-react";
+import { Copy, Check, Download, ArrowRight, X } from "lucide-react";
 import { useQueryStates } from "nuqs";
-import { benchmarkQueryParsers } from "@/lib/benchmark/query";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { Surface } from "@/lib/surface";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type PointerEvent,
-} from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ContextMark, ProviderName } from "@/components/trace/provider-logo";
 import { CodeBlock, CodeWindow } from "@/components/site/code-window";
-import { percent } from "@/lib/benchmark/format";
-import { filterHistory, firstSampleDay } from "@/lib/benchmark/history";
-import { Hero } from "@/components/site/hero";
-import { SiteHeader } from "@/components/site/site-header";
-import { SiteSection, SectionHeading, SectionHeaderRule } from "@/components/site/section";
 import { HeroDotField } from "@/components/visuals/hero-dot-field";
+import { Surface } from "@/lib/surface";
+import { cn } from "@/lib/utils";
+import { percent } from "@/lib/benchmark/format";
+import { benchmarkCategories, type BenchmarkDataset } from "@/lib/benchmark/combined";
+import { buildView, categoryName, faqItems, providerName } from "@/lib/benchmark/view";
+import { benchmarkQueryParsers } from "@/lib/benchmark/query";
+import { firstSampleDay } from "@/lib/benchmark/history";
+import { prices, pairBetween, type ProviderId } from "@/lib/benchmark/analysis";
+import { DEADLINE_MS } from "@/lib/benchmark/outcomes";
+import { providers } from "@/lib/benchmark/types";
+import { BenchRail } from "./rail";
+import { Radar } from "./radar";
 import {
-  benchmarkCategories,
-  scorePages,
-  uniquePages,
-  type BenchmarkDataset,
-} from "@/lib/benchmark/combined";
-import { ThemeToggle } from "@/components/trace/theme-toggle";
-import { BenchmarkSources } from "./sources";
-import {
-  categories,
-  providers,
-  ACCESS_PROTOCOL,
-  type ProviderMetric,
-  type RunSummary,
-} from "@/lib/benchmark/types";
+  Bars,
+  FailureBars,
+  FunnelChart,
+  LatencyStrips,
+  Name,
+  PairMatrix,
+  Swatch,
+  Table,
+  integer,
+  points,
+  seconds,
+} from "./charts";
+import { Trend, historyResult, scoringLabel } from "./history";
+import { dailyExamples } from "./sources";
 
-const integer = (value: number) => value.toLocaleString("en-US");
-function Name({ id }: { id: string }) {
-  return (
-    <ProviderName
-      id={id}
-      name={providers.find((p) => p.id === id)?.name ?? id}
-    />
-  );
-}
-function Table({
-  headers,
-  rows,
-  label,
-}: {
-  headers: string[];
-  rows: { id: string; cells: ReactNode[] }[];
-  label: string;
-}) {
-  return (
-    <div className="bench-scroll" tabIndex={0} role="region" aria-label={label}>
-      <table>
-        <caption className="sr-only">{label}</caption>
-        <thead>
-          <tr>
-            {headers.map((h) => (
-              <th key={h} scope="col">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              {row.cells.map((cell, j) =>
-                j === 0 ? (
-                  <th key={headers[j]} scope="row">
-                    {cell}
-                  </th>
-                ) : (
-                  <td key={headers[j]} data-label={headers[j]}>
-                    {cell}
-                  </td>
-                ),
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-function Section({
-  id,
-  accent,
-  title,
-  note,
-  chart,
-  table,
-  controls,
-}: {
-  id: string;
-  accent: string;
-  title: string;
-  note: string;
-  chart: ReactNode;
-  table: ReactNode;
-  controls?: ReactNode;
-}) {
-  const viewTabs = (
-    <TabsList variant="segmented" aria-label={`${title} view`}>
-      <TabsTrigger value="chart">Chart</TabsTrigger>
-      <TabsTrigger value="table">Table</TabsTrigger>
-    </TabsList>
-  );
-  return (
-    <SiteSection id={id} lines className="bench-section">
-      <Tabs defaultValue="chart">
-        <SectionHeading
-          title={title.slice(0, -accent.length).trimEnd()}
-          accent={accent}
-          description={note}
-        />
-        <SectionHeaderRule />
-        {controls ? (
-          <div className="bench-result-controls mb-6 flex flex-wrap items-center justify-between gap-3">
-            {viewTabs}
-            {controls}
-          </div>
-        ) : viewTabs}
-        <TabsContent value="chart">{chart}</TabsContent>
-        <TabsContent value="table">{table}</TabsContent>
-      </Tabs>
-    </SiteSection>
-  );
-}
-const patterns = ["", "8 4", "2 4", "10 3 2 3"];
-function Legend({
-  active,
-  onSelect,
-}: {
-  active?: string | null;
-  onSelect?: (id: string) => void;
-}) {
-  return (
-    <div className="bench-legend">
-      {providers.map((p, i) => {
-        const content = (
-          <>
-            <svg width="26" height="8" aria-hidden="true">
-              <line
-                x1="0"
-                x2="26"
-                y1="4"
-                y2="4"
-                stroke={p.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray={patterns[i]}
-              />
-            </svg>
-            <Name id={p.id} />
-          </>
-        );
-        return onSelect ? (
-          <button
-            key={p.id}
-            type="button"
-            aria-label={`Highlight ${p.name}`}
-            aria-pressed={active === p.id}
-            onClick={() => onSelect(p.id)}
-          >
-            {content}
-          </button>
-        ) : (
-          <span key={p.id}>{content}</span>
-        );
-      })}
-    </div>
-  );
-}
+export type SourceSummary = { total: number; categories: { id: string; count: number; examples: string[] }[] };
 
-function Bars({ rows }: { rows: ProviderMetric[] }) {
-  const track = useRef<HTMLDivElement>(null);
-  const [columns, setColumns] = useState(30);
-
-  useEffect(() => {
-    if (!track.current) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setColumns(Math.max(1, Math.floor(entry.contentRect.width / 12))),
-    );
-    observer.observe(track.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      className="bench-bars"
-      role="img"
-      aria-label={rows.map((r) => `${r.id}: ${percent(r.rate)}`).join(", ")}
-    >
-      <div className="bench-axis">
-        <span>0%</span>
-        <span>100%</span>
-      </div>
-      {providers.map((p, index) => {
-        const value = rows.find((r) => r.id === p.id)?.rate;
-        const filled = Math.round((value ?? 0) * columns);
-        return (
-          <div className="bench-bar-row" key={p.id}>
-            <Name id={p.id} />
-            <div
-              ref={index === 0 ? track : undefined}
-              className="bench-track"
-              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-              aria-hidden="true"
-            >
-              {Array.from({ length: columns * 2 }, (_, cell) => (
-                <span className="meter-cell" key={cell}>
-                  <span
-                    className="meter-dot"
-                    style={Math.floor(cell / 2) < filled
-                      ? { backgroundColor: p.color, borderColor: p.color }
-                      : undefined}
-                  />
-                </span>
-              ))}
-            </div>
-            <strong data-score={p.id}>{percent(value)}</strong>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-function categoryRate(row: ProviderMetric | undefined, category: string) {
-  const group = row?.categories[category];
-  return group?.total && group.completed ? group.useful / group.total : null;
-}
-function Radar({
-  rows,
-  chartCategories,
-  accessOnly,
-}: {
-  rows: ProviderMetric[];
-  accessOnly: boolean;
-  chartCategories: { id: string; name: string }[];
-}) {
-  const [active, setActive] = useState<string | null>(null);
-  const container = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(600);
-  useEffect(() => {
-    if (!container.current) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(Math.max(280, Math.round(entry.contentRect.width))),
-    );
-    observer.observe(container.current);
-    return () => observer.disconnect();
-  }, []);
-  const radius = Math.max(40, width / 2 - (width < 500 ? 104 : 96));
-  const height = radius * 2 + 128;
-  const cx = width / 2,
-    cy = height / 2;
-  const point = (i: number, value: number, extra = 0) => {
-    const angle = (i * 2 * Math.PI) / chartCategories.length - Math.PI / 2;
-    return [
-      cx + Math.cos(angle) * (radius * value + extra),
-      cy + Math.sin(angle) * (radius * value + extra),
-    ];
-  };
-  const shortNames: Record<string, string[]> = {
-    legal_regulatory: ["Legal"],
-    software_docs: ["Docs"],
-    arts_sports_reference: ["Arts &", "reference"],
-  };
-  const labels = chartCategories.map((c) => shortNames[c.id] ?? [c.name]);
-  return (
-    <>
-      <Legend
-        active={active}
-        onSelect={(id) => setActive(active === id ? null : id)}
-      />
-      <div className="bench-radar" ref={container}>
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          role="img"
-          aria-label={`${accessOnly ? "Page access" : "Useful content"} by category from zero to 100 percent; exact values and page counts are available in the table`}
-        >
-          {[0.25, 0.5, 0.75, 1].map((value) => (
-            <polygon
-              key={value}
-              points={chartCategories
-                .map((_, i) => point(i, value).join(","))
-                .join(" ")}
-              className="bench-radar-grid"
-            />
-          ))}
-          {chartCategories.map((category, i) => {
-            const [x, y] = point(i, 1),
-              [lx, ly] = point(i, 1, 20);
-            return (
-              <g key={category.id}>
-                <line
-                  x1={cx}
-                  y1={cy}
-                  x2={x}
-                  y2={y}
-                  className="bench-radar-grid"
-                />
-                <text
-                  x={lx}
-                  y={ly}
-                  textAnchor={
-                    Math.abs(lx - cx) < 1 ? "middle" : lx > cx ? "start" : "end"
-                  }
-                  dominantBaseline="middle"
-                >
-                  {labels[i].map((label, j) => (
-                    <tspan
-                      key={label}
-                      x={lx}
-                      dy={j ? 16 : labels[i].length > 1 ? -8 : 0}
-                    >
-                      {label}
-                    </tspan>
-                  ))}
-                </text>
-              </g>
-            );
-          })}
-          {providers.map((p, providerIndex) => {
-            const row = rows.find((r) => r.id === p.id);
-            const values = chartCategories.map((c) => categoryRate(row, c.id));
-            return (
-              <g key={p.id} opacity={active && active !== p.id ? 0.2 : 1}>
-                {values.map((value, i) => {
-                  if (value == null) return null;
-                  const next = values[(i + 1) % values.length];
-                  const [x, y] = point(i, value),
-                    [nx, ny] = point((i + 1) % values.length, next ?? 0);
-                  return (
-                    <g key={chartCategories[i].id}>
-                      {next != null && (
-                        <line
-                          x1={x}
-                          y1={y}
-                          x2={nx}
-                          y2={ny}
-                          stroke={p.color}
-                          strokeWidth="2"
-                          strokeDasharray={patterns[providerIndex]}
-                        />
-                      )}
-                      <circle cx={x} cy={y} r="3" fill={p.color}>
-                        <title>{`${p.name}, ${chartCategories[i].name}: ${percent(value)} (${integer(row?.categories[chartCategories[i].id]?.total ?? 0)} pages)`}</title>
-                      </circle>
-                    </g>
-                  );
-                })}
-              </g>
-            );
-          })}
-          {(width < 500 ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]).map(
-            (value) => (
-              <text
-                key={value}
-                x={cx + 8}
-                y={cy - radius * value + 4}
-                textAnchor="start"
-                className="bench-radar-scale"
-              >
-                {Math.round(value * 100)}%
-              </text>
-            ),
-          )}
-        </svg>
-      </div>
-    </>
-  );
-}
-const dayMs = 86400000;
-const dateLabel = (time: number, long = false) =>
-  new Date(time).toLocaleDateString("en-US", {
-    month: long ? "long" : "short",
-    day: "numeric",
-    ...(long ? { year: "numeric" as const } : {}),
-    timeZone: "UTC",
-  });
-const scoringLabel = (protocol: string) =>
-  protocol === ACCESS_PROTOCOL ? "Page access" : "Useful content";
-function historyResult(run: RunSummary, provider: string) {
-  const result = run.providers.find((metric) => metric.id === provider);
-  if (run.status !== "completed" || !result?.total) return "—";
-  return result.rate == null
-    ? `${integer(result.useful)} / ${integer(result.total)} ${run.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"}`
-    : percent(result.rate);
-}
-function Trend({ history, filtered }: { history: RunSummary[]; filtered: boolean }) {
-  const container = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(1000);
-  const [active, setActive] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
-  useEffect(() => {
-    const element = container.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(Math.max(280, Math.round(entry.contentRect.width))),
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [history.length]);
-  const firstDay = Date.parse(history[0]?.day ?? "1970-01-01");
-  const lastDay = Date.parse(history.at(-1)?.day ?? "1970-01-01");
-  const latestCompleted = history.findLast(
-    (sample) => sample.status === "completed" && sample.pages > 0,
-  );
-  const latestSample = latestCompleted ?? history.findLast((sample) => sample.pages > 0) ?? history.at(-1);
-  const defaultDay = latestSample ? Date.parse(latestSample.day) : lastDay;
-  const dayCount = Math.round((lastDay - firstDay) / dayMs) + 1;
-  const inspectedDay = Math.max(
-    firstDay,
-    Math.min(lastDay, hoveredDay ?? selectedDay ?? defaultDay),
-  );
-  const plotLeft = 46,
-    plotRight = width - 32;
-  const position = (time: number) =>
-    dayCount === 1
-      ? (plotLeft + plotRight) / 2
-      : plotLeft +
-        ((time - firstDay) * (plotRight - plotLeft)) / (lastDay - firstDay);
-  const protocols = [...new Set(history.map((r) => r.protocol))];
-  const latestBySample = new Map<string, RunSummary>();
-  for (const sample of history) {
-    const key = `${sample.day}:${sample.protocol}`;
-    if (
-      sample.status === "completed" ||
-      latestBySample.get(key)?.status !== "completed"
-    ) {
-      latestBySample.set(key, sample);
-    }
-  }
-  const daily = [...latestBySample.values()];
-  const byDay = new Map<number, RunSummary[]>();
-  for (const sample of daily) {
-    const time = Date.parse(sample.day);
-    byDay.set(time, [...(byDay.get(time) ?? []), sample]);
-  }
-  const runsOnDay = (time: number) => byDay.get(time) ?? [];
-  const x = (r: RunSummary) => {
-    const sameDay = runsOnDay(Date.parse(r.day));
-    return (
-      position(Date.parse(r.day)) +
-      (sameDay.indexOf(r) - (sameDay.length - 1) / 2) *
-        Math.min(8, ((plotRight - plotLeft) / Math.max(1, dayCount - 1)) * 0.4)
-    );
-  };
-  const y = (value: number) => 280 - value * 240;
-  const tickIntervals = width < 500 ? 3 : 6;
-  const tickStep = dayCount <= 7
-    ? Math.max(1, Math.ceil((dayCount - 1) / tickIntervals))
-    : Math.max(1, Math.ceil((dayCount - 1) / tickIntervals / 7) * 7);
-  const ticks = [firstDay];
-  for (
-    let t = firstDay + tickStep * dayMs;
-    t < lastDay - (tickStep * dayMs) / 2;
-    t += tickStep * dayMs
-  )
-    ticks.push(t);
-  if (lastDay !== firstDay) ticks.push(lastDay);
-  const pickDay = (event: PointerEvent<SVGSVGElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const px = ((event.clientX - bounds.left) * width) / bounds.width;
-    return Math.max(
-      firstDay,
-      Math.min(
-        lastDay,
-        firstDay +
-          Math.round(
-            ((px - plotLeft) / (plotRight - plotLeft)) * (dayCount - 1),
-          ) * dayMs,
-      ),
-    );
-  };
-  if (!history.length)
-    return (
-      <p className="bench-notice">No historical samples are available yet.</p>
-    );
-  return (
-    <>
-      <div className="bench-history-range">
-        <p>
-          {dateLabel(firstDay, true)} – {dateLabel(lastDay, true)}{" "}
-          <span>
-            {byDay.size} sampled {byDay.size === 1 ? "day" : "days"}
-          </span>
-        </p>
-        <Legend
-          active={active}
-          onSelect={(id) => setActive(active === id ? null : id)}
-        />
-      </div>
-      <div className="bench-history" ref={container}>
-        <svg
-          viewBox={`0 0 ${width} 348`}
-          role="slider"
-          tabIndex={0}
-          aria-label="History date"
-          aria-describedby="history-instructions"
-          aria-valuemin={0}
-          aria-valuemax={dayCount - 1}
-          aria-valuenow={Math.round((inspectedDay - firstDay) / dayMs)}
-          aria-valuetext={`${dateLabel(inspectedDay, true)} UTC`}
-          onKeyDown={(event) => {
-            const next =
-              event.key === "Home"
-                ? firstDay
-                : event.key === "End"
-                  ? lastDay
-                  : event.key === "ArrowLeft" || event.key === "ArrowDown"
-                    ? inspectedDay - dayMs
-                    : event.key === "ArrowRight" || event.key === "ArrowUp"
-                      ? inspectedDay + dayMs
-                      : null;
-            if (next != null) {
-              event.preventDefault();
-              setHoveredDay(null);
-              setSelectedDay(Math.max(firstDay, Math.min(lastDay, next)));
-            }
-          }}
-          onPointerDown={(event) => {
-            setHoveredDay(null);
-            setSelectedDay(pickDay(event));
-            event.currentTarget.focus({ preventScroll: true });
-          }}
-          onPointerMove={(event) => {
-            if (event.pointerType === "mouse") setHoveredDay(pickDay(event));
-            else if (event.buttons === 1) setSelectedDay(pickDay(event));
-          }}
-          onPointerLeave={() => setHoveredDay(null)}
-        >
-          {[0, 25, 50, 75, 100].map((n) => (
-            <g key={n}>
-              <text x="0" y={y(n / 100) + 5}>
-                {n}%
-              </text>
-              <line
-                x1={plotLeft}
-                x2={plotRight}
-                y1={y(n / 100)}
-                y2={y(n / 100)}
-              />
-            </g>
-          ))}
-          <line
-            className="bench-history-cursor"
-            x1={position(inspectedDay)}
-            x2={position(inspectedDay)}
-            y1="35"
-            y2="336"
-          />
-          {protocols.flatMap((protocol) =>
-            providers.map((p, providerIndex) => {
-              const series = daily.filter((r) => r.protocol === protocol);
-              return (
-                <g
-                  key={`${protocol}-${p.id}`}
-                  opacity={active && active !== p.id ? 0.18 : 1}
-                >
-                  {series.map((r, i) => {
-                    const value =
-                      r.status === "completed"
-                        ? r.providers.find((v) => v.id === p.id)?.rate
-                        : null;
-                    const previous = series[i - 1];
-                    const before =
-                      previous?.status === "completed"
-                        ? previous.providers.find((v) => v.id === p.id)?.rate
-                        : null;
-                    if (value == null) return null;
-                    return (
-                      <g key={r.id}>
-                        {before != null &&
-                          Date.parse(r.day) - Date.parse(previous.day) ===
-                            dayMs && (
-                            <line
-                              x1={x(previous)}
-                              x2={x(r)}
-                              y1={y(before)}
-                              y2={y(value)}
-                              strokeLinecap="round"
-                              style={{
-                                stroke: p.color,
-                                strokeWidth: 2,
-                                strokeDasharray: patterns[providerIndex],
-                              }}
-                            />
-                          )}
-                        <circle
-                          cx={x(r)}
-                          cy={y(value)}
-                          r={Date.parse(r.day) === inspectedDay ? 4 : 3}
-                          fill={p.color}
-                        >
-                          <title>{`${r.day}: ${p.name} ${percent(value)}`}</title>
-                        </circle>
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            }),
-          )}
-          {ticks.map((time, i) => (
-            <text
-              key={time}
-              x={position(time)}
-              y="309"
-              textAnchor={
-                i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"
-              }
-            >
-              {dateLabel(time)}
-            </text>
-          ))}
-          {Array.from({ length: dayCount }, (_, i) => {
-            const time = firstDay + i * dayMs;
-            const samples = runsOnDay(time);
-            const scored = samples.some(
-              (r) =>
-                r.status === "completed" &&
-                r.providers.some((p) => p.rate != null),
-            );
-            if (!samples.length)
-              return (
-                <path
-                  key={time}
-                  className="bench-coverage is-absent"
-                  d={`M${position(time) - 3},328 l6,6 M${position(time) - 3},334 l6,-6`}
-                />
-              );
-            return (
-              <circle
-                key={time}
-                cx={position(time)}
-                cy="331"
-                r="3"
-                className={`bench-coverage ${scored ? "is-scored" : "is-unscored"}`}
-              />
-            );
-          })}
-        </svg>
-      </div>
-      <div className="bench-history-key" aria-label="Sample coverage legend">
-        <span>
-          <i className="is-scored" />
-          Score available
-        </span>
-        <span>
-          <i className="is-unscored" />
-          Sample without score
-        </span>
-        <span>
-          <i className="is-absent">×</i>
-          No sample
-        </span>
-      </div>
-      <p className="bench-note" id="history-instructions">
-        {filtered && !history.some((r) => r.pages > 0)
-          ? history.some((r) => r.status === "unavailable")
-            ? "Filtered results are unavailable for these dates."
-            : "No pages match these filters."
-          : latestCompleted ? "Showing the latest completed sample by default." : "No completed sample yet; showing the latest available sample."} Hover to preview a day;
-        click, touch or use the arrow keys to keep it selected. Gaps are not estimated.
-      </p>
-      <Button variant="outline" className="mb-6" onClick={() => {
-        setSelectedDay(null);
-        setHoveredDay(null);
-      }}>
-        {latestCompleted ? "Latest completed result" : "Latest available sample"}
-      </Button>
-      <div
-        className="bench-history-detail"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {Array.from({ length: dayCount }, (_, index) => {
-          const time = firstDay + index * dayMs;
-          const samples = runsOnDay(time);
-          const current = time === inspectedDay;
-          return (
-            <div
-              key={time}
-              className="bench-history-day"
-              data-active={current}
-              aria-hidden={!current}
-            >
-              <h3>
-                {dateLabel(time, true)} <span>UTC</span>
-              </h3>
-              {!samples.length && <p>No sample was collected on this day.</p>}
-              {samples.map((r) => (
-                <div key={r.id} className="bench-history-sample">
-                  <p>
-                    {r.status === "unavailable"
-                      ? "Filtered results unavailable: complete source records are unavailable."
-                      : <>
-                        {scoringLabel(r.protocol)} · {integer(r.pages)} pages
-                        {r.pages === 0 ? filtered ? " · No pages match these filters" : " · No pages were collected" : r.status !== "completed" ? " · Collection in progress" : ""}
-                      </>}
-                  </p>
-                  {r.status === "completed" && r.pages > 0 &&
-                    r.providers.every((p) => p.rate == null) && (
-                      <p>
-                        This sample does not cover every category, so no overall score is reported.
-                        The results below show {r.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"} pages out of all pages tested.
-                      </p>
-                    )}
-                  <dl>
-                    {providers.map((p) => (
-                      <div key={p.id}>
-                        <dt>
-                          <Name id={p.id} />
-                        </dt>
-                        <dd style={{ color: p.color }}>
-                          {historyResult(r, p.id)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
 const citation = `@misc{scrapingbench2026,
   author = {{Context.dev}},
   title = {{Scraping Bench}: A Live Scraping Benchmark},
   year = {2026},
   url = {https://trace-benchmark-contextdev.vercel.app/}
 }`;
-function Filter({
-  label,
-  value,
-  onChange,
-  options,
+const repo = "https://github.com/context-dot-dev/trace-benchmark";
+const longDate = (day: string) =>
+  new Date(day + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const shortDate = (day: string) =>
+  new Date(day + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const utcTime = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toISOString().replace("T", " ").slice(0, 16) + " UTC" : null;
+
+function Frame({
+  id,
+  index,
+  eyebrow,
+  title,
+  accent,
+  lede,
+  method,
+  as: Heading = "h2",
+  aside,
+  children,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string; description?: string }[];
+  id: string;
+  index: number;
+  eyebrow: string;
+  title: ReactNode;
+  accent?: ReactNode;
+  lede?: ReactNode;
+  method?: boolean;
+  as?: "h1" | "h2";
+  aside?: ReactNode;
+  children?: ReactNode;
 }) {
   return (
-    <div className="sample-filter">
-      <span>{label}</span>
-      <Select value={value} onValueChange={onChange} options={options} label={label} appearance="field" />
+    <section id={id} tabIndex={-1} aria-labelledby={`${id}-title`} className={cn("bench-frame", method && "is-method")}>
+      <header className="bench-frame-head">
+        <div className="bench-frame-title">
+          <p className="bench-eyebrow">
+            <span>{String(index).padStart(2, "0")}</span>
+            {eyebrow}
+          </p>
+          <Heading id={`${id}-title`}>
+            {title}
+            {accent && (
+              <>
+                {" "}
+                <span className="text-fg-brand">{accent}</span>
+              </>
+            )}
+          </Heading>
+        </div>
+        {lede && <div className="bench-lede">{lede}</div>}
+        {aside}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function ChartTabs({ label, chart, table, controls }: { label: string; chart: ReactNode; table: ReactNode; controls?: ReactNode }) {
+  const tabs = (
+    <TabsList variant="segmented" aria-label={`${label} view`}>
+      <TabsTrigger value="chart">Chart</TabsTrigger>
+      <TabsTrigger value="table">Table</TabsTrigger>
+    </TabsList>
+  );
+  return (
+    <Tabs defaultValue="chart" className="bench-tabs">
+      {/* The row stays mounted while chips come and go, so the tabs keep keyboard focus. */}
+      {controls !== undefined ? (
+        <div className="bench-result-controls">
+          {tabs}
+          {controls}
+        </div>
+      ) : (
+        tabs
+      )}
+      <TabsContent value="chart">{chart}</TabsContent>
+      <TabsContent value="table">{table}</TabsContent>
+    </Tabs>
+  );
+}
+
+function Notes({ items }: { items: { title: string; body: ReactNode }[] }) {
+  return (
+    <div className="bench-notes">
+      {items.map((item) => (
+        <div key={item.title}>
+          <h3>{item.title}</h3>
+          <div>{item.body}</div>
+        </div>
+      ))}
     </div>
   );
 }
-export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
+
+export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDataset; sources: SourceSummary }) {
   const [dataset, setDataset] = useState(initial);
-  const [{ source, category, run: selection }, setFilters] = useQueryStates(
-    benchmarkQueryParsers,
-    { history: "push", shallow: true, scroll: false },
-  );
+  const [{ source, category, run: selection }, setFilters] = useQueryStates(benchmarkQueryParsers, {
+    history: "push",
+    shallow: true,
+    scroll: false,
+  });
   const setSource = (value: string) => void setFilters({ source: benchmarkQueryParsers.source.parse(value) ?? "all" });
   const setCategory = (value: string) => void setFilters({ category: benchmarkQueryParsers.category.parse(value) ?? "all" });
-  const setSelection = (run: string) => void setFilters({ run });
+  const setSelection = (value: string) => void setFilters({ run: value });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const data = dataset.report;
-  const visibleHistory = data.history.filter((run) => run.day >= firstSampleDay);
-  const requestedRun = selection === "latest"
-    ? visibleHistory.find((run) => run.status === "completed") ?? visibleHistory[0]
-    : visibleHistory.find((run) => run.id === selection);
-  const run = data.latest?.id === requestedRun?.id ? data.latest : null;
-  const sampleUnavailable = Boolean(requestedRun && !run);
-  const sampleLoading = sampleUnavailable && (loading || !error);
-  const sampleStatus = sampleLoading ? "Loading sample…" : "Sample results unavailable.";
-  const samplePlaceholder = (
-    <div className="flex min-h-64 items-center justify-center text-muted" role="status">
-      {sampleStatus}
-    </div>
-  );
-  const accessRun = requestedRun?.protocol === ACCESS_PROTOCOL;
-  const accessOnly = accessRun;
   useEffect(() => {
     if (copyStatus !== "Copied") return;
     const timer = setTimeout(() => setCopyStatus(""), 2000);
@@ -805,9 +168,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
       )
         .then((response) => {
           if (!response.ok) {
-            throw new Error(
-              "Results could not be refreshed. Please try again.",
-            );
+            throw new Error("Results could not be refreshed. Please try again.");
           }
           return response.json() as Promise<BenchmarkDataset>;
         })
@@ -819,15 +180,11 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         })
         .catch((e: unknown) => {
           if (!controller.signal.aborted) {
-            setError(
-              e instanceof Error ? e.message : "Results could not be refreshed.",
-            );
+            setError(e instanceof Error ? e.message : "Results could not be refreshed.");
           }
         })
         .finally(() => {
-          if (!controller.signal.aborted) {
-            setLoading(false);
-          }
+          if (!controller.signal.aborted) setLoading(false);
         });
     }
     void refresh();
@@ -839,39 +196,55 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
       clearInterval(timer);
     };
   }, [selection]);
-  const selected = uniquePages(
-    dataset.pages.filter(
-      (p) =>
-        p.source !== "wikipedia" && p.day >= firstSampleDay &&
-        p.day === run?.day &&
-        (source === "all" || p.source === source) &&
-        (category === "all" || p.category === category),
-    ),
+
+  const view = useMemo(() => buildView(dataset, { source, category, run: selection }), [dataset, source, category, selection]);
+  const { run, requestedRun, visibleHistory, filteredHistory, hasFilters, retainedDaily } = view;
+  // A different sample is selected but its records have not arrived: never show its scores as zero.
+  const sampleUnavailable = Boolean(requestedRun && !run);
+  const sampleLoading = sampleUnavailable && (loading || !error);
+  const sampleStatus = sampleLoading ? "Loading sample…" : "Sample results unavailable.";
+  const samplePlaceholder = (
+    <div className="flex min-h-64 items-center justify-center text-muted" role="status">
+      {sampleStatus}
+    </div>
   );
-  const observedCategories = [...new Set(selected.map((p) => p.category))];
-  const categoryIds =
-    source === "all" && category === "all"
-      ? [...categories.map((c) => c.id), ...(observedCategories.includes("other") ? ["other"] : [])]
-      : observedCategories;
-  const rows = scorePages(selected, categoryIds);
+  const { selected, rows, ranks, pairs, cats, lat, fails, funnel, quality, costs, history, stability, accessOnly } = view;
+  const order = [...providers]
+    .map((p) => p.id)
+    .sort((a, b) => (rows.find((r) => r.id === b)?.rate ?? -1) - (rows.find((r) => r.id === a)?.rate ?? -1)) as ProviderId[];
   const pending = rows.reduce((sum, r) => sum + r.pending, 0);
   const unknown = rows.reduce((sum, r) => sum + r.unknown, 0);
-  const chartCategories = benchmarkCategories.filter((c) =>
-    categoryIds.includes(c.id),
-  );
-  const hasFilters = source !== "all" || category !== "all";
+  const excluded = rows.reduce((sum, r) => sum + (r.excluded ?? 0), 0);
+  const timedPages = lat.some((l) => l.n > 0);
+  const graded = funnel.some((f) => f.graded > 0);
+  const scoredSamples = stability[0]?.scored ?? 0;
+  const firstPlace = [...stability].sort((a, b) => b.firsts - a.firsts)[0];
+  const audits = data.audits ?? [];
+  const audit = audits.find((a) => a.rubric === run?.protocol) ?? audits[0];
+  const duplicateDays = Object.entries(
+    (data.runs ?? [])
+      .filter((r) => r.day >= firstSampleDay)
+      .reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.day]: (acc[r.day] ?? 0) + 1 }), {}),
+  ).filter(([, n]) => n > 1);
+  const measureWord = accessOnly ? "accessed" : "useful";
   const sourceLabel = source === "all" ? "All daily sources" : "Daily Wikipedia discoveries";
   const categoryLabel = benchmarkCategories.find((c) => c.id === category)?.name ?? "All categories";
-  const filterLabel = `${sourceLabel} · ${categoryLabel}`;
+
+  function reset() {
+    void setFilters({ source: null, category: null });
+  }
+  /** Removes one filter, then keeps focus in the same section: the other chip, the selected tab, or the section. */
   function clearFilter(filter: "source" | "category", section: HTMLElement | null) {
     const remaining = filter === "source" ? "category" : "source";
-    const next = section?.querySelector<HTMLButtonElement>(`[data-result-filter="${remaining}"]`)
-      ?? section?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]');
+    const next =
+      section?.querySelector<HTMLElement>(`[data-result-filter="${remaining}"]`) ??
+      section?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ??
+      section;
     next?.focus({ preventScroll: true });
     void setFilters(filter === "source" ? { source: null } : { category: null });
   }
-  const filterControls = (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Applied filters">
+  const chips = hasFilters ? (
+    <div className="bench-chips" role="group" aria-label="Applied filters">
       {source !== "all" && (
         <Button
           variant="outline-brand"
@@ -881,7 +254,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           aria-label={`Remove ${sourceLabel} source filter`}
           onClick={(event) => clearFilter("source", event.currentTarget.closest("section"))}
         >
-          {sourceLabel}<X aria-hidden="true" strokeWidth={1.5} />
+          {sourceLabel}
+          <X aria-hidden="true" strokeWidth={1.5} />
         </Button>
       )}
       {category !== "all" && (
@@ -893,49 +267,28 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           aria-label={`Remove ${categoryLabel} category filter`}
           onClick={(event) => clearFilter("category", event.currentTarget.closest("section"))}
         >
-          {categoryLabel}<X aria-hidden="true" strokeWidth={1.5} />
+          {categoryLabel}
+          <X aria-hidden="true" strokeWidth={1.5} />
         </Button>
       )}
     </div>
-  );
-  const filteredHistory = filterHistory(visibleHistory, { source, category }, dataset.wikipediaHistory);
-  const history = [...filteredHistory]
-    .reverse()
-    .sort((a, b) => a.day.localeCompare(b.day));
-  const retainedDaily = dataset.pages.filter(
-    (p) => p.source !== "wikipedia" && p.day === run?.day,
-  ).length;
-  const categoryTable = (
-    <Table
-      label="Category results"
-      headers={["Category", "Pages", ...providers.map((p) => p.name)]}
-      rows={chartCategories.map((c) => ({ id: c.id, cells: [
-        c.name,
-        integer(selected.filter((p) => p.category === c.id).length),
-        ...providers.map((p) =>
-          percent(
-            categoryRate(
-              rows.find((r) => r.id === p.id),
-              c.id,
-            ),
-          ),
-        ),
-      ] }))}
-    />
-  );
-  function reset() {
-    void setFilters({ source: null, category: null });
-  }
+  ) : null;
+  const chipRow = chips && <div className="bench-result-controls">{chips}</div>;
   function download() {
     const blob = new Blob(
       [
         JSON.stringify(
           {
-            scoring:
-              `The score averages the ${accessOnly ? "accessed" : "useful"}-page rate of each scored category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts. ${accessOnly ? "Access does not measure relevance, identity, completeness, or extraction quality." : "A useful result contains substantive content matching the requested page."}`,
+            scoring: `The score averages the ${measureWord}-page rate of each scored category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts; requests rejected by our own account limits are excluded. ${accessOnly ? "Access does not measure relevance, identity, completeness, or extraction quality." : "A useful result contains substantive content matching the requested page."}`,
             filters: { source, category },
             dailyRun: run?.id,
             scores: rows,
+            pairs,
+            categories: cats,
+            latency: lat,
+            failures: fails,
+            quality: { funnel, signals: quality },
+            cost: costs,
             pages: selected,
           },
           null,
@@ -951,430 +304,1002 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  const sampleSelect = (
+    <Select
+      value={selection}
+      onValueChange={setSelection}
+      label="Sample date (UTC)"
+      appearance="field"
+      className="bench-date"
+      icon={
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M16 3v4M8 3v4M3 11h18" />
+        </svg>
+      }
+      options={[
+        { value: "latest", label: "Latest completed sample" },
+        ...visibleHistory.map((r) => ({
+          value: r.id,
+          label: r.day,
+          description: r.status !== "completed" ? "In progress" : undefined,
+        })),
+      ]}
+    />
+  );
+  const glance = (
+    <dl aria-label={`${accessOnly ? "Pages accessed" : "Useful content"} with 95% confidence intervals`}>
+      <div className="bench-glance-head">
+        <dt>{accessOnly ? "Accessed" : "Useful"}</dt>
+        <dd>95% CI</dd>
+      </div>
+      {order.map((id) => {
+        const row = rows.find((r) => r.id === id);
+        return (
+          <div key={id}>
+            <dt>
+              <Swatch id={id} />
+              {providerName(id)}
+            </dt>
+            <dd>
+              {percent(row?.rate)}
+              {row?.ci != null && <small> {points(row.ci)}</small>}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+  const filterControls = (
+    <div className="bench-filters" id="sample" aria-label="Benchmark filters">
+      <Select
+        value={source}
+        onValueChange={setSource}
+        label="Source"
+        appearance="ghost"
+        options={[
+          { value: "all", label: "All daily sources" },
+          { value: "wikipedia_daily", label: "Daily Wikipedia discoveries" },
+        ]}
+      />
+      <Select
+        value={category}
+        onValueChange={setCategory}
+        label="Category"
+        appearance="ghost"
+        options={[
+          { value: "all", label: "All categories" },
+          ...benchmarkCategories
+            .filter((c) => c.id !== "arts_sports_reference")
+            .map((c) => ({ value: c.id, label: c.name })),
+        ]}
+      />
+      {hasFilters && (
+        <button type="button" className="bench-reset" onClick={reset}>
+          Reset filters
+        </button>
+      )}
+      <p className="sr-only" role="status">
+        {hasFilters ? `Results filtered by ${sourceLabel} · ${categoryLabel}.` : "Showing all daily sources and categories."}
+      </p>
+    </div>
+  );
+  const leaderTable = (
+    <Table
+      label={accessOnly ? "Page access results" : "Useful content results"}
+      headers={["Provider", "Place", accessOnly ? "Accessed" : "Useful", accessOnly ? "Not accessed" : "Not useful", "Unresolved", "Excluded", "Pending", "Score", "95% CI"]}
+      rows={order.map((id) => {
+        const r = rows.find((x) => x.id === id)!;
+        const rank = ranks.get(id);
+        return {
+          id,
+          cells: [
+            <Name key={id} id={id} />,
+            rank ? `${rank.place}${rank.tied ? " (tied)" : ""}` : "—",
+            integer(r.useful),
+            integer(r.failed),
+            integer(r.unknown),
+            integer(r.excluded ?? 0),
+            integer(r.pending),
+            percent(r.rate),
+            points(r.ci) || "—",
+          ],
+        };
+      })}
+    />
+  );
+
   return (
     <Surface kind="site" className="bench-page">
-      <SiteHeader
-        logo={<ContextMark />}
-        wordmark="Scraping Bench"
-        logoHref="/"
-        logoLabel="Scraping Bench"
-        className="data-[scrolled=false]:bg-surface max-[879px]:bg-surface max-[879px]:data-[scrolled=true]:border-b max-[879px]:data-[scrolled=true]:border-hairline"
-        items={[
-          { label: "Sources", href: "#sources" },
-          { label: "Methodology", href: "#methodology" },
-          { label: "Citation", href: "#citation" },
-          { label: "GitHub ↗", href: "https://github.com/context-dot-dev/trace-benchmark" },
-        ]}
-        endAction={<ThemeToggle />}
+      <BenchRail
+        sample={sampleSelect}
+        meta={
+          run ? (
+            <>
+              <i className={cn("bench-live", data.collecting && "is-collecting")} aria-hidden="true" />
+              {`${scoringLabel(run.protocol)} · ${integer(selected.length)} pages`}
+            </>
+          ) : (
+            "No sample yet"
+          )
+        }
+        glance={glance}
+        onFilters={() => {
+          document.getElementById("useful-content")?.scrollIntoView({ behavior: "smooth" });
+          setTimeout(() => document.querySelector<HTMLElement>("#sample button")?.focus({ preventScroll: true }), 400);
+        }}
+        shortDate={requestedRun ? shortDate(requestedRun.day) : "Sample"}
       />
-      <main id="main">
-        <Hero
-          id="overview"
-          title="How reliably can web scrapers read a page?"
-          accent="read a page?"
-          description="We ask Context, Exa, Firecrawl, and Keenable to retrieve the same fresh sample of web pages each day, then compare their results."
-          background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
-          contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
-          actions={<a href="#sources" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">See where the pages come from</a>}
-        />
-        <div id="results" aria-busy={loading || sampleLoading}>
-        <SiteSection id="sample" lines>
-        <div className="sample-filters" aria-label="Benchmark filters">
-          <Filter
-            label="Source"
-            value={source}
-            onChange={setSource}
-            options={[
-              { value: "all", label: "All daily sources" },
-              { value: "wikipedia_daily", label: "Daily Wikipedia discoveries" },
-            ]}
-          />
-          <Filter
-            label="Category"
-            value={category}
-            onChange={setCategory}
-            options={[
-              { value: "all", label: "All categories" },
-              ...benchmarkCategories.filter((c) => c.id !== "arts_sports_reference").map((c) => ({
-                value: c.id,
-                label: c.name,
-              })),
-            ]}
-          />
+      <div className="bench-app">
+        <div className="bench-status">
+          <p>
+            <span className="bench-status-chip">
+              <i aria-hidden="true" />
+              {data.collecting ? "Collecting" : "Live"}
+            </span>
+            <span>
+              New sample every day at 00:15 UTC
+              {run?.finishedAt ? ` · Last completed ${utcTime(run.finishedAt)}` : ""}
+              {loading ? " · Updating…" : ""}
+            </span>
+          </p>
+          <Button variant="pill" size="sm" className="bench-status-download" onClick={download} disabled={!run} data-download-results>
+            <Download aria-hidden="true" />
+            Download data
+          </Button>
         </div>
-        <p className="sr-only" role="status">
-          {hasFilters ? `Results filtered by ${filterLabel}.` : "Showing all daily sources and categories."}
-        </p>
-        <div className="mt-6">
-          {source === "all" && (
-            <p className="bench-note">
-              Each day, we find pages through publisher feeds that announce new
-              articles, public databases that list records such as company filings
-              and job openings, and sitemaps that list a website’s pages.
-            </p>
-          )}
-          <p className="bench-note">
-            Before building each daily sample, we check the previous day’s
-            English Wikipedia edits for new external links. All four providers
-            then retrieve the previously untested pages in that sample.
-          </p>
-          <p className="bench-note">
-            <a href="#sources">Explore the sources and example pages</a>.
-          </p>
-        </div>
-        <div className="bench-sample">
-          <p aria-live="polite">
-            {requestedRun ? (
-              <>
-                Daily sample: <strong>{requestedRun.day}</strong> UTC
-              </>
-            ) : (
-              "No daily sample available"
-            )}
-            {sampleUnavailable ? ` · ${sampleLoading ? "Loading…" : sampleStatus}` : loading && " · Updating…"}
-          </p>
-          <div className="sample-actions">
-            <Select
-              value={selection}
-              onValueChange={setSelection}
-              label="Sample date (UTC)"
-              className="rounded-pill px-5"
-              icon={
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="5" width="18" height="16" rx="2" />
-                  <path d="M16 3v4M8 3v4M3 11h18" />
-                </svg>
-              }
-              options={[
-                { value: "latest", label: "Latest completed sample" },
-                ...visibleHistory.map((run) => ({
-                  value: run.id,
-                  label: run.day,
-                  description: run.status !== "completed" ? "In progress" : undefined,
-                })),
-              ]}
-            />
-            <Button variant="outline-brand" className="rounded-pill px-5" aria-label="Reset filters" onClick={reset}>
-              Reset filters
-            </Button>
-          </div>
-        </div>
-        {error && (
-          <p role="alert" className="bench-notice">
-            {error}
-          </p>
-        )}
-        {run && retainedDaily < run.pages && (
-          <p className="bench-notice" role="status" data-retention-notice>
-            Only {integer(retainedDaily)} of {integer(run.pages)} daily page
-            records are available for {run.day}. Individual records expire after
-            30 days. The filters and scores below use available records only;
-            original daily scores remain available in the history under All daily sources.
-          </p>
-        )}
-          <dl className="sample-metrics" aria-live="polite">
-            <div>
-              <dt>Pages in sample</dt>
-              <dd data-sample-count>{sampleUnavailable ? "—" : integer(selected.length)}</dd>
-            </div>
-            <div>
-              <dt>Categories represented</dt>
-              <dd>{sampleUnavailable ? "—" : integer(observedCategories.length)}</dd>
-            </div>
-          </dl>
-        </SiteSection>
-          {!sampleUnavailable && source === "wikipedia_daily" && selected.length === 0 && (
-            <p className="bench-column bench-note" role="status">
-              No daily Wikipedia pages match this sample and these filters.
-              Choose another sample date to see available results.
-            </p>
-          )}
-          <Section
-            id="useful-content"
-            accent={accessOnly ? "accessed" : "useful content"}
-            title={accessOnly ? "Pages accessed" : "Pages with useful content"}
-            note={accessOnly
-              ? "The score measures whether page data loaded, rather than only a block, error, or empty shell. Partial content and populated landing pages count. Relevance, identity, completeness, and extraction quality are not graded."
-              : "The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."}
-            controls={filterControls}
-            chart={sampleUnavailable ? samplePlaceholder : <Bars rows={rows} />}
-            table={
-              sampleUnavailable ? samplePlaceholder : <Table
-                label={accessOnly ? "Page access results" : "Useful content results"}
-                headers={[
-                  "Provider",
-                  accessOnly ? "Accessed" : "Useful",
-                  accessOnly ? "Not accessed" : "Not useful",
-                  "Unresolved",
-                  "Pending",
-                  "Score",
-                ]}
-                rows={rows.map((r) => ({ id: r.id, cells: [
-                  <Name key={r.id} id={r.id} />,
-                  integer(r.useful),
-                  integer(r.failed),
-                  integer(r.unknown),
-                  integer(r.pending),
-                  percent(r.rate),
-                ] }))}
-              />
-            }
-          />
-          <div className="bench-column bench-support">
-            <p className="bench-note">
-              Context runs this benchmark and is one of the providers tested. See
-              the <a href="#methodology">methodology</a> for scoring rules and limitations.
-            </p>
-            {pending > 0 && (
-              <p className="bench-note" role="status">
-                Results for this selection are still being collected.
-              </p>
-            )}
-          </div>
-          <Section
-            id="categories"
-            accent="category"
-            title="Results by category"
-            controls={filterControls}
-            note="Compare how reliably each provider returns content from different kinds of pages, including news articles, research papers, and product listings."
-            chart={
-              sampleUnavailable ? samplePlaceholder : chartCategories.length >= 3 ? (
-                <Radar rows={rows} chartCategories={chartCategories} accessOnly={accessOnly} />
-              ) : (
-                categoryTable
-              )
-            }
-            table={sampleUnavailable ? samplePlaceholder : categoryTable}
-          />
-          <div className="bench-section-head bench-column bench-download">
-            <p className="bench-note">
-              {sampleUnavailable ? sampleStatus : `${integer(selected.length)} pages match these filters.`}{" "}
-              Downloads include the source, sample date, scoring rules, and grades.
-            </p>
-            <Button
-              variant="outline"
-              className="sample-download"
-              data-download-results
-              disabled={!run}
-              onClick={download}
-            >
-              Download filtered results ↓
-            </Button>
-          </div>
-        </div>
-        <Section
-          id="history"
-          accent="over time"
-          title="Daily results over time"
-          note="Daily results from November 4, 2026 onward."
-          controls={filterControls}
-          chart={<Trend history={history} filtered={hasFilters} />}
-          table={
-            <Table
-              label="Daily results history"
-              headers={[
-                "Date (UTC)",
-                "Status",
-                "Pages",
-                ...providers.map((p) => p.name),
-              ]}
-              rows={filteredHistory.map((r) => ({ id: r.id, cells: [
-                r.day,
-                r.status === "unavailable"
-                  ? "Filtered results unavailable"
-                  : hasFilters && r.pages === 0
-                    ? "No matching pages"
-                    : r.status !== "completed"
-                      ? "In progress"
-                      : r.providers.every((p) => p.rate == null)
-                        ? "Completed · partial coverage"
-                        : "Scored",
-                r.status === "unavailable" ? "—" : integer(r.pages),
-                ...providers.map((p) => historyResult(r, p.id)),
-              ] }))}
-            />
-          }
-        />
-        <BenchmarkSources onViewDailyWikipedia={() => {
-          void setFilters({ source: "wikipedia_daily", category: null });
-          document.getElementById("sample")?.scrollIntoView({ behavior: "smooth" });
-        }} />
-        <SiteSection id="methodology" lines className="bench-method">
-          <SectionHeading title="Methodology" />
-          <SectionHeaderRule />
-          <h3>How scores are calculated</h3>
-          <p>
-            {accessOnly
-              ? "A page counts as accessed when actual page data or file content loaded. A partial preview, populated listing, publication landing page, or raw file can pass. Blocks, mandatory login screens, main-page errors, and empty shells fail when they contain no page data. Relevance, document identity, completeness, and extraction quality are not graded."
-              : "A page counts as useful when the response contains substantive content that matches the requested page."}{" "}
-            We calculate the percentage of {accessOnly ? "accessed" : "useful"} pages
-            within each category, then average those percentages. This gives every
-            category the same influence, regardless of its page count. Failed
-            requests, unresolved judgments, and pending results remain in the
-            denominator and lower the score.
-          </p>
-          {(unknown > 0 || pending > 0) && (
-            <p>
-              For the current selection, {integer(unknown)} provider results
-              remain unresolved and {integer(pending)} are pending. These results
-              count against the score until {accessOnly ? "access" : "useful content"} is confirmed. You can
-              inspect each provider’s counts in the results table.
-            </p>
-          )}
-          <h3>Reading the daily history</h3>
-          <p>
-            Source and category filters apply to every daily result, including
-            its page count and provider scores. Gaps mark missing scores or dates
-            with no matching pages; they are not estimated. Source-filtered
-            history requires complete retained page records, which expire after
-            30 days. Category-only history uses saved daily summaries. A dash in
-            a results table means no score is available.
-          </p>
-          <h3>Daily collection</h3>
-          {run && run.pages < run.target && (
-            <p>
-              The selected daily run collected {integer(run.pages)} of{" "}
-              {integer(run.target)} targeted pages. In the unfiltered daily-only
-              view, a missing category withholds the overall score.
-            </p>
-          )}
-          <p>
-            Public feeds, registries, and sitemaps supply up to 300 previously
-            unseen pages per category each day. All four providers receive the
-            same frozen sample with fresh content requested and a 30-second
-            request deadline. {accessOnly
-              ? "An automated judge checks whether page data loaded or access failed, without seeing the provider name or target metadata."
-              : "An automated judge checks for substantive content matching the requested page without seeing the provider name."}
-          </p>
-          <p>
-            Wikipedia discovery runs once before the daily sample is created,
-            using up to 1,200 non-bot article edits spread across the previous
-            UTC day. We compare the old and new revision text. Only new
-            external URLs that have not been tested before are eligible. The daily sample includes up to 300 of
-            these pages in the Other category, without inferring their subject
-            from the citing article. This is a sample of edits, not every link
-            added to Wikipedia. If discovery fails, the other sources can still
-            form the daily sample, and Wikipedia is checked again the next day.
-          </p>
-          <p>
-            This group receives the same weight as each other category when
-            present; missing Wikipedia pages do not suppress the eight-category
-            daily score.
-          </p>
-          <details>
-            <summary>Collection, grading, and limitations</summary>
-            <p>
-              Context and Firecrawl request main content; all outputs are
-              limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
-              characters from the beginning, middle, and end. {accessOnly
-                ? "Accessed and not-accessed judgments are scored directly; unclear sampled evidence or a judge failure remains unresolved."
-                : "Negative judgments from incomplete excerpts remain unresolved, as do judge failures."}{" "}
-              Failed, unresolved, and pending results stay in the denominator,
-              with equal weight for each scored category.
-            </p>
-            <p>
-              Although we request fresh content, providers may still return
-              cached responses, so response times would not be directly
-              comparable and are not ranked here. The number of available pages,
-              provider rate limits, and request budgets can also reduce the daily
-              sample.
-            </p>
-            <p>
-              Scheduled collection checks every fifteen minutes, and workers
-              continue through the queued sample. Limits are 4,000 requests per
-              provider per UTC day, plus a separate grading budget.
-              Interrupted requests are not automatically repeated, which avoids
-              giving a provider extra attempts at the same page.
-            </p>
-            <p>
-              Individual results are retained for 30 days. Private grading
-              excerpts are compressed and retained for up to seven days within a
-              256 MB budget; daily summaries remain available. Saved
-              records retain their original grading decisions.
-            </p>
-            {data.collecting && data.collecting.day >= firstSampleDay && data.collecting.id !== run?.id && (
-              <p>
-                Collection for {data.collecting.day} is in progress, with{" "}
-                {integer(
-                  data.collecting.providers.reduce(
-                    (n, p) => n + p.total - p.pending,
-                    0,
-                  ),
-                )}{" "}
-                of {integer(data.collecting.pages * providers.length)} results
-                ready.
-              </p>
-            )}
-            <p>
-              {data.health.healthySources} of {data.health.sources} sources last
-              fetched successfully. Last collector update:{" "}
-              {data.health.lastTick
-                ? new Date(data.health.lastTick)
-                    .toISOString()
-                    .replace("T", " ")
-                    .slice(0, 19) + " UTC"
-                : "not yet recorded"}
-              .{data.health.error && ` ${data.health.error}`}
-            </p>
-          </details>
-        </SiteSection>
-        <SiteSection id="citation" lines className="bench-citation">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-          <div className="flex flex-col gap-6">
-          <SectionHeading title="Citation" />
-          <p>
-            Scraping Bench is maintained by{" "}
-            <a href="https://context.dev">Context.dev</a>. If you use these
-            results in your work, please cite the benchmark and
-            include the sample date and scoring rules.
-          </p>
-          </div>
-          <div className="flex min-w-0 flex-col gap-10">
-          <CodeWindow label="scraping-bench.bib" windowClassName="[&>div:first-child]:flex-wrap" actions={
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white/70 hover:bg-white/10 hover:text-white"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(citation);
-                    setCopyStatus("Copied");
-                  } catch {
-                    setCopyStatus("Select and copy the citation above.");
-                  }
-                }}
-              >
-                {copyStatus === "Copied" ? <Check /> : <Copy />}
-                <span className="sr-only">{copyStatus === "Copied" ? "Copied" : "Copy citation"}</span>
-              </Button>
-          }>
-            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="BibTeX citation">
-              <CodeBlock code={citation} className="[&_span]:whitespace-pre-wrap [&_span]:wrap-anywhere" />
-            </div>
-          </CodeWindow>
-          <span
-            className={!copyStatus || copyStatus === "Copied" ? "sr-only" : "bench-note"}
-            role="status"
+        <main id="main">
+          <div id="results" className="contents" aria-busy={loading || sampleLoading}>
+          <Frame
+            id="overview"
+            index={1}
+            as="h1"
+            eyebrow="Daily web scraping benchmark"
+            title="How reliably can web scrapers"
+            accent="read a page?"
           >
-            {copyStatus}
-          </span>
-          <p className="text-body-sm leading-relaxed text-fg-muted">
-            Our approach is inspired by{" "}
-            <a href="https://keenableai.github.io/needle/">
-              NEEDLE: A Live Open-Source Search Benchmark for AI Agents
-            </a>{" "}
-            (2026), by Andrey Styskin, Matthias Petri, and Ilya Gusev. Its
-            fresh-query methodology and transparent comparisons informed this
-            benchmark, which evaluates scraping rather than search.
+            <div className="bench-hero-field" aria-hidden="true">
+              <HeroDotField fine streams miniStreams />
+            </div>
+            <p className="bench-intro-text">
+              Every day we send the same fresh sample of about 2,500 web pages to Context, Exa, Firecrawl, and Keenable.
+              We publish how often each one gets through, how fast it answers, whether it returns the right page,
+              what it costs, and why it fails.
+            </p>
+            <div className="bench-overview">
+              <div className="bench-findings">
+                <h2 className="bench-findings-title">
+                  Key findings{run ? ` · ${longDate(run.day)} sample` : ""}
+                </h2>
+                {sampleUnavailable ? (
+                  <p className="bench-note">{sampleStatus}</p>
+                ) : view.findings.length ? (
+                  <ol>
+                    {view.findings.map((f) => (
+                      <li key={f.lead}>
+                        <span>
+                          <strong>{f.lead}</strong> {f.detail}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="bench-note">Findings appear once the selected sample has scores.</p>
+                )}
+              </div>
+              <div className="bench-stats">
+                <dl className="bench-stats-group sample-metrics" aria-live="polite">
+                  <div>
+                    <dt>pages, each sent to all four providers</dt>
+                    <dd data-sample-count>{sampleUnavailable ? "—" : integer(selected.length)}</dd>
+                  </div>
+                  <div>
+                    <dt>categories, weighted equally</dt>
+                    <dd>{sampleUnavailable ? "—" : integer(view.categoryIds.length)}</dd>
+                  </div>
+                </dl>
+                <dl className="bench-stats-group">
+                  <div>
+                    <dt>daily samples scored{history[0] ? ` since ${shortDate(history[0].day).replace(" ", "\u00a0")}` : ""}</dt>
+                    <dd className="text-fg-brand">{integer(scoredSamples)}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </Frame>
+
+          <Frame
+            id="useful-content"
+            index={2}
+            eyebrow="Leaderboard"
+            title={accessOnly ? "Pages" : "Pages with"}
+            accent={accessOnly ? "accessed" : "useful content"}
+            lede={
+              accessOnly
+                ? "The score measures whether page data loaded, rather than only a block, error, or empty shell. Partial content and populated landing pages count. Ranks change only where a paired test on the same pages shows a real difference."
+                : "The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."
+            }
+          >
+            <div className="bench-toolbar">
+              {/* Below the sidebar breakpoint the sample date sits with the filters. */}
+              <div className="bench-toolbar-date">{sampleSelect}</div>
+              {filterControls}
+              <p className="bench-sample bench-sample-line" aria-live="polite">
+                {requestedRun ? (
+                  <>
+                    Sample <strong>{requestedRun.day}</strong> UTC{run ? ` · ${integer(selected.length)} pages` : ""}
+                  </>
+                ) : (
+                  "No daily sample available"
+                )}
+                {sampleUnavailable ? ` · ${sampleLoading ? "Loading…" : sampleStatus}` : loading && " · Updating…"}
+              </p>
+            </div>
+            {error && <p role="alert" className="bench-notice">{error}</p>}
+            {run && retainedDaily < run.pages && (
+              <p className="bench-notice" role="status" data-retention-notice>
+                Only {integer(retainedDaily)} of {integer(run.pages)} daily page records are available for {run.day}.
+                Older page records expire under the retention policy. The filters and scores below use available
+                records only; original daily scores remain available in the history under All daily sources.
+              </p>
+            )}
+            {!sampleUnavailable && source === "wikipedia_daily" && selected.length === 0 && (
+              <p className="bench-notice" role="status">
+                No daily Wikipedia pages match this sample and these filters. Choose another sample date to see available results.
+              </p>
+            )}
+            <ChartTabs
+              label="Leaderboard"
+              chart={sampleUnavailable ? samplePlaceholder : <Bars rows={rows} ranks={ranks} />}
+              table={sampleUnavailable ? samplePlaceholder : leaderTable}
+              controls={chips}
+            />
+            <Notes
+              items={[
+                {
+                  title: accessOnly ? "What counts as accessed" : "What counts as useful",
+                  body: accessOnly
+                    ? "A page counts when real page data loads: an article, a listing, a filing, or a partial preview. A login wall, CAPTCHA, error page, or empty shell does not. An automated judge decides from the returned text and never sees which provider sent it."
+                    : "A page counts as useful when the response contains substantive content that matches the requested page. An automated judge decides from the returned text and never sees which provider sent it.",
+                },
+                {
+                  title: "How to read the ranges",
+                  body: (
+                    <>
+                      The ± value is a 95% confidence interval. Two providers get separate places only when a paired
+                      test on the pages they disagree on passes at the 95% level; otherwise they share a place.
+                      {excluded > 0 && ` ${integer(excluded)} ${excluded === 1 ? "request" : "requests"} rejected by our own account limits ${excluded === 1 ? "is" : "are"} excluded and listed in the table.`}
+                    </>
+                  ),
+                },
+              ]}
+            />
+            <p className="bench-note">
+              Context runs this benchmark and is one of the providers tested. See the <a href="#methodology">methodology</a> for scoring rules and limitations.
+              {pending > 0 && " Results for this selection are still being collected."}
+            </p>
+          </Frame>
+
+          <Frame
+            id="head-to-head"
+            index={3}
+            eyebrow="Head-to-head"
+            title="Same pages,"
+            accent="paired"
+            lede={(() => {
+              const called = pairs.filter((p) => p.winner).length;
+              return `Every provider gets the identical sample, so we can count the pages one got and another missed. ${called === pairs.length ? "On this selection, every pair shows a clear winner." : `${called} of ${pairs.length} pairs show a clear winner; the rest are within the noise.`}`;
+            })()}
+          >
+            {chipRow}
+            {sampleUnavailable ? samplePlaceholder : (<>
+            <div className="bench-split">
+              <PairMatrix pairs={pairs} order={order} />
+              <div className="bench-verdicts">
+                <h3>Pair verdicts</h3>
+                <ul>
+                  {order.flatMap((a, i) =>
+                    order.slice(i + 1).map((b) => {
+                      const pair = pairBetween(pairs, a, b)!;
+                      return (
+                        <li key={`${a}-${b}`}>
+                          <span>
+                            {providerName(a)} vs {providerName(b)}
+                          </span>
+                          <span className="bench-verdict-count">
+                            {integer(pair.aOnly)} to {integer(pair.bOnly)}
+                          </span>
+                          <span className={cn("bench-verdict", pair.winner && "is-called")}>
+                            {pair.winner ? (
+                              <>
+                                <Swatch id={pair.winner} />
+                                {providerName(pair.winner)} ahead
+                              </>
+                            ) : (
+                              "Tied"
+                            )}
+                          </span>
+                        </li>
+                      );
+                    }),
+                  )}
+                </ul>
+                <p className="bench-note">
+                  A pair is called only when an exact McNemar test on the pages the two disagree on passes at the 95% level.
+                  Requests rejected by our own account limits are left out of both sides.
+                </p>
+              </div>
+            </div>
+            </>)}
+          </Frame>
+
+          <Frame
+            id="categories"
+            index={4}
+            eyebrow="Categories"
+            title="Results by"
+            accent="category"
+            lede={view.findings[1] ? `${view.findings[1].lead} ${view.findings[1].detail}` : "Compare how reliably each provider handles different kinds of pages."}
+          >
+            <ChartTabs
+              label="Categories"
+              controls={chips}
+              chart={
+                sampleUnavailable ? (
+                  samplePlaceholder
+                ) : view.categoryList.length >= 3 ? (
+                  <Radar rows={rows} chartCategories={view.categoryList} accessOnly={accessOnly} />
+                ) : (
+                  <p className="bench-notice">The chart needs at least three categories. Switch to Table to see this selection.</p>
+                )
+              }
+              table={
+            sampleUnavailable ? samplePlaceholder : <Table
+              className="bench-category-table"
+              label="Results by category"
+              headers={["Category", ...order.map(providerName), "No provider", "Verdict"]}
+              rows={cats.map((c) => {
+                const best = Math.max(...order.map((id) => c.rates[id] ?? -1));
+                return {
+                  id: c.id,
+                  cells: [
+                    `${categoryName(c.id)}`,
+                    ...order.map((id) => (
+                      <span key={id} className={cn(c.rates[id] === best && "is-best")}>
+                        {percent(c.rates[id])}
+                      </span>
+                    )),
+                    integer(c.nobody),
+                    c.verdict === "leads" && c.leader ? (
+                      <span key="v" className="bench-chip is-called">
+                        <Swatch id={c.leader} />
+                        {providerName(c.leader)} leads
+                      </span>
+                    ) : c.verdict === "tied" ? (
+                      <span key="v" className="bench-chip">Tied</span>
+                    ) : (
+                      "—"
+                    ),
+                  ],
+                };
+              })}
+            />
+              }
+            />
+            <p className="bench-note">
+              In the table, black marks the highest rate in each row. “No provider” counts sample pages that all four failed. A verdict
+              compares the top two providers in that category with a paired test on the same pages; “Tied” means the gap
+              is within the noise. Categories hold up to 300 pages each.
+            </p>
+          </Frame>
+
+          <Frame
+            id="latency"
+            index={5}
+            eyebrow="Latency"
+            title="How long a"
+            accent="page takes"
+            lede={view.findings.find((f) => f.lead.includes("median")) ? `${view.findings.find((f) => f.lead.includes("median"))!.lead} ${view.findings.find((f) => f.lead.includes("median"))!.detail}` : undefined}
+          >
+            {sampleUnavailable ? (
+              <>
+                {chipRow}
+                {samplePlaceholder}
+              </>
+            ) : timedPages ? (
+              <ChartTabs
+                label="Latency"
+                controls={chips}
+                chart={<LatencyStrips rows={order.map((id) => lat.find((l) => l.id === id)!)} />}
+                table={
+                  <Table
+                    label="Response time percentiles"
+                    headers={["Provider", "p50", "p90", "p95", "p99", "Successful p50", "Successful p95", "Timeouts"]}
+                    rows={order.map((id) => {
+                      const l = lat.find((x) => x.id === id)!;
+                      return {
+                        id,
+                        cells: [
+                          <Name key={id} id={id} />,
+                          seconds(l.p50),
+                          seconds(l.p90),
+                          seconds(l.p95),
+                          seconds(l.p99),
+                          seconds(l.successP50),
+                          seconds(l.successP95),
+                          `${integer(l.timeouts)} (${percent(l.timeoutRate)})`,
+                        ],
+                      };
+                    })}
+                  />
+                }
+              />
+            ) : (
+              <>
+                {chipRow}
+                <p className="bench-notice">Response times were not recorded for this selection.</p>
+              </>
+            )}
+            <Notes
+              items={[
+                {
+                  title: "Requests that hit the deadline",
+                  body: (
+                    <>
+                      <span className="bench-inline-stats">
+                        {[...lat].sort((a, b) => (a.timeoutRate ?? 0) - (b.timeoutRate ?? 0)).map((l) => (
+                          <span key={l.id}>
+                            {providerName(l.id)} <strong>{percent(l.timeoutRate)}</strong>
+                          </span>
+                        ))}
+                      </span>
+                      Context, Exa, and Firecrawl are asked to give up at {DEADLINE_MS / 1000} seconds; Keenable offers no
+                      deadline setting, so our 30-second cutoff applies. Any failure at the deadline counts as a timeout,
+                      whatever error the provider returns.
+                    </>
+                  ),
+                },
+                {
+                  title: "How we measure",
+                  body: "Time runs from sending the request to receiving the full response, measured from Vercel's US East region. Caching is turned off for every provider, and any response a provider marks as cached is excluded. Requests rejected by our own account limits are left out.",
+                },
+              ]}
+            />
+          </Frame>
+
+          <Frame
+            id="quality"
+            index={6}
+            eyebrow="Quality"
+            title="From response to"
+            accent="useful page"
+            lede="Getting through is only the first step. A page can still be the wrong document, or a title with no real content. Each line follows one provider from response to useful page."
+          >
+            {chipRow}
+            {sampleUnavailable ? samplePlaceholder : (<>
+            <div className="bench-split is-wide">
+              <FunnelChart rows={order.map((id) => funnel.find((f) => f.id === id)!)} />
+              <dl className="bench-stages">
+                <div><dt>Returned content</dt><dd>The provider answered with text before the deadline.</dd></div>
+                <div><dt>Page accessed</dt><dd>The text is real page data, not a block or error screen{accessOnly ? "" : " (earlier samples need a page-access regrade)"}.</dd></div>
+                <div><dt>Right page</dt><dd>It is the requested document, not a homepage or a different item.</dd></div>
+                <div><dt>Substantive</dt><dd>It holds the page&apos;s main content, not just a title or navigation.</dd></div>
+              </dl>
+            </div>
+            {!graded && (
+              <p className="bench-notice" role="status">
+                Right-page and substantive-content grades are not available for this sample yet, so the chart stops at
+                the stages that are graded.
+              </p>
+            )}
+            <Table
+              label="Quality signals"
+              headers={["Provider", "Right page", "Substantive", "Ended on another page", "Median length", "Length vs. other providers"]}
+              rows={order.map((id) => {
+                const f = funnel.find((x) => x.id === id)!;
+                const q = quality.find((x) => x.id === id)!;
+                return {
+                  id,
+                  cells: [
+                    <Name key={id} id={id} />,
+                    f.rightPage != null && f.n ? percent(f.rightPage / f.n) : "—",
+                    f.substantive != null && f.n ? percent(f.substantive / f.n) : "—",
+                    q.redirectRate != null ? percent(q.redirectRate) : "—",
+                    q.medianChars != null ? `${integer(q.medianChars)} chars` : "—",
+                    q.lengthRatio != null ? `${q.lengthRatio.toFixed(2)}×` : "—",
+                  ],
+                };
+              })}
+            />
+            <p className="bench-note">
+              “Ended on another page” compares the final URL with the requested one, ignoring the scheme, “www.”, query
+              strings, and trailing slashes. Length compares each provider with the median length across providers that
+              returned the same page. Context and Firecrawl request main content only while Exa returns full text, so length is a
+              signal, not a score.
+            </p>
+            </>)}
+          </Frame>
+
+          <Frame
+            id="cost"
+            index={7}
+            eyebrow="Cost"
+            title="What a"
+            accent="page costs"
+            lede="A cheap request is not cheap if it fails. We divide each published price by the access rate to get the cost of 1,000 pages that actually load."
+          >
+            {chipRow}
+            {sampleUnavailable ? samplePlaceholder : (<>
+            <div className="bench-cost">
+              <div className="bench-cost-row is-head" aria-hidden="true">
+                <span>Provider</span>
+                <span>Published price used</span>
+                <span>Per 1,000 requests</span>
+                <span>{accessOnly ? "Access rate" : "Useful rate"}</span>
+                <span>Per 1,000 {accessOnly ? "accessed" : "useful"} pages</span>
+              </div>
+              {[...costs].sort((a, b) => (a.perAccessed1k ?? Infinity) - (b.perAccessed1k ?? Infinity)).map((c) => {
+                const entry = prices.providers[c.id];
+                const max = Math.max(...costs.map((x) => x.perAccessed1k ?? 0));
+                return (
+                  <div className="bench-cost-row" key={c.id}>
+                    <span className="bench-cost-name"><Swatch id={c.id} />{providerName(c.id)}</span>
+                    <span className="bench-cost-plan">
+                      <a href={entry.source}>{entry.plan}</a> · {entry.price}
+                    </span>
+                    <span>${c.per1k.toFixed(2)}</span>
+                    <span>{percent(c.rate)}</span>
+                    <span className="bench-cost-value">
+                      <i aria-hidden="true">
+                        <i style={{ width: `${((c.perAccessed1k ?? 0) / (max || 1)) * 100}%`, backgroundColor: providers.find((p) => p.id === c.id)?.color }} />
+                      </i>
+                      <strong>{c.perAccessed1k != null ? `$${c.perAccessed1k.toFixed(2)}` : "—"}</strong>
+                      {c.assumed && <span className="bench-cost-flag" title="Assumes failed requests are billed">*</span>}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="bench-note">
+              {prices.note} Prices checked {longDate(prices.checked)}. Context and Keenable say they do not bill failed
+              requests, so their cost per accessed page equals their request price. * Exa and Firecrawl do not say, so we
+              assume failed requests are billed. Keenable&apos;s first 100,000 requests each month are free.
+            </p>
+            </>)}
+          </Frame>
+
+          <Frame
+            id="failures"
+            index={8}
+            eyebrow="Failures"
+            title="Why pages"
+            accent="fail"
+            lede={(() => {
+              const top = [...fails].map((f) => {
+                const [reason, count] = Object.entries(f.reasons).sort((a, b) => b[1] - a[1])[0] ?? [];
+                return { id: f.id, reason, count, share: f.total ? f.failed / f.total : 0 };
+              });
+              const least = [...top].sort((a, b) => a.share - b.share)[0];
+              return least ? `${providerName(least.id)} fails least. Each bar shows the share of pages a provider missed, split by the first reason we recorded.` : undefined;
+            })()}
+          >
+            {chipRow}
+            {sampleUnavailable ? samplePlaceholder : (<>
+            <FailureBars rows={fails} />
+            <p className="bench-note">
+              Bars show the share of all scored pages each provider failed to {accessOnly ? "access" : "return useful content for"}.
+              Hover a segment for the count. Provider-reported failures and missed deadlines count as failures, even when
+              the provider did not return an error code. {accessOnly ? "Wrong documents and thin pages count as accessed and appear under Quality." : "Thin pages and wrong documents count as failures under this scoring rule."}
+            </p>
+            </>)}
+          </Frame>
+
+          <Frame
+            id="history"
+            index={9}
+            eyebrow="History"
+            title="Daily results"
+            accent="over time"
+            lede={
+              firstPlace?.scored
+                ? `Daily results from ${longDate(firstSampleDay)} onward. ${providerName(firstPlace.id)} ranked first in ${integer(firstPlace.firsts)} of ${integer(firstPlace.scored)} scored samples.`
+                : `Daily results from ${longDate(firstSampleDay)} onward.`
+            }
+          >
+            <ChartTabs
+              label="History"
+              controls={chips}
+              chart={<Trend history={history} filtered={hasFilters} />}
+              table={
+                <Table
+                  label="Daily results history"
+                  headers={["Date (UTC)", "Status", "Pages", ...providers.map((p) => p.name)]}
+                  rows={filteredHistory.map((r) => ({
+                    id: r.id,
+                    cells: [
+                      r.day,
+                      r.status === "unavailable"
+                        ? "Filtered results unavailable"
+                        : hasFilters && r.pages === 0
+                          ? "No matching pages"
+                          : r.status !== "completed"
+                            ? "In progress"
+                            : r.providers.every((p) => p.rate == null)
+                              ? "Completed · partial coverage"
+                              : "Scored",
+                      r.status === "unavailable" ? "—" : integer(r.pages),
+                      ...providers.map((p) => historyResult(r, p.id)),
+                    ],
+                  }))}
+                />
+              }
+            />
+            <Notes
+              items={[
+                {
+                  title: "Reading the daily history",
+                  body: `Source and category filters apply to every daily result, including its page count and provider scores. Gaps mark missing scores or dates with no matching pages; they are not estimated. Source-filtered history requires complete retained page records, and category-only history uses saved daily summaries. A dash means no score is available.${duplicateDays.length ? ` ${duplicateDays.length === 1 ? "One day has" : `${duplicateDays.length} days have`} more than one run (${duplicateDays.map(([d]) => shortDate(d)).join(", ")}); the most recently created run is shown.` : ""}`,
+                },
+                {
+                  title: "Same evidence, new rules",
+                  body: "When a sample is regraded from its stored evidence under a newer scoring rule, both grades are kept so they can be compared on identical pages. The original grades are never overwritten.",
+                },
+              ]}
+            />
+          </Frame>
+          </div>
+
+          <Frame
+            id="sources"
+            index={10}
+            method
+            eyebrow="Sample & sources"
+            title="Where the"
+            accent="pages come from"
+            lede={`Each day we collect new pages from ${integer(sources.total - 1)} public feeds, registries, and sitemaps, plus links freshly added to English Wikipedia. No page is ever tested twice.`}
+          >
+            <div className="bench-split is-table">
+              <ol className="bench-steps">
+                <li><span><strong>Discover.</strong> On each source&apos;s schedule we poll publisher feeds, job boards, SEC and Federal Register listings, and sitemaps for new URLs. Wikipedia edits from the previous UTC day are checked once a day for new external links.</span></li>
+                <li><span><strong>Sample.</strong> At 00:15 UTC we draw up to 300 previously unseen pages per category, with at most 125 from one organization and 375 from one website.</span></li>
+                <li><span><strong>Freeze.</strong> The sample is locked and sent to all four providers with caching turned off for every one.</span></li>
+                <li><span><strong>Grade.</strong> A blind judge reads each response. Every URL, verdict, and timing is published in the page-level data.</span></li>
+              </ol>
+              <div>
+                <Table
+                  className="bench-text-table"
+                  label="Discovery sources by category"
+                  headers={["Category", "Sources", "Examples"]}
+                  rows={sources.categories.map((c) => ({
+                    id: c.id,
+                    cells: [categoryName(c.id) === "Wikipedia links" ? "Other" : categoryName(c.id), integer(c.count), c.examples.join(", ")],
+                  }))}
+                />
+                <div className="bench-actions">
+                  <Button
+                    variant="pill-outline"
+                    size="sm"
+                    onClick={() => {
+                      void setFilters({ source: "wikipedia_daily", category: null });
+                      document.getElementById("useful-content")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    View daily Wikipedia results
+                  </Button>
+                  <Button asChild variant="pill-outline" size="sm">
+                    <a href={`${repo}/blob/main/config/sources.json`}>Browse all {integer(sources.total)} sources ↗</a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <details id="daily-sources" className="bench-details">
+              <summary>Daily source examples by category</summary>
+              <p>
+                These feeds, APIs, and sitemaps supply the URLs for the daily sample. We follow those links and test
+                whether each provider can recover content from the destination page. We assign each page the category of
+                the source that supplied it. Pages are new to the benchmark, but may have been published earlier.
+              </p>
+              <dl className="bench-example-list">
+                {dailyExamples.map((example) => (
+                  <div key={example.category}>
+                    <dt>{example.category}</dt>
+                    <dd>
+                      {example.description} · <a href={example.url}>{example.name} ↗</a>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p>These are configured discovery sources, not a guarantee that every source contributes to every daily sample.</p>
+            </details>
+          </Frame>
+
+          <Frame
+            id="methodology"
+            index={11}
+            method
+            eyebrow="Methodology"
+            title="How the"
+            accent="benchmark works"
+            lede="Every rule that affects a score is written down here. Each topic opens for the full detail, and all of it stays on the page for readers, search engines, and AI assistants."
+          >
+            <div className="bench-accordion">
+              <details open>
+                <summary>How scores are calculated</summary>
+                <p>
+                  {accessOnly
+                    ? "A page counts as accessed when actual page data or file content loaded. A partial preview, populated listing, publication landing page, or raw file can pass. Blocks, mandatory login screens, main-page errors, and empty shells fail when they contain no page data. Relevance, document identity, completeness, and extraction quality are not part of the access score; they are reported separately under Quality."
+                    : "A page counts as useful when the response contains substantive content that matches the requested page."}{" "}
+                  We calculate the percentage of {measureWord} pages within each category, then average those percentages,
+                  so every category has the same influence regardless of its page count. Failed requests, unresolved
+                  judgments, and pending results remain in the denominator and lower the score. Requests rejected by our
+                  own account limits (HTTP 401, 402, or 429, or exhausted credits) are excluded from that provider&apos;s
+                  score and listed separately; they are not retried, so no provider gets a second attempt at a page.
+                </p>
+                <p>
+                  The ± range is a 95% confidence interval for the category-weighted score. Rankings use an exact McNemar
+                  test on the pages two providers disagree on; providers that do not differ at the 95% level share a place.
+                </p>
+                {(unknown > 0 || pending > 0) && (
+                  <p>
+                    For the current selection, {integer(unknown)} provider results remain unresolved and {integer(pending)} are
+                    pending. These results count against the score until {accessOnly ? "access" : "useful content"} is confirmed.
+                  </p>
+                )}
+              </details>
+              <details>
+                <summary>The judge, and how we audit it</summary>
+                <p>
+                  TypeSafe&apos;s Jev 1.13.0 model grades up to 12,000 characters taken from the beginning, middle, and end of
+                  each response.{" "}
+                  {accessOnly
+                    ? "For the access score it sees only that text and whether it was sampled, never the provider name or the requested URL."
+                    : "For the useful-content score it checks for substantive content matching the requested page, without seeing the provider name."}{" "}
+                  Unclear evidence and judge failures stay unresolved rather than being guessed.
+                  Document and content grades for the Quality section use a separate judge call that also sees the requested
+                  URL, title, and category, still without the provider name.
+                </p>
+                <p>
+                  {audit
+                    ? `People have hand-checked ${integer(audit.pages)} judged pages for ${scoringLabel(audit.rubric).toLowerCase()} since ${audit.since?.slice(0, 10)}; they agreed with the judge on ${percent(audit.pages ? audit.agreed / audit.pages : null)} of them. Reviewers see the requested URL and the same evidence as the judge, but not the provider or the judge's verdict.`
+                    : "Each week we hand-check a random sample of judged pages. Reviewers see the requested URL and the same evidence as the judge, but not the provider or the judge's verdict. No audit has been published for this scoring rule yet; agreement will appear here once it has."}
+                </p>
+              </details>
+              <details>
+                <summary>Fresh content and cache checks</summary>
+                <p>
+                  Every request asks for a fresh fetch, and every response is checked for the provider&apos;s own record of
+                  where the content came from. A response that a provider marks as served from cache is left out of the
+                  scores and latency instead of being counted as a success.
+                </p>
+                <Table
+                  label="How each provider's cache status is checked"
+                  headers={["Provider", "Fresh-content setting", "Response field checked"]}
+                  rows={[
+                    ["context", "maxAgeMs: 0", "cache_metadata.status, cache_metadata.age_ms"],
+                    ["exa", "maxAgeHours: 0", "statuses[].source"],
+                    ["firecrawl", "maxAge: 0, storeInCache: false", "metadata.cacheState"],
+                    ["keenable", "live=true", "usage.sku must be fetch.live"],
+                  ].map(([id, setting, field]) => ({ id, cells: [<Name key={id} id={id} />, <code key="s">{setting}</code>, <code key="f">{field}</code>] }))}
+                />
+              </details>
+              <details open>
+                <summary>Request settings for each provider</summary>
+                <p>Each provider&apos;s API is different, so these are the closest equivalent settings. Any change to them is logged in the repository with the date it took effect.</p>
+                <Table
+                  label="Request settings"
+                  headers={["Provider", "Endpoint", "Fresh content", "Content", "Deadline"]}
+                  rows={[
+                    ["context", "/v1/web/scrape", "maxAgeMs: 0", "Main content only", "27 s"],
+                    ["exa", "/contents", "maxAgeHours: 0", "Full text", "27 s"],
+                    ["firecrawl", "/v2/scrape", "maxAge: 0, storeInCache: false", "Main content only", "27 s"],
+                    ["keenable", "/v1/fetch", "live=true", "Default", "30 s cutoff (no setting)"],
+                  ].map(([id, endpoint, fresh, content, deadline]) => ({
+                    id,
+                    cells: [<Name key={id} id={id} />, <code key="e">{endpoint}</code>, <code key="f">{fresh}</code>, content, deadline],
+                  }))}
+                />
+                <p>All outputs are limited to 250,000 characters.</p>
+              </details>
+              <details>
+                <summary>Deadlines, timeouts, and rate limits</summary>
+                <p>
+                  Each request has a 30-second hard cutoff on our side. Context, Exa, and Firecrawl are also asked to give up
+                  at 27 seconds. Providers report a missed deadline in different ways: an HTTP 408, an empty failure, or our
+                  cutoff. All of them count as timeouts.
+                </p>
+                <p>
+                  Scheduled collection checks every fifteen minutes, and workers continue through the queued sample.
+                  Limits are 4,000 requests per provider per UTC day, plus a separate grading budget. HTTP 401, 402, and
+                  429 responses pause the affected provider across workers.
+                  Results reflect our own account plans, and requests those limits reject are excluded from scores.
+                  Interrupted requests are not automatically repeated, which avoids giving a provider extra
+                  attempts at the same page.
+                </p>
+              </details>
+              <details>
+                <summary>Reruns, duplicate days, and retention</summary>
+                <p>
+                  {duplicateDays.length
+                    ? `${duplicateDays.map(([d, n]) => `${longDate(d)} has ${n} runs`).join("; ")}. The most recently created run for a day is shown, and every run is in the downloadable summaries.`
+                    : "Every sampled day has exactly one run."}
+                </p>
+                <p>
+                  Grading evidence (the excerpts the judge reads) is compressed and kept for 30 days so samples can be
+                  regraded and audited. Page-level records are kept for 180 days, and daily summaries are kept permanently.
+                  Raw responses are not published.
+                </p>
+              </details>
+              <details>
+                <summary>Daily collection and Wikipedia discovery</summary>
+                {run && run.pages < run.target && (
+                  <p>
+                    The selected daily run collected {integer(run.pages)} of {integer(run.target)} targeted pages. In the
+                    unfiltered daily-only view, a missing category withholds the overall score.
+                  </p>
+                )}
+                <p>
+                  Wikipedia discovery runs once before the daily sample is created, using up to 1,200 non-bot article edits
+                  spread across the previous UTC day. We compare the old and new revision text. Only new external URLs
+                  that have not been tested before are eligible. The daily sample includes up to 300 of these pages in the
+                  Other category, without inferring their subject from the citing article. This is a sample of edits, not
+                  every link added to Wikipedia. If discovery fails, the other sources can still form the daily sample, and
+                  Wikipedia is checked again the next day.
+                </p>
+                <p>
+                  This group receives the same weight as each other category when present; missing Wikipedia pages do not
+                  suppress the eight-category daily score.
+                </p>
+              </details>
+              <details>
+                <summary>Known limitations</summary>
+                <p>
+                  The sample is drawn from sources we chose; it is not a random sample of the web. The judge can make
+                  mistakes, which is why its agreement with human reviewers is published. Provider rate limits, request
+                  budgets, and the number of available pages can reduce a daily sample. Latency is measured from one
+                  region with caching turned off, which is slower than many real workloads.
+                </p>
+                {data.collecting && data.collecting.day >= firstSampleDay && data.collecting.id !== run?.id && (
+                  <p>
+                    Collection for {data.collecting.day} is in progress, with{" "}
+                    {integer(data.collecting.providers.reduce((n, p) => n + p.total - p.pending, 0))} of{" "}
+                    {integer(data.collecting.pages * providers.length)} results ready.
+                  </p>
+                )}
+                <p>
+                  {data.health.healthySources} of {data.health.sources} sources last fetched successfully. Last collector update:{" "}
+                  {utcTime(data.health.lastTick) ?? "not yet recorded"}.{data.health.error && ` ${data.health.error}`}
+                </p>
+              </details>
+            </div>
+          </Frame>
+
+          <Frame
+            id="data"
+            index={12}
+            method
+            eyebrow="Data & API"
+            title="Check our"
+            accent="work"
+            lede="Every number on this page comes from public records you can download. Each record has the URL, provider, timing, HTTP status, judge verdict, and a hash of the returned text."
+          >
+            <div className="bench-split">
+              <ul className="bench-downloads">
+                <li>
+                  <span>Filtered results for this view</span>
+                  <button type="button" onClick={download} disabled={!run}>JSON <Download aria-hidden="true" /></button>
+                </li>
+                {run && (
+                  <li>
+                    <span>Every page-level record for {run.day}</span>
+                    <a href={`/api/download?run=${encodeURIComponent(run.id)}`}>NDJSON <Download aria-hidden="true" /></a>
+                  </li>
+                )}
+                <li>
+                  <span>Daily summaries with intervals</span>
+                  <a href="/api/report">JSON <ArrowRight aria-hidden="true" /></a>
+                </li>
+                <li>
+                  <span>Judge prompts and request settings</span>
+                  <a href={`${repo}/blob/main/src/lib/benchmark/providers.ts`}>GitHub ↗</a>
+                </li>
+                <li>
+                  <span>Full source code</span>
+                  <a href={repo}>MIT license ↗</a>
+                </li>
+                <li>
+                  <span>Plain-text summary for AI assistants</span>
+                  <a href="/llms.txt">llms.txt <ArrowRight aria-hidden="true" /></a>
+                </li>
+              </ul>
+              <CodeWindow label="report.sh">
+                <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="API example">
+                  <CodeBlock
+                    code={`curl -s https://trace-benchmark-contextdev.vercel.app/api/report \\\n  | jq '.latest.providers[] | {id, rate, ci, p50, p95}'`}
+                    className="[&_span]:whitespace-pre-wrap [&_span]:wrap-anywhere"
+                  />
+                </div>
+              </CodeWindow>
+            </div>
+          </Frame>
+
+          <Frame id="faq" index={13} method eyebrow="FAQ" title="Common" accent="questions">
+            <div className="bench-faq">
+              {faqItems(view).map((item) => (
+                <div key={item.q}>
+                  <h3>{item.q}</h3>
+                  <p>{item.a}</p>
+                </div>
+              ))}
+            </div>
+          </Frame>
+
+          <Frame
+            id="citation"
+            index={14}
+            method
+            eyebrow="Citation"
+            title="Cite the"
+            accent="benchmark"
+            lede={
+              <>
+                Scraping Bench is maintained by <a href="https://context.dev">Context.dev</a>. If you use these results in
+                your work, please cite the benchmark and include the sample date and scoring rules.
+              </>
+            }
+          >
+            <div className="bench-split">
+              <p className="bench-note">
+                Our approach is inspired by{" "}
+                <a href="https://keenableai.github.io/needle/">NEEDLE: A Live Open-Source Search Benchmark for AI Agents</a>{" "}
+                (2026), by Andrey Styskin, Matthias Petri, and Ilya Gusev. Its fresh-query methodology and transparent
+                comparisons informed this benchmark, which evaluates scraping rather than search.
+              </p>
+              <div className="flex min-w-0 flex-col gap-3">
+                <CodeWindow
+                  label="scraping-bench.bib"
+                  windowClassName="[&>div:first-child]:flex-wrap"
+                  actions={
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-white/70 hover:bg-white/10 hover:text-white"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(citation);
+                          setCopyStatus("Copied");
+                        } catch {
+                          setCopyStatus("Select and copy the citation above.");
+                        }
+                      }}
+                    >
+                      {copyStatus === "Copied" ? <Check /> : <Copy />}
+                      <span className="sr-only">{copyStatus === "Copied" ? "Copied" : "Copy citation"}</span>
+                    </Button>
+                  }
+                >
+                  <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="BibTeX citation">
+                    <CodeBlock code={citation} className="[&_span]:whitespace-pre-wrap [&_span]:wrap-anywhere" />
+                  </div>
+                </CodeWindow>
+                <span className={!copyStatus || copyStatus === "Copied" ? "sr-only" : "bench-note"} role="status">
+                  {copyStatus}
+                </span>
+              </div>
+            </div>
+          </Frame>
+        </main>
+        <footer className="bench-footer">
+          <p>
+            Published by <a href="https://context.dev">Context.dev</a> to compare how reliably scraping APIs access content
+            from a shared sample of web pages.
           </p>
-          </div>
-          </div>
-        </SiteSection>
-      </main>
-      <footer className="bench-footer bench-column">
-        Published by <a href="https://context.dev">Context.dev</a> to compare how
-        reliably scraping APIs return content from a shared sample of web pages.
-      </footer>
+          <p className="bench-footer-links">
+            <a href={repo}>GitHub</a>
+            <a href="#data">Data</a>
+            <a href="/llms.txt">llms.txt</a>
+          </p>
+        </footer>
+      </div>
     </Surface>
   );
 }

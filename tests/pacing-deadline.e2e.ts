@@ -48,7 +48,7 @@ try {
   await migrateStore(store);
   for (const phase of ["read", "judge"]) {
     calls.read = 0; calls.judge = 0;
-    await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+    await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
     const day = "2026-11-06";
     await store.db.insert(runs).values({ id: "pacing-run", day, protocol: PROTOCOL, status: "collecting", summary: {} as RunSummary });
     await store.db.insert(attempts).values(Array.from({ length: 8 }, (_, index) => ({

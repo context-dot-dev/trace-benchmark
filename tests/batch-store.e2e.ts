@@ -24,7 +24,7 @@ const grade: Grade = { inputTokens: 20, success: true, content: "substantive", i
 let failure: string | undefined;
 try {
   await migrateStore(store);
-  await store.db.execute(sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
+  await store.db.execute(sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`);
   await store.db.insert(worker).values({ id: "fixture-worker", claim: token, leaseUntil: lease });
   await store.db.insert(runs).values({ id: "fixture-run", day, protocol: "fixture", status: "collecting", summary: {} as RunSummary });
   await store.db.insert(attempts).values(Array.from({ length: 8 }, (_, index) => ({

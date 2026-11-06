@@ -79,7 +79,7 @@ const readers = createReaders({
 try {
   await migrateStore(store);
   await store.db.execute(
-    sql`truncate scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
+    sql`truncate scraping_bench.grades, scraping_bench.audits, scraping_bench.attempts, scraping_bench.runs, scraping_bench.candidates, scraping_bench.seen, scraping_bench.budgets, scraping_bench.worker, scraping_bench.sources`,
   );
   assert.equal(
     authorizeCron(new Request(base), {
@@ -231,17 +231,17 @@ try {
   assert.equal(requests.length, before);
   checks.push("Durable daily request caps prevent external calls");
   await store.db.execute(
-    sql`update scraping_bench.attempts set day='2026-10-20' where state='done'`,
+    sql`update scraping_bench.attempts set day='2026-09-20' where state='done'`,
   );
   await runTick(store, { ...options, now: () => capped, maxPages: 0 });
   const retained = await store.db.execute(
-    sql`select id,xmin::text as version,evidence_bytes from scraping_bench.attempts where day='2026-10-20' order by id`,
+    sql`select id,xmin::text as version,evidence_bytes from scraping_bench.attempts where day='2026-09-20' order by id`,
   );
   assert.ok(retained.rows.length > 0);
   assert.ok(retained.rows.every((r) => r.evidence_bytes === 0));
   await runTick(store, { ...options, now: () => capped, maxPages: 0 });
   const repeated = await store.db.execute(
-    sql`select id,xmin::text as version,evidence_bytes from scraping_bench.attempts where day='2026-10-20' order by id`,
+    sql`select id,xmin::text as version,evidence_bytes from scraping_bench.attempts where day='2026-09-20' order by id`,
   );
   assert.deepEqual(repeated.rows, retained.rows);
   checks.push(
