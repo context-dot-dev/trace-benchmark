@@ -8,6 +8,7 @@ import { dsFontVariables } from "@/lib/ds-fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://trace.context.dev"),
   title: "TRACE · Daily web scraping API benchmark",
   description: "Daily web scraping API benchmark: page access, latency percentiles, document quality, cost per page, and failure reasons for context.dev, Exa, Firecrawl, and Keenable on a new fresh sample every day, with confidence intervals and page-level data.",
   openGraph: {
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
     description: "Daily web scraping API benchmark: page access, latency percentiles, document quality, cost per page, and failure reasons for context.dev, Exa, Firecrawl, and Keenable on a new fresh sample every day, with confidence intervals and page-level data.",
     type: "website",
   },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, colorScheme: "light dark" };
