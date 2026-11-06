@@ -1,27 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { PanelLeft, PanelLeftOpen, SlidersHorizontal, ChevronUp, X } from "lucide-react";
+import { PanelLeft, PanelLeftOpen, SlidersHorizontal, ChevronUp, X, House, ChartNoAxesColumn, ArrowLeftRight, Shapes, Timer, FileCheck2, DollarSign, CircleAlert, History, Database, FlaskConical, Code2, CircleHelp, Quote, type LucideIcon } from "lucide-react";
 import { ContextMark } from "@/components/trace/provider-logo";
 import { ThemeToggle } from "@/components/trace/theme-toggle";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-export type RailSection = { id: string; label: string; group?: string };
+export type RailSection = { id: string; label: string; group?: string; icon: LucideIcon };
 
 export const sections: RailSection[] = [
-  { id: "overview", label: "Overview", group: "Results" },
-  { id: "useful-content", label: "Leaderboard" },
-  { id: "head-to-head", label: "Head-to-head" },
-  { id: "categories", label: "Categories" },
-  { id: "latency", label: "Latency" },
-  { id: "quality", label: "Quality" },
-  { id: "cost", label: "Cost" },
-  { id: "failures", label: "Failures" },
-  { id: "history", label: "History" },
-  { id: "sources", label: "Sample & sources", group: "Method" },
-  { id: "methodology", label: "Methodology" },
-  { id: "data", label: "Data & API" },
-  { id: "faq", label: "FAQ" },
-  { id: "citation", label: "Citation" },
+  { id: "overview", label: "Overview", group: "Results", icon: House },
+  { id: "useful-content", label: "Leaderboard", icon: ChartNoAxesColumn },
+  { id: "head-to-head", label: "Head-to-head", icon: ArrowLeftRight },
+  { id: "categories", label: "Categories", icon: Shapes },
+  { id: "latency", label: "Latency", icon: Timer },
+  { id: "quality", label: "Quality", icon: FileCheck2 },
+  { id: "cost", label: "Cost", icon: DollarSign },
+  { id: "failures", label: "Failures", icon: CircleAlert },
+  { id: "history", label: "History", icon: History },
+  { id: "sources", label: "Sample & sources", group: "Method", icon: Database },
+  { id: "methodology", label: "Methodology", icon: FlaskConical },
+  { id: "data", label: "Data & API", icon: Code2 },
+  { id: "faq", label: "FAQ", icon: CircleHelp },
+  { id: "citation", label: "Citation", icon: Quote },
 ];
 const number = (index: number) => String(index + 1).padStart(2, "0");
 const RAIL_KEY = "bench-rail";
@@ -164,11 +165,11 @@ export function BenchRail({
         <div className="bench-nav-group" key={group}>
           <p className="bench-nav-label">{group}</p>
           <ul>
-            {items.map((s) => (
-              <li key={s.id}>
+            {items.map((s) => {
+              const link = (
                 <a
                   href={`#${s.id}`}
-                  data-label={s.label}
+                  aria-label={s.label}
                   aria-current={active === s.id ? "location" : undefined}
                   onClick={(event) => {
                     event.preventDefault();
@@ -176,12 +177,23 @@ export function BenchRail({
                     requestAnimationFrame(() => go(s.id));
                   }}
                 >
+                  {variant === "rail" && <s.icon className="bench-nav-icon" aria-hidden="true" strokeWidth={1.5} />}
                   <span className="bench-nav-number">{number(s.index)}</span>
                   <span className="bench-nav-text">{s.label}</span>
                   {variant === "rail" && <span className="bench-nav-dot" aria-hidden="true" />}
                 </a>
-              </li>
-            ))}
+              );
+              return (
+                <li key={s.id}>
+                  {variant === "rail" ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right" className="bench-rail-tooltip">{s.label}</TooltipContent>
+                    </Tooltip>
+                  ) : link}
+                </li>
+              );
+            })}
           </ul>
         </div>
       );
@@ -192,7 +204,7 @@ export function BenchRail({
       <aside className="bench-rail" data-state={rail} aria-label="Benchmark sections">
         <div className="bench-rail-panel">
           <div className="bench-rail-brand">
-            <a href="#overview" className="bench-rail-home" onClick={(event) => { event.preventDefault(); go("overview"); }}>
+            <a href="#overview" className="bench-rail-home" aria-label="Scraping Bench overview" onClick={(event) => { event.preventDefault(); go("overview"); }}>
               <ContextMark className="h-[0.95rem] w-auto" />
               <span className="bench-rail-wordmark">Scraping Bench</span>
             </a>
