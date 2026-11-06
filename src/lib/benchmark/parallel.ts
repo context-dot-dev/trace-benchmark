@@ -32,7 +32,7 @@ export function providerWorkers(env = process.env): ProviderWorker[] {
         !Number.isFinite(rps) || rps <= 0 || rps > 4000)
       throw new Error("Invalid collector capacity for " + id);
     const capacity = Math.min(concurrency, Math.ceil(rps * 30));
-    const shards = Math.ceil(capacity / 128);
+    const shards = Math.ceil(capacity / 256);
     return Array.from({ length: shards }, (_, shard) => ({
       provider: id, shard, shards,
       concurrency: Math.floor(capacity / shards) + (shard < capacity % shards ? 1 : 0),
@@ -58,16 +58,16 @@ function batcher<I, O>(
     running = true;
     clearTimeout(timer);
     timer = undefined;
-    while (pending.length) {
-      const group = pending.splice(0, 128);
-      try {
-        const results = new Map((await flush(group.map((entry) => entry.input))).map((value) => [outputId(value), value]));
-        for (const entry of group) entry.resolve(results.get(inputId(entry.input)));
-      } catch (error) {
-        for (const entry of group) entry.reject(error);
-      }
+    const group = pending.splice(0, 128);
+    try {
+      const results = new Map((await flush(group.map((entry) => entry.input))).map((value) => [outputId(value), value]));
+      for (const entry of group) entry.resolve(results.get(inputId(entry.input)));
+    } catch (error) {
+      for (const entry of group) entry.reject(error);
     }
     running = false;
+    if (pending.length >= 128) void drain();
+    else if (pending.length) timer = setTimeout(() => void drain(), 100);
   }
   return (input: I) => new Promise<O | undefined>((resolve, reject) => {
     pending.push({ input, resolve, reject });
