@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContextMark, ProviderName } from "@/components/trace/provider-logo";
 import { CodeBlock, CodeWindow } from "@/components/site/code-window";
 import { percent } from "@/lib/benchmark/format";
+import { filterHistory, firstSampleDay } from "@/lib/benchmark/history";
 import { Hero } from "@/components/site/hero";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteSection, SectionHeading, SectionHeaderRule } from "@/components/site/section";
@@ -366,7 +367,6 @@ function Radar({
   );
 }
 const dayMs = 86400000;
-const firstSampleDay = "2026-11-04";
 const dateLabel = (time: number, long = false) =>
   new Date(time).toLocaleDateString("en-US", {
     month: long ? "long" : "short",
@@ -383,7 +383,7 @@ function historyResult(run: RunSummary, provider: string) {
     ? `${integer(result.useful)} / ${integer(result.total)} ${run.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"}`
     : percent(result.rate);
 }
-function Trend({ history }: { history: RunSummary[] }) {
+function Trend({ history, filtered }: { history: RunSummary[]; filtered: boolean }) {
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1000);
   const [active, setActive] = useState<string | null>(null);
@@ -654,7 +654,11 @@ function Trend({ history }: { history: RunSummary[] }) {
         </span>
       </div>
       <p className="bench-note" id="history-instructions">
-        {latestCompleted ? "Showing the latest completed sample by default." : "No completed sample yet; showing the latest available sample."} Hover to preview a day;
+        {filtered && !history.some((r) => r.pages > 0)
+          ? history.some((r) => r.status === "unavailable")
+            ? "Filtered results are unavailable for these dates."
+            : "No pages match these filters."
+          : latestCompleted ? "Showing the latest completed sample by default." : "No completed sample yet; showing the latest available sample."} Hover to preview a day;
         click, touch or use the arrow keys to keep it selected. Gaps are not estimated.
       </p>
       <Button variant="outline" className="mb-6" onClick={() => {
@@ -686,10 +690,14 @@ function Trend({ history }: { history: RunSummary[] }) {
               {samples.map((r) => (
                 <div key={r.id} className="bench-history-sample">
                   <p>
-                    {scoringLabel(r.protocol)} · {integer(r.pages)} pages
-                    {r.pages === 0 ? " · No pages were collected" : r.status !== "completed" ? " · Collection in progress" : ""}
+                    {r.status === "unavailable"
+                      ? "Filtered results unavailable: complete source records are unavailable."
+                      : <>
+                        {scoringLabel(r.protocol)} · {integer(r.pages)} pages
+                        {r.pages === 0 ? filtered ? " · No pages match these filters" : " · No pages were collected" : r.status !== "completed" ? " · Collection in progress" : ""}
+                      </>}
                   </p>
-                  {r.status === "completed" &&
+                  {r.status === "completed" && r.pages > 0 &&
                     r.providers.every((p) => p.rate == null) && (
                       <p>
                         This sample does not cover every category, so no overall score is reported.
@@ -822,8 +830,13 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const chartCategories = benchmarkCategories.filter((c) =>
     categoryIds.includes(c.id),
   );
+  const hasFilters = source !== "all" || category !== "all";
+  const sourceLabel = source === "all" ? "All daily sources" : "Daily Wikipedia discoveries";
+  const categoryLabel = benchmarkCategories.find((c) => c.id === category)?.name ?? "All categories";
+  const filterLabel = `${sourceLabel} · ${categoryLabel}`;
   const visibleHistory = data.history.filter((run) => run.day >= firstSampleDay);
-  const history = [...visibleHistory]
+  const filteredHistory = filterHistory(visibleHistory, { source, category }, dataset.wikipediaHistory);
+  const history = [...filteredHistory]
     .reverse()
     .sort((a, b) => a.day.localeCompare(b.day));
   const retainedDaily = dataset.pages.filter(
@@ -927,6 +940,10 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ]}
           />
         </div>
+        <p className="bench-note" role="status">
+          {hasFilters ? `Filters applied: ${filterLabel}.` : "Showing all daily sources and categories."}{" "}
+          Source and category filters apply to every chart, table, and download, including daily history.
+        </p>
         <div className="mt-6">
           {source === "all" && (
             <p className="bench-note">
@@ -991,7 +1008,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             Only {integer(retainedDaily)} of {integer(run.pages)} daily page
             records are available for {run.day}. Individual records expire after
             30 days. The filters and scores below use available records only;
-            original daily scores remain in the history.
+            original daily scores remain available in the history under All daily sources.
           </p>
         )}
           <dl className="sample-metrics" aria-live="polite">
@@ -1085,8 +1102,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="history"
           accent="over time"
           title="Daily results over time"
-          note="Daily results from November 4, 2026 onward. Each point compares providers on the same day’s sample."
-          chart={<Trend history={history} />}
+          note={`Daily results from November 4, 2026 onward. ${hasFilters ? "Filters applied" : "Showing"}: ${filterLabel}. Each point uses the same source and category filters as the results above.`}
+          chart={<Trend history={history} filtered={hasFilters} />}
           table={
             <Table
               label="Daily results history"
@@ -1096,14 +1113,18 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 "Pages",
                 ...providers.map((p) => p.name),
               ]}
-              rows={visibleHistory.map((r) => ({ id: r.id, cells: [
+              rows={filteredHistory.map((r) => ({ id: r.id, cells: [
                 r.day,
-                r.status !== "completed"
-                  ? "In progress"
-                  : r.providers.every((p) => p.rate == null)
-                    ? "Completed · partial coverage"
-                    : "Scored",
-                integer(r.pages),
+                r.status === "unavailable"
+                  ? "Filtered results unavailable"
+                  : hasFilters && r.pages === 0
+                    ? "No matching pages"
+                    : r.status !== "completed"
+                      ? "In progress"
+                      : r.providers.every((p) => p.rate == null)
+                        ? "Completed · partial coverage"
+                        : "Scored",
+                r.status === "unavailable" ? "—" : integer(r.pages),
                 ...providers.map((p) => historyResult(r, p.id)),
               ] }))}
             />
@@ -1138,9 +1159,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           )}
           <h3>Reading the daily history</h3>
           <p>
-            Each point is a saved daily result and does not change with the
-            filters above. Gaps mark missing scores; they are not estimated.
-            A dash in a results table means no score is available.
+            Source and category filters apply to every daily result, including
+            its page count and provider scores. Gaps mark missing scores or dates
+            with no matching pages; they are not estimated. Source-filtered
+            history requires complete retained page records, which expire after
+            30 days. Category-only history uses saved daily summaries. A dash in
+            a results table means no score is available.
           </p>
           <h3>Daily collection</h3>
           {run && run.pages < run.target && (

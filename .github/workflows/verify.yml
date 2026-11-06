@@ -38,6 +38,7 @@ jobs:
             artifacts/rebuild/e2e.json
             artifacts/daily-wikipedia/e2e.json
             artifacts/access-judge/e2e.json
+            artifacts/history-filters/e2e.json
             artifacts/continuous/e2e.json
             artifacts/continuous/retry-e2e.json
             artifacts/continuous/server.log
