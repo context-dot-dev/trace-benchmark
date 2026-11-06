@@ -4,7 +4,8 @@ import { eq } from "drizzle-orm";
 import { cachedReport } from "./cached-report";
 import { database } from "./store";
 import { attempts } from "./schema";
-import { providers } from "./types";
+import { providers, type RunSummary } from "./types";
+import { sourceHistory } from "./source-history";
 import {
   normalizeCategory,
   type BenchmarkDataset,
@@ -81,6 +82,11 @@ const wikipediaPages: BenchmarkPage[] = study.pages.map((p) => ({
     ]),
   ),
 }));
+const wikipediaHistory = unstable_cache(
+  async (history: RunSummary[]) => sourceHistory(database(), history),
+  ["benchmark-source-history-v1"],
+  { revalidate: 900 },
+);
 export async function benchmarkDataset(
   run?: string,
 ): Promise<BenchmarkDataset> {
@@ -92,8 +98,9 @@ export async function benchmarkDataset(
     return response.json();
   }
   const report = await cachedReport({ run });
-  const daily = report.latest
-    ? await dailyPages(report.latest.id, report.latest.protocol)
-    : [];
-  return { report, pages: [...daily, ...wikipediaPages] };
+  const [daily, sourceSummaries] = await Promise.all([
+    report.latest ? dailyPages(report.latest.id, report.latest.protocol) : [],
+    wikipediaHistory(report.history),
+  ]);
+  return { report, pages: [...daily, ...wikipediaPages], wikipediaHistory: sourceSummaries };
 }

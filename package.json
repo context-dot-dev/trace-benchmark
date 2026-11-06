@@ -13,7 +13,7 @@
     "lint": "eslint src/app src/components/benchmark src/lib/benchmark",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts && tsx tests/batch-store.e2e.ts && tsx tests/collector-retry.e2e.ts && tsx tests/provider-pause.e2e.ts && tsx tests/judge-pause.e2e.ts && tsx tests/pacing-deadline.e2e.ts && tsx tests/continuous.e2e.ts && tsx tests/parallel.e2e.ts"
+    "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts && tsx tests/history-filters.e2e.ts && tsx tests/batch-store.e2e.ts && tsx tests/collector-retry.e2e.ts && tsx tests/provider-pause.e2e.ts && tsx tests/judge-pause.e2e.ts && tsx tests/pacing-deadline.e2e.ts && tsx tests/continuous.e2e.ts && tsx tests/parallel.e2e.ts"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.4.1",

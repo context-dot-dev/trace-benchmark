@@ -8,6 +8,8 @@ import { resolve } from "node:path";
 // Failures: Nov 4 omitted; pre-cutoff dates offered or charted; protocol labels
 // and boundaries retained; archived results mixed into daily scores; keyboard
 // selection, source/category filters, mobile layout, or empty history regressing.
+// History must use the selected source/category for every day, expose the active
+// filters, preserve empty intersections as gaps, and restore overall data on reset.
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const evidence = resolve("artifacts/history-sources");
@@ -28,13 +30,47 @@ const fixturePage = (day, source, category, success = true) => ({
   title: `${day} ${source}`, source, category, day, protocol: "scraping-bench-v5",
   results: Object.fromEntries(providers.map(id => [id, { success, state: "done", error: null }])),
 });
+let filteredScenario = false;
+let includeWikipediaHistory = true;
+const filterPages = {};
+const filteredHistory = [
+  ["2026-11-06", 1, 1, 3, 2],
+  ["2026-11-05", 4, 1, 2, 1],
+  ["2026-11-04", 2, 1, 1, 0],
+].map(([day, news, newsUseful, wiki, wikiUseful]) => {
+  const pages = [
+    ...Array.from({ length: news }, (_, i) => fixturePage(day, "daily", "news", i < newsUseful)),
+    fixturePage(day, "daily", "jobs", day === "2026-11-04"),
+    ...Array.from({ length: wiki }, (_, i) => fixturePage(day, "wikipedia_daily", "other", i < wikiUseful)),
+  ].map((page, i) => ({ ...page, id: page.id + "-" + i, url: page.url + "/" + i }));
+  filterPages[day] = pages;
+  const categories = { news, jobs: 1, other: wiki };
+  const groups = Object.fromEntries(Object.entries(categories).map(([category, total]) => [category, {
+    total, useful: pages.filter(p => p.category === category && p.results.context.success).length,
+    unknown: 0, completed: total,
+  }]));
+  const useful = pages.filter(p => p.results.context.success).length;
+  return { ...sample(day), pages: pages.length, target: pages.length, categories,
+    providers: providers.map(id => ({ id, total: pages.length, useful, failed: pages.length - useful,
+      unknown: 0, pending: 0, rate: Object.values(groups).reduce((sum, g) => sum + g.useful / g.total, 0) / 3,
+      p50: null, p95: null, rateLimited: 0, categories: groups })),
+  };
+});
 function dataset(runId) {
   const latest = history.find(run => run.id === runId) ?? history[0] ?? null;
   return {
+    ...(filteredScenario && includeWikipediaHistory ? { wikipediaHistory: filteredHistory.map(run => ({
+      ...run, pages: run.categories.other, categories: { other: run.categories.other },
+      providers: run.providers.map(metric => {
+        const group = metric.categories.other;
+        return { ...metric, total: group.total, useful: group.useful, failed: group.total - group.useful,
+          rate: group.useful / group.total, categories: { other: group } };
+      }),
+    })) } : {}),
     report: { latest, history, collecting: null, records: [], totalRecords: 0, page: 0,
       health: { lastTick: null, error: null, sources: 0, healthySources: 0, evidenceBytes: 0 } },
     pages: [
-      ...(latest ? [fixturePage(latest.day, "daily", "news"), fixturePage(latest.day, "wikipedia_daily", "other")] : []),
+      ...(latest ? filteredScenario ? filterPages[latest.day] ?? [] : [fixturePage(latest.day, "daily", "news"), fixturePage(latest.day, "wikipedia_daily", "other")] : []),
       fixturePage("2026-11-03", "daily", "news", false),
       fixturePage("2026-10-29", "wikipedia", "news", false),
     ],
@@ -153,6 +189,48 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     checks.push(`${width}px: source/category filters, reset, empty filtered results and table/chart layouts work without page overflow`);
   }
+  filteredScenario = true;
+  history = structuredClone(filteredHistory);
+  await page.goto(base, { waitUntil: "networkidle" });
+  async function historyRows(expected) {
+    await historySection.getByRole("tab", { name: "Table", exact: true }).click();
+    for (const [day, count, rate] of expected) {
+      const row = historySection.locator("tbody tr").filter({ hasText: day });
+      const cells = await row.locator("th,td").allTextContents();
+      assert.equal(cells[2], String(count), `${day} history pages must follow the active filters`);
+      assert.deepEqual(cells.slice(3), [rate, rate, rate, rate], `${day} history rates must follow the active filters`);
+    }
+    await historySection.getByRole("tab", { name: "Chart", exact: true }).click();
+  }
+  await select("Category", "News");
+  await historyRows([["2026-11-04", 2, "50.0%"], ["2026-11-05", 4, "25.0%"], ["2026-11-06", 1, "100.0%"]]);
+  assert.match(await historySection.innerText(), /All daily sources/);
+  assert.match(await historySection.innerText(), /News/);
+  checks.push("Category filtering updates every historical day with its own page count and rate, with active filters shown beside history");
+  await page.getByRole("button", { name: "Reset filters", exact: true }).click();
+  await select("Source", "Daily Wikipedia discoveries");
+  await historyRows([["2026-11-04", 1, "0.0%"], ["2026-11-05", 2, "50.0%"], ["2026-11-06", 3, "66.7%"]]);
+  assert.match(await historySection.innerText(), /Daily Wikipedia discoveries/);
+  assert.match(await historySection.innerText(), /All categories/);
+  checks.push("Wikipedia filtering updates every historical day and identifies the selected source beside history");
+  await select("Category", "News");
+  await historyRows([["2026-11-04", 0, "—"], ["2026-11-05", 0, "—"], ["2026-11-06", 0, "—"]]);
+  assert.equal(await historySection.locator("svg circle title").count(), 0);
+  assert.match(await historySection.innerText(), /Daily Wikipedia discoveries/);
+  assert.match(await historySection.innerText(), /News/);
+  checks.push("An empty source/category intersection stays empty across all days without falling back to overall scores");
+  await page.getByRole("button", { name: "Reset filters", exact: true }).click();
+  await historyRows([["2026-11-04", 4, "50.0%"], ["2026-11-05", 7, "25.0%"], ["2026-11-06", 5, "55.6%"]]);
+  assert.match(await historySection.innerText(), /All daily sources/);
+  assert.match(await historySection.innerText(), /All categories/);
+  checks.push("Reset restores the saved overall historical totals and category-weighted rates");
+  includeWikipediaHistory = false;
+  await page.goto(base, { waitUntil: "networkidle" });
+  await select("Source", "Daily Wikipedia discoveries");
+  await historyRows([["2026-11-04", "—", "—"], ["2026-11-05", "—", "—"], ["2026-11-06", "—", "—"]]);
+  assert.match(await historySection.innerText(), /unavailable|not available/i);
+  checks.push("Missing Wikipedia history is explicitly unavailable and never substitutes overall scores");
+  filteredScenario = false;
   history = [sample("2026-11-03")];
   await page.goto(base, { waitUntil: "networkidle" });
   assert.match(await page.locator("#history").innerText(), /No historical samples/);
@@ -170,6 +248,7 @@ try {
 } finally {
   writeFileSync(resolve(evidence, "checks.json"), JSON.stringify({ ok: !failure, failure, base, checks, errors,
     fixture: { dates: originalHistory.map(run => run.day), dailyPagesPerDate: 2, excludedArchive: "2026-10-29" },
+    filterFixture: filteredHistory.map(run => ({ day: run.day, pages: run.pages, categories: run.providers[0].categories })),
     repeat: "PLAYWRIGHT_PATH=/absolute/path/to/playwright TEST_PORT=3186 node tests/history-sources.browser.mjs" }, null, 2));
   writeFileSync(resolve(evidence, "server.log"), log);
   await browser.close();

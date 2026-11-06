@@ -2,6 +2,7 @@ import {
   categories,
   providers,
   type ProviderMetric,
+  type RunSummary,
   type Report,
   type Provider,
 } from "./types";
@@ -32,7 +33,7 @@ export type BenchmarkPage = {
   citedAt?: string;
   plainHttp?: boolean | null;
 };
-export type BenchmarkDataset = { report: Report; pages: BenchmarkPage[] };
+export type BenchmarkDataset = { report: Report; pages: BenchmarkPage[]; wikipediaHistory?: RunSummary[] };
 export function normalizeCategory(id: string) {
   if (id === "legal_government") return "legal_regulatory";
   if (id === "finance") return "finance_filings";
