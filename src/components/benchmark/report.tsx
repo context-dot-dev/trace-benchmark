@@ -40,7 +40,7 @@ export type SourceSummary = { total: number; categories: { id: string; count: nu
 
 const citation = `@misc{trace2026,
   author = {{context.dev}},
-  title = {{TRACE}: A Live TRACEmark},
+  title = {{TRACE}: A Live Scraping Benchmark},
   year = {2026},
   url = {https://trace.context.dev/}
 }`;
