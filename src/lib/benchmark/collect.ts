@@ -1,12 +1,9 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { gzipSync, gunzipSync } from "node:zlib";
 import {
   and,
-  asc,
   desc,
   eq,
   inArray,
-  getTableColumns,
   isNotNull,
   isNull,
   lt,
@@ -29,10 +26,10 @@ import {
   providers,
   PROTOCOL,
   type Candidate,
-  type Provider,
   type RunSummary,
 } from "./types";
 import { createReaders, type Readers } from "./providers";
+import { runProvider, providerWorkers } from "./parallel";
 import { discoverSource, type Source } from "./discovery";
 import { summarize } from "./report";
 import type { Store } from "./store";
@@ -66,7 +63,6 @@ export async function runTick(store: Store, options: TickOptions = {}) {
   const clock = now();
   const day = clock.toISOString().slice(0, 10);
   const token = randomUUID();
-  const deadline = Date.now() + (options.deadlineMs ?? 230000);
   const readers = options.readers ?? createReaders();
   if (!readers.ready()) throw new Error("Collector credentials are incomplete");
   const lease = new Date(clock.getTime() + 300000);
@@ -118,251 +114,25 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       await discoverDue(store, clock, samplePending, options.discovery);
     if (samplePending)
       await selectSample(store, day, options.perCategory ?? 300, clock);
-    const maxPages = options.maxPages ?? 100;
-    while (
-      processed < maxPages &&
-      (options.deadlineMs
-        ? Date.now() < deadline
-        : Date.now() + 95000 < deadline)
-    ) {
-      const dayBudgets = await store.db
-        .select()
-        .from(budgets)
-        .where(eq(budgets.day, day));
-      const blocked = dayBudgets
-        .filter((b) => b.bucket !== "judge" && b.used >= 4000)
-        .map((b) => b.bucket);
-      const judgeAvailable =
-        (dayBudgets.find((b) => b.bucket === "judge")?.used ?? 0) <
-        120_000_000 - 55000;
-      const eligible = or(
-        and(
-          eq(attempts.state, "queued"),
-          blocked.length
-            ? sql`${attempts.provider} not in (${sql.join(
-                blocked.map((p) => sql`${p}`),
-                sql`,`,
-              )})`
-            : sql`true`,
-        ),
-        and(
-          eq(attempts.state, "fetched"),
-          judgeAvailable ? sql`true` : sql`false`,
-        ),
-      );
-      const pages = await store.db
-        .selectDistinct({ day: attempts.day, pageId: attempts.pageId })
-        .from(attempts)
-        .where(eligible)
-        .orderBy(asc(attempts.day), asc(attempts.pageId))
-        .limit(8);
-      const queued = pages.length
-        ? await store.db
-            .select({ ...getTableColumns(attempts), protocol: runs.protocol })
-            .from(attempts)
-            .innerJoin(runs, eq(attempts.runId, runs.id))
-            .where(
-              and(
-                inArray(
-                  attempts.pageId,
-                  pages.map((p) => p.pageId),
-                ),
-                eligible,
-              ),
-            )
-            .orderBy(attempts.pageId, attempts.provider)
-        : [];
-      if (!queued.length) break;
-      let advanced = 0;
-      await Promise.all(
-        queued.map(async (row, index) => {
-          if (!options.deadlineMs)
-            await new Promise((resolve) =>
-              setTimeout(resolve, Math.floor(index / 4) * 500),
-            );
-          if (row.state === "queued") {
-            const claimed = await store.db.transaction(async (tx) => {
-              await tx.execute(sql`select pg_advisory_xact_lock(74012492)`);
-              const [owner] = await tx
-                .select()
-                .from(worker)
-                .where(
-                  and(eq(worker.id, "collector"), eq(worker.claim, token)),
-                );
-              if (!owner) return false;
-              const [budget] = await tx
-                .select()
-                .from(budgets)
-                .where(
-                  and(eq(budgets.day, day), eq(budgets.bucket, row.provider)),
-                );
-              if ((budget?.used ?? 0) >= 4000) return false;
-              const changed = await tx
-                .update(attempts)
-                .set({
-                  state: "fetching",
-                  claim: token,
-                  leaseUntil: lease,
-                  startedAt: clock,
-                })
-                .where(
-                  and(eq(attempts.id, row.id), eq(attempts.state, "queued")),
-                )
-                .returning({ id: attempts.id });
-              if (!changed.length) return false;
-              await tx
-                .insert(budgets)
-                .values({ day, bucket: row.provider, used: 1 })
-                .onConflictDoUpdate({
-                  target: [budgets.day, budgets.bucket],
-                  set: { used: sql`${budgets.used}+1` },
-                });
-              return true;
-            });
-            if (!claimed) return;
-            const receipt = await readers.read(row.provider as Provider, row);
-            const evidence = receipt.text ? gzipSync(receipt.text) : null;
-            const saved = await store.db
-              .update(attempts)
-              .set({
-                state: receipt.text && !receipt.error ? "fetched" : "done",
-                success: receipt.success,
-                error: receipt.error,
-                elapsedMs: receipt.elapsedMs,
-                httpStatus: receipt.httpStatus,
-                credits: receipt.credits,
-                costUsd: receipt.costUsd,
-                chars: receipt.chars,
-                hash: receipt.hash,
-                evidence,
-                evidenceBytes: evidence?.length ?? 0,
-                claim: null,
-                leaseUntil: null,
-              })
-              .where(
-                and(
-                  eq(attempts.id, row.id),
-                  eq(attempts.claim, token),
-                  eq(attempts.state, "fetching"),
-                ),
-              )
-              .returning();
-            if (!saved.length) return;
-            Object.assign(row, saved[0]);
-            advanced++;
-          }
-          if (row.state === "fetched") {
-            if (!row.evidence) {
-              await store.db
-                .update(attempts)
-                .set({
-                  state: "done",
-                  error: "EVIDENCE_UNAVAILABLE",
-                  success: null,
-                })
-                .where(eq(attempts.id, row.id));
-              return;
-            }
-            if (row.judgeCalls >= 2) {
-              await store.db
-                .update(attempts)
-                .set({
-                  state: "done",
-                  error: "JUDGE_UNAVAILABLE",
-                  success: null,
-                })
-                .where(eq(attempts.id, row.id));
-              return;
-            }
-            const text = gunzipSync(row.evidence).toString("utf8");
-            const reservation =
-              Buffer.byteLength(text) +
-              Buffer.byteLength(row.url) +
-              Buffer.byteLength(row.title) +
-              8192;
-            const claimed = await store.db.transaction(async (tx) => {
-              await tx.execute(sql`select pg_advisory_xact_lock(74012492)`);
-              const [owner] = await tx
-                .select()
-                .from(worker)
-                .where(
-                  and(eq(worker.id, "collector"), eq(worker.claim, token)),
-                );
-              if (!owner) return false;
-              const [budget] = await tx
-                .select()
-                .from(budgets)
-                .where(and(eq(budgets.day, day), eq(budgets.bucket, "judge")));
-              if ((budget?.used ?? 0) + reservation > 120_000_000) return false;
-              const changed = await tx
-                .update(attempts)
-                .set({
-                  state: "grading",
-                  claim: token,
-                  leaseUntil: lease,
-                  judgeCalls: sql`${attempts.judgeCalls}+1`,
-                })
-                .where(
-                  and(eq(attempts.id, row.id), eq(attempts.state, "fetched")),
-                )
-                .returning({ id: attempts.id });
-              if (!changed.length) return false;
-              await tx
-                .insert(budgets)
-                .values({ day, bucket: "judge", used: reservation })
-                .onConflictDoUpdate({
-                  target: [budgets.day, budgets.bucket],
-                  set: { used: sql`${budgets.used}+${reservation}` },
-                });
-              return true;
-            });
-            if (!claimed) return;
-            const grade = await readers.grade(
-              row,
-              {
-                text,
-                chars: row.chars ?? 0,
-              },
-              row.protocol,
-            );
-            const { inputTokens, ...judgment } = grade;
-            await store.db.transaction(async (tx) => {
-              const saved = await tx
-                .update(attempts)
-                .set({
-                  ...judgment,
-                  state: grade.error && row.judgeCalls < 1 ? "fetched" : "done",
-                  claim: null,
-                  leaseUntil: null,
-                })
-                .where(
-                  and(
-                    eq(attempts.id, row.id),
-                    eq(attempts.claim, token),
-                    eq(attempts.state, "grading"),
-                  ),
-                )
-                .returning({ id: attempts.id });
-              if (
-                saved.length &&
-                inputTokens !== null &&
-                inputTokens <= reservation
-              )
-                await tx
-                  .update(budgets)
-                  .set({
-                    used: sql`${budgets.used}-${reservation - inputTokens}`,
-                  })
-                  .where(
-                    and(eq(budgets.day, day), eq(budgets.bucket, "judge")),
-                  );
-            });
-            advanced++;
-          }
+    if (options.maxPages !== 0) {
+      const configured = providerWorkers();
+      const workers = options.maxPages === undefined ? configured : providers.map(({ id }) => ({
+        provider: id, shard: 0, shards: 1,
+        concurrency: Math.min(options.maxPages!, configured.filter((entry) => entry.provider === id)
+          .reduce((sum, entry) => sum + entry.concurrency, 0)),
+        requestsPerSecond: configured.filter((entry) => entry.provider === id)
+          .reduce((sum, entry) => sum + entry.requestsPerSecond, 0),
+      }));
+      const results = await Promise.allSettled(workers.map((config) =>
+        runProvider(store, {
+          ...config, readers, now, maxPages: options.maxPages,
+          deadlineMs: options.deadlineMs,
         }),
-      );
-      if (!advanced) break;
-      processed += new Set(queued.map((r) => r.pageId)).size;
+      ));
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) throw failed.reason;
+      processed = results.reduce((sum, result) => sum +
+        (result.status === "fulfilled" ? result.value.processed : 0), 0);
     }
     for (const run of await store.db
       .select()
@@ -396,7 +166,15 @@ export async function runTick(store: Store, options: TickOptions = {}) {
         .where(eq(runs.id, run.id));
     }
     await retainEvidence(store, clock);
-    return { status: "advanced", pages: processed, day };
+    const errors = await store.db.select({ error: worker.error }).from(worker).where(and(
+      isNotNull(worker.error),
+      or(sql`${worker.id} like 'collector:%'`,
+        and(sql`${worker.id} like 'pause:%'`, sql`${worker.leaseUntil} > ${clock}`)),
+    ));
+    if (errors.length) await store.db.update(worker).set({
+      error: [...new Set(errors.map((row) => row.error))].join("; "),
+    }).where(and(eq(worker.id, "collector"), eq(worker.claim, token)));
+    return { status: "advanced", processed, day };
   } catch (error) {
     await store.db
       .update(worker)

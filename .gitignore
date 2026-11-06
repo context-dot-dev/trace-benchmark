@@ -27,6 +27,8 @@ server/functions/
 
 # Next.js local development
 .next/
+.workflow-data/
+src/app/.well-known/workflow/
 out/
 tsconfig.tsbuildinfo
 
@@ -37,3 +39,4 @@ public/plan.md
 
 .ds/hooks.log
 .ds/session.json
+/.swc
