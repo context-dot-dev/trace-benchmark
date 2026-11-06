@@ -37,3 +37,4 @@ jobs:
           path: |
             artifacts/rebuild/e2e.json
             artifacts/daily-wikipedia/e2e.json
+            artifacts/access-judge/e2e.json

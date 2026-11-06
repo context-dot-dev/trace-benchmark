@@ -6,9 +6,13 @@ Daily comparison of Context, Exa, Firecrawl, and Keenable on the same pages, wit
 
 ## How scoring works
 
-All four providers receive the same daily sample. Protocol v5 samples eight categories from public feeds, registries, and sitemaps, plus an optional Other category of newly added Wikipedia links. TypeSafe's Jev 1.13.0 judge receives the target URL, title, category, and up to 12,000 characters from the response's beginning, middle, and end, without the provider name. A result is useful when it contains substantive content matching the requested page. Partial content can pass; this does not measure completeness or factual accuracy against a reference page.
+All four providers receive the same daily sample. Protocol v6 measures access only: did page data load, or did the scraper receive only a block, error, or empty shell? TypeSafe's Jev 1.13.0 judge receives up to 12,000 characters from the response's beginning, middle, and end, plus whether the evidence was sampled. It receives no provider name or target metadata. Relevance, document identity, completeness, usefulness, and extraction quality are not graded.
 
-Daily scores average each category's useful-page rate equally. Failed requests, unresolved judgments, and pending results remain in the denominator. Missing any of the eight core categories withholds the overall daily score; Other contributes when present. Negative judgments based on incomplete excerpts remain unresolved. Historical samples retain their original scoring rules and are not directly comparable across protocols. The report also includes a separate historical Wikipedia study.
+Partial previews, populated listings, publication landing pages, and raw file data count as accessed. Mandatory login screens, CAPTCHA challenges, main-page errors, and empty shells count as not accessed when no page data loaded. A cookie banner or broken secondary widget does not fail an otherwise populated page. Unclear sampled evidence and judge failures remain unresolved; determinate access failures are scored even when the text was sampled.
+
+Daily scores average each category's accessed-page rate equally. Failed requests, unresolved judgments, and pending results remain in the denominator. Missing any of the eight core categories withholds the overall daily score; the optional Other category of newly added Wikipedia links contributes when present.
+
+Earlier protocols and unfinished runs created under them retain their original substantive-content and document-identity grading. Their scores are not directly comparable with v6. The separate historical Wikipedia study is excluded from access scores and remains available with its original useful-content grades. API metric fields named `useful` remain unchanged for compatibility; interpret them using the run's protocol.
 
 ## Run locally
 

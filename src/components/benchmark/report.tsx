@@ -31,6 +31,7 @@ import {
   categories,
   providers,
   PROTOCOL,
+  ACCESS_PROTOCOL,
   type ProviderMetric,
   type RunSummary,
 } from "@/lib/benchmark/types";
@@ -227,8 +228,10 @@ function categoryRate(row: ProviderMetric | undefined, category: string) {
 function Radar({
   rows,
   chartCategories,
+  accessOnly,
 }: {
   rows: ProviderMetric[];
+  accessOnly: boolean;
   chartCategories: { id: string; name: string }[];
 }) {
   const [active, setActive] = useState<string | null>(null);
@@ -269,7 +272,7 @@ function Radar({
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Useful content by category from zero to 100 percent; exact values and page counts are available in the table"
+          aria-label={`${accessOnly ? "Page access" : "Useful content"} by category from zero to 100 percent; exact values and page counts are available in the table`}
         >
           {[0.25, 0.5, 0.75, 1].map((value) => (
             <polygon
@@ -373,11 +376,13 @@ const dateLabel = (time: number, long = false) =>
   });
 const protocolLabel = (protocol: string) =>
   `Protocol ${protocol.match(/v\d+$/)?.[0] ?? protocol}`;
+const scoringLabel = (protocol: string) =>
+  protocol === ACCESS_PROTOCOL ? "Page access" : "Useful content";
 function historyResult(run: RunSummary, provider: string) {
   const result = run.providers.find((metric) => metric.id === provider);
   if (run.status !== "completed" || !result?.total) return "—";
   return result.rate == null
-    ? `${integer(result.useful)} / ${integer(result.total)} useful`
+    ? `${integer(result.useful)} / ${integer(result.total)} ${run.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"}`
     : percent(result.rate);
 }
 function Trend({ history }: { history: RunSummary[] }) {
@@ -710,14 +715,14 @@ function Trend({ history }: { history: RunSummary[] }) {
               {samples.map((r) => (
                 <div key={r.id} className="bench-history-sample">
                   <p>
-                    {protocolLabel(r.protocol)} · {integer(r.pages)} pages
+                    {protocolLabel(r.protocol)} · {scoringLabel(r.protocol)} · {integer(r.pages)} pages
                     {r.pages === 0 ? " · No pages were collected" : r.status !== "completed" ? " · Collection in progress" : ""}
                   </p>
                   {r.status === "completed" &&
                     r.providers.every((p) => p.rate == null) && (
                       <p>
                         This sample does not cover every category, so no overall score is reported.
-                        The results below show useful pages out of all pages tested.
+                        The results below show {r.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"} pages out of all pages tested.
                       </p>
                     )}
                   <dl>
@@ -776,6 +781,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const [copyStatus, setCopyStatus] = useState("");
   const data = dataset.report;
   const run = data.latest;
+  const accessRun = run?.protocol === ACCESS_PROTOCOL;
+  const accessOnly = source !== "wikipedia" && accessRun;
   useEffect(() => {
     if (copyStatus !== "Copied") return;
     const timer = setTimeout(() => setCopyStatus(""), 2000);
@@ -828,7 +835,9 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const selected = uniquePages(
     dataset.pages.filter(
       (p) =>
-        (source === "all" || (source === "daily" ? p.source !== "wikipedia" : p.source === source)) &&
+        (source === "all"
+          ? !accessRun || p.source !== "wikipedia"
+          : source === "daily" ? p.source !== "wikipedia" : p.source === source) &&
         (category === "all" || p.category === category) &&
         (validation === "all" ||
           (validation === "hard"
@@ -838,7 +847,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   );
   const observedCategories = [...new Set(selected.map((p) => p.category))];
   const categoryIds =
-    source === "daily" &&
+    (source === "daily" || (source === "all" && accessRun)) &&
     category === "all" &&
     validation === "all"
       ? [...categories.map((c) => c.id), ...(observedCategories.includes("other") ? ["other"] : [])]
@@ -886,7 +895,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         JSON.stringify(
           {
             scoring:
-              "The score averages the useful-page rate of each represented category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts.",
+              `The score averages the ${accessOnly ? "accessed" : "useful"}-page rate of each scored category, giving every category equal weight. Failed, unresolved, and pending results remain in the page counts. ${accessOnly ? "Access does not measure relevance, identity, completeness, or extraction quality." : "Historical results retain their original useful-content criteria."}`,
             filters: { source, category, validation },
             dailyRun: run?.id,
             scores: rows,
@@ -926,7 +935,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="overview"
           title="How reliably can web scrapers read a page?"
           accent="read a page?"
-          description="We ask Context, Exa, Firecrawl, and Keenable to retrieve the same web pages, then check whether each response contains meaningful content from the requested page. The results show how reliably each provider handles different kinds of websites."
+          description="We ask Context, Exa, Firecrawl, and Keenable to retrieve the same web pages. New samples check whether page data loaded or access failed. Earlier samples retain their original useful-content scores."
           background={<HeroDotField fine streams miniStreams className="max-[43.2rem]:[mask-image:linear-gradient(to_bottom,var(--ds-color-black)_0,var(--ds-color-black)_8%,transparent_15%,transparent_88%,var(--ds-color-black)_97%)]" />}
           contentClassName="min-h-0 gap-8 pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-24"
           actions={<a href="#sources" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary bg-primary px-6 py-3 text-body text-on-primary transition-colors hover:bg-primary-hover">See where the pages come from</a>}
@@ -936,11 +945,11 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         <div className="sample-filters" aria-label="Benchmark filters">
           <Filter
             label="Source"
-            value={source}
+            value={accessRun && source === "daily" ? "all" : source}
             onChange={setSource}
             options={[
-              { value: "all", label: "All sources" },
-              { value: "daily", label: "Daily web sample" },
+              { value: "all", label: accessRun ? "All daily sources" : "All sources" },
+              ...(!accessRun ? [{ value: "daily", label: "Daily web sample" }] : []),
               { value: "wikipedia_daily", label: "Daily Wikipedia discoveries" },
               { value: "wikipedia", label: "Original Wikipedia study (Oct 29)" },
             ]}
@@ -989,6 +998,13 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               available alongside the daily results as a separate historical sample.
             </p>
           )}
+          {accessRun && source !== "wikipedia" && (
+            <p className="bench-note">
+              This sample measures page access only. The original Wikipedia study
+              uses useful-content grades and is available separately in the Source
+              filter; its results are excluded from access scores.
+            </p>
+          )}
           <p className="bench-note">
             <a href="#sources">Explore the sources and example pages</a>.
           </p>
@@ -1002,7 +1018,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ) : (
               "No daily sample available"
             ))}
-            {source === "all" && (
+            {source === "all" && !accessRun && (
               <> · <a href="#wikipedia" onClick={() => {
                 const archive = document.querySelector<HTMLDetailsElement>("#wikipedia");
                 if (archive) archive.open = true;
@@ -1075,6 +1091,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 ? "This subset was selected using provider failures and is not an unbiased ranking. Independent validation is incomplete."
                 : "Five pages were reference checked against visible article bodies or public abstracts. This small subset is not representative."}{" "}
               Daily pages have not been independently screened and are excluded.
+              {accessRun && source !== "wikipedia" && " Select the original Wikipedia study in the Source filter to see reviewed pages."}
             </p>
           )}
         </SiteSection>
@@ -1086,17 +1103,19 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           )}
           <Section
             id="useful-content"
-            accent="useful content"
-            title="Pages with useful content"
-            note="The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."
+            accent={accessOnly ? "accessed" : "useful content"}
+            title={accessOnly ? "Pages accessed" : "Pages with useful content"}
+            note={accessOnly
+              ? "The score measures whether page data loaded, rather than only a block, error, or empty shell. Partial content and populated landing pages count. Relevance, identity, completeness, and extraction quality are not graded."
+              : "The score summarizes how often each provider returned meaningful content from the requested pages. Every provider is tested on the same selected pages."}
             chart={<Bars rows={rows} />}
             table={
               <Table
-                label="Useful content results"
+                label={accessOnly ? "Page access results" : "Useful content results"}
                 headers={[
                   "Provider",
-                  "Useful",
-                  "Not useful",
+                  accessOnly ? "Accessed" : "Useful",
+                  accessOnly ? "Not accessed" : "Not useful",
                   "Unresolved",
                   "Pending",
                   "Score",
@@ -1130,7 +1149,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             note="Compare how reliably each provider returns content from different kinds of pages, including news articles, research papers, and product listings."
             chart={
               chartCategories.length >= 3 ? (
-                <Radar rows={rows} chartCategories={chartCategories} />
+                <Radar rows={rows} chartCategories={chartCategories} accessOnly={accessOnly} />
               ) : (
                 categoryTable
               )
@@ -1155,12 +1174,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
         <Section
           id="history"
           accent="over time"
-          title="Daily quality over time"
-          note="Follow each provider’s results as we test a new sample of web pages each day. This chart shows the daily collection and does not include the fixed Wikipedia sample."
+          title="Daily results over time"
+          note="Protocol v6 measures page access; earlier protocols measure useful content. Scores across these rules are not directly comparable. This chart excludes the fixed Wikipedia study."
           chart={<Trend history={history} />}
           table={
             <Table
-              label="Daily quality history"
+              label="Daily results history"
               headers={[
                 "Date (UTC)",
                 "Protocol",
@@ -1170,7 +1189,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               ]}
               rows={data.history.map((r) => ({ id: r.id, cells: [
                 r.day,
-                r.protocol,
+                `${r.protocol} · ${scoringLabel(r.protocol)}`,
                 r.status !== "completed"
                   ? "In progress"
                   : r.providers.every((p) => p.rate == null)
@@ -1193,20 +1212,20 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           <SectionHeaderRule />
           <h3>How scores are calculated</h3>
           <p>
-            A page counts as useful when the response contains substantive
-            content that matches the requested page. We calculate the percentage
-            of useful pages within each category, then average those percentages.
-            This gives every category the same influence on the final score,
-            regardless of how many pages it contains. Failed requests, unresolved
-            judgments, and pending results remain in the page count and lower the
-            score, so it reflects more than the quality of successfully returned
-            content.
+            {accessOnly
+              ? "A page counts as accessed when actual page data or file content loaded. A partial preview, populated listing, publication landing page, or raw file can pass. Blocks, mandatory login screens, main-page errors, and empty shells fail when they contain no page data. Relevance, document identity, completeness, and extraction quality are not graded."
+              : "A page counts as useful when the response contains substantive content that matches the requested page. These historical results retain their original grading rules."}{" "}
+            We calculate the percentage of {accessOnly ? "accessed" : "useful"} pages
+            within each category, then average those percentages. This gives every
+            category the same influence, regardless of its page count. Failed
+            requests, unresolved judgments, and pending results remain in the
+            denominator and lower the score.
           </p>
           {(unknown > 0 || pending > 0) && (
             <p>
               For the current selection, {integer(unknown)} provider results
               remain unresolved and {integer(pending)} are pending. These results
-              count against the score until useful content is confirmed. You can
+              count against the score until {accessOnly ? "access" : "useful content"} is confirmed. You can
               inspect each provider’s counts in the results table.
             </p>
           )}
@@ -1230,10 +1249,11 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             Public feeds, registries, and sitemaps supply up to 300 previously
             unseen pages per category each day. All four providers receive the
             same frozen sample with fresh content requested and a 30-second
-            request deadline. An automated judge evaluates whether returned
-            content is substantive and belongs to the requested page, without
-            seeing the provider name. A useful result does not establish that
-            every fact is correct or that all of the page’s content was recovered.
+            request deadline. Under protocol v6, an automated judge checks only
+            whether page data loaded or access failed, without seeing the provider
+            name or target metadata. Earlier protocols checked for substantive
+            content matching the requested page. Historical grades are preserved,
+            including unfinished runs that started under an earlier protocol.
           </p>
           <p>
             Wikipedia discovery runs once before the daily sample is created,
@@ -1247,7 +1267,7 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             form the daily sample, and Wikipedia is checked again the next day.
           </p>
           <p>
-            Protocol v5 adds this group to the daily sample. It receives the same
+            Protocol v5 added this group to the daily sample. It receives the same
             weight as each other category when present; missing Wikipedia pages
             do not suppress the eight-category daily score. Historical results
             retain their original scoring rules.
@@ -1260,11 +1280,12 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
                 : `Collection uses ${PROTOCOL}.`}{" "}
               Context and Firecrawl request main content; all outputs are
               limited to 250,000 characters. Jev 1.13.0 grades up to 12,000
-              characters from the beginning, middle, and end. A positive match
-              can establish useful content, while a negative judgment from an
-              incomplete excerpt remains unresolved. Failed, unresolved, and
-              pending results stay in the denominator, with equal weight for
-              each scored category.
+              characters from the beginning, middle, and end. In protocol v6,
+              accessed and not-accessed judgments are scored directly; unclear
+              sampled evidence or a judge failure remains unresolved. Earlier
+              protocols keep negative judgments from incomplete excerpts unresolved.
+              Failed, unresolved, and pending results stay in the denominator,
+              with equal weight for each scored category.
             </p>
             <p>
               Although we request fresh content, providers may still return
@@ -1317,12 +1338,14 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
               to daily samples. The earlier study tested 1,041 linked pages on
               October 29, 2026, using links found in 48 two-minute windows on
               October 25 and 27, covering 4,777 edits. Those saved results remain
-              available in the Source filter and are included in All sources;
-              they are not refreshed with each daily sample.
+              available in the Source filter and are not refreshed. They are
+              excluded from protocol v6 access scores because they measure useful
+              content; earlier daily samples still offer the original combined view.
             </p>
             <p>
-              The combined view brings together the selected daily sample and the
-              fixed Wikipedia study. We align their legal and finance categories
+              For earlier protocols, the combined view brings together the selected
+              daily sample and the fixed Wikipedia study. We align their legal and
+              finance categories
               and keep arts, sports, and reference pages in a separate category.
               A URL appears only once, ignoring page fragments; when both studies
               contain it, we use the daily result.

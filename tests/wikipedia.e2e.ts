@@ -9,7 +9,7 @@ import { discoverSource, type Source } from "../src/lib/benchmark/discovery.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { report } from "../src/lib/benchmark/report.ts";
 import study from "../public/data/wikipedia-study.json";
-import { categories, providers } from "../src/lib/benchmark/types.ts";
+import { categories, providers, PROTOCOL } from "../src/lib/benchmark/types.ts";
 
 const databaseUrl = process.env.DATABASE_URL!;
 assert.ok(
@@ -95,10 +95,12 @@ const fixture = createServer(async (req, res) => {
   if (url.pathname === "/judge")
     res.end(
       JSON.stringify({
-        answers: {
-          content: { choice: "substantive", confidence: 0.99 },
-          identity: { choice: "match", confidence: 0.99 },
-        },
+        answers: body.state.target
+          ? {
+              content: { choice: "substantive", confidence: 0.99 },
+              identity: { choice: "match", confidence: 0.99 },
+            }
+          : { access: { choice: "accessed", confidence: 0.99 } },
         usage: { input_tokens: 100 },
       }),
     );
@@ -265,7 +267,7 @@ try {
     ),
   );
   checks.push(
-    "Failed Wikipedia requests lower the v5 score as the ninth category; the eight existing categories remain equally weighted",
+    "Failed Wikipedia requests lower the access score as the ninth category; the eight existing categories remain equally weighted",
   );
   assert.equal(providerCalls(), 72);
   wiki = await store.db.execute(
@@ -360,7 +362,7 @@ try {
     from scraping_bench.runs where day='2026-11-08'
   `);
   await store.db.execute(sql`update scraping_bench.attempts set run_id='scraping-bench-v4:2026-11-08' where day='2026-11-08'`);
-  await store.db.execute(sql`delete from scraping_bench.runs where id='scraping-bench-v5:2026-11-08'`);
+  await store.db.execute(sql`delete from scraping_bench.runs where id=${PROTOCOL + ':2026-11-08'}`);
   const upgradeDiscoveryCalls = wikipediaCalls();
   const upgradeProviderCalls = providerCalls();
   await runTick(store, options);
@@ -379,20 +381,20 @@ try {
   await seedFeeds();
   await runTick(store, options);
   data = await report(store);
-  assert.equal(data.latest?.protocol, "scraping-bench-v5");
+  assert.equal(data.latest?.protocol, PROTOCOL);
   assert.equal(data.latest?.pages, 9);
   assert.equal(data.latest?.status, "completed");
   assert.ok(wikipediaCalls() > upgradeDiscoveryCalls);
-  checks.push("A mid-day protocol upgrade completes the existing run without duplicating discovery or billing, then starts v5 with Wikipedia the next day");
+  checks.push("A mid-day protocol upgrade completes the existing run without duplicating discovery or billing, then starts the current protocol with Wikipedia the next day");
   await store.db.execute(sql`
     insert into scraping_bench.runs (id,day,protocol,status,created_at,summary)
     select 'scraping-bench-v4:2026-11-09',day,'scraping-bench-v4','collecting',created_at - interval '1 hour',
       summary || '{"id":"scraping-bench-v4:2026-11-09","protocol":"scraping-bench-v4","status":"collecting"}'::jsonb
-    from scraping_bench.runs where id='scraping-bench-v5:2026-11-09'
+    from scraping_bench.runs where id=${PROTOCOL + ':2026-11-09'}
   `);
   data = await report(store);
   assert.deepEqual(data.history.map((r) => r.id), [
-    "scraping-bench-v5:2026-11-09",
+    PROTOCOL + ":2026-11-09",
     "scraping-bench-v4:2026-11-08",
   ], "History must show only the newest sample for each day while retaining earlier protocols on earlier days");
   assert.equal(data.collecting, null, "A superseded protocol must not appear as the public collecting sample");
@@ -403,10 +405,10 @@ try {
   `);
   await store.db.execute(sql`
     update scraping_bench.runs set status='collecting',summary=summary || '{"status":"collecting"}'::jsonb
-    where id='scraping-bench-v5:2026-11-09'
+    where id=${PROTOCOL + ':2026-11-09'}
   `);
   data = await report(store);
-  assert.equal(data.collecting?.id, "scraping-bench-v5:2026-11-09");
+  assert.equal(data.collecting?.id, PROTOCOL + ":2026-11-09");
   assert.equal(data.history.filter((r) => r.day === "2026-11-09").length, 1);
   assert.equal(data.latest?.id, "scraping-bench-v4:2026-11-08", "The completed-sample default must not fall back to a superseded protocol on the same day");
   checks.push("History exposes one active sample per day, preserves earlier days and explicit run access, and excludes superseded collecting runs");
