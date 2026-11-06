@@ -1270,7 +1270,10 @@ body:has(.bench-page)::after {
   border-radius: var(--ds-radius-pill);
   background: currentColor;
 }
-.bench-status-download {
+.bench-status-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
   flex-shrink: 0;
 }
 .bench-status-download svg {
@@ -2402,7 +2405,7 @@ body:has(.bench-page)::after {
     grid-row: 1;
     grid-column: 1;
   }
-  .bench-status-download {
+  .bench-status-actions {
     grid-row: 1;
     grid-column: 3;
   }
