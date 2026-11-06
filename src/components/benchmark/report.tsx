@@ -39,7 +39,7 @@ import { dailyExamples } from "./sources";
 export type SourceSummary = { total: number; categories: { id: string; count: number; examples: string[] }[] };
 
 const citation = `@misc{scrapingbench2026,
-  author = {{Context.dev}},
+  author = {{context.dev}},
   title = {{Scraping Bench}: A Live Scraping Benchmark},
   year = {2026},
   url = {https://trace-benchmark-contextdev.vercel.app/}
@@ -462,7 +462,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               <HeroDotField fine streams miniStreams />
             </div>
             <p className="bench-intro-text">
-              Every day we send the same fresh sample of about 2,500 web pages to Context, Exa, Firecrawl, and Keenable.
+              Every day we send a new fresh sample of about 2,500 web pages to context.dev, Exa, Firecrawl, and Keenable.
               We publish how often each one gets through, how fast it answers, whether it returns the right page,
               what it costs, and why it fails.
             </p>
@@ -575,7 +575,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               ]}
             />
             <p className="bench-note">
-              Context runs this benchmark and is one of the providers tested. See the <a href="#methodology">methodology</a> for scoring rules and limitations.
+              context.dev runs this benchmark and is one of the providers tested. See the <a href="#methodology">methodology</a> for scoring rules and limitations.
               {pending > 0 && " Results for this selection are still being collected."}
             </p>
           </Frame>
@@ -753,7 +753,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                           </span>
                         ))}
                       </span>
-                      Context, Exa, and Firecrawl are asked to give up at {DEADLINE_MS / 1000} seconds; Keenable offers no
+                      context.dev, Exa, and Firecrawl are asked to give up at {DEADLINE_MS / 1000} seconds; Keenable offers no
                       deadline setting, so our 30-second cutoff applies. Any failure at the deadline counts as a timeout,
                       whatever error the provider returns.
                     </>
@@ -814,7 +814,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             <p className="bench-note">
               “Ended on another page” compares the final URL with the requested one, ignoring the scheme, “www.”, query
               strings, and trailing slashes. Length compares each provider with the median length across providers that
-              returned the same page. Context and Firecrawl request main content only while Exa returns full text, so length is a
+              returned the same page. context.dev and Firecrawl request main content only while Exa returns full text, so length is a
               signal, not a score.
             </p>
             </>)}
@@ -861,7 +861,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               })}
             </div>
             <p className="bench-note">
-              {prices.note} Prices checked {longDate(prices.checked)}. Context and Keenable say they do not bill failed
+              {prices.note} Prices checked {longDate(prices.checked)}. context.dev and Keenable say they do not bill failed
               requests, so their cost per accessed page equals their request price. * Exa and Firecrawl do not say, so we
               assume failed requests are billed. Keenable&apos;s first 100,000 requests each month are free.
             </p>
@@ -1103,7 +1103,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               <details>
                 <summary>Deadlines, timeouts, and rate limits</summary>
                 <p>
-                  Each request has a 30-second hard cutoff on our side. Context, Exa, and Firecrawl are also asked to give up
+                  Each request has a 30-second hard cutoff on our side. context.dev, Exa, and Firecrawl are also asked to give up
                   at 27 seconds. Providers report a missed deadline in different ways: an HTTP 408, an empty failure, or our
                   cutoff. All of them count as timeouts.
                 </p>
@@ -1242,7 +1242,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             accent="benchmark"
             lede={
               <>
-                Scraping Bench is maintained by <a href="https://context.dev">Context.dev</a>. If you use these results in
+                Scraping Bench is maintained by <a href="https://context.dev">context.dev</a>. If you use these results in
                 your work, please cite the benchmark and include the sample date and scoring rules.
               </>
             }
@@ -1290,7 +1290,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
         </main>
         <footer className="bench-footer">
           <p>
-            Published by <a href="https://context.dev">Context.dev</a> to compare how reliably scraping APIs access content
+            Published by <a href="https://context.dev">context.dev</a> to compare how reliably scraping APIs access content
             from a shared sample of web pages.
           </p>
           <p className="bench-footer-links">

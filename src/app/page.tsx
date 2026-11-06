@@ -57,9 +57,9 @@ export default async function Page({ searchParams }: PageProps<"/">) {
       "@type": "Dataset",
       name: "Scraping Bench: daily web scraping API benchmark",
       description:
-        "Daily comparison of Context, Exa, Firecrawl, and Keenable on the same fresh sample of web pages: page access, latency, document quality, cost, and failure reasons, with page-level records.",
+        "Daily comparison of context.dev, Exa, Firecrawl, and Keenable on a new fresh sample of web pages each day: page access, latency, document quality, cost, and failure reasons, with page-level records.",
       url: site,
-      creator: { "@type": "Organization", name: "Context.dev", url: "https://context.dev" },
+      creator: { "@type": "Organization", name: "context.dev", url: "https://context.dev" },
       license: "https://opensource.org/licenses/MIT",
       isAccessibleForFree: true,
       ...(run ? { dateModified: run.finishedAt ?? run.day, temporalCoverage: `${visible.at(-1)?.day ?? run.day}/${run.day}` } : {}),

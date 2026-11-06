@@ -1,7 +1,7 @@
 export const providers = [
   {
     id: "context",
-    name: "Context",
+    name: "context.dev",
     color: "var(--color-provider-context)",
     logo: "/logos/context-mark.svg",
   },
