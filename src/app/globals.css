@@ -1456,38 +1456,49 @@ body:has(.bench-page)::after {
   gap: var(--ds-space-10);
   align-items: start;
 }
-.bench-findings-title {
-  padding-bottom: var(--ds-space-2-5);
+.bench-findings-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ds-space-1) var(--ds-space-4);
+  margin-bottom: var(--ds-space-6);
+}
+.bench-findings .bench-findings-title {
   font-size: var(--ds-text-body-lg) !important;
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-findings-header time {
+  color: var(--bench-muted);
+  font-size: var(--ds-text-body-sm);
 }
 .bench-findings ol {
   counter-reset: finding;
-  border-bottom: 1px solid var(--ds-color-border-default);
+  display: grid;
+  gap: var(--ds-space-6);
 }
 .bench-findings li {
   counter-increment: finding;
   display: grid;
-  grid-template-columns: 1.5rem 1fr;
+  grid-template-columns: var(--ds-space-4) minmax(0, 1fr);
   gap: var(--ds-space-3);
-  padding: var(--ds-space-3-5) 0;
-  border-top: 1px solid var(--ds-color-border-default);
-  color: var(--ds-color-neutral-80);
+  color: var(--bench-muted);
   font-size: var(--ds-text-body);
   line-height: 1.5;
-}
-:root[data-theme="dark"] .bench-findings li {
-  color: var(--ds-color-text-secondary);
+  text-wrap: pretty;
 }
 .bench-findings li::before {
   content: counter(finding);
-  padding-top: var(--ds-space-0-5);
-  color: var(--bench-faint);
+  color: var(--bench-muted);
   font-family: var(--ds-font-mono);
   font-size: var(--ds-text-body);
 }
 .bench-findings strong {
+  display: block;
   color: var(--bench-text);
-  font-weight: var(--ds-font-weight-regular);
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-findings li p {
+  margin-top: var(--ds-space-1);
 }
 .bench-stats {
   display: flex;

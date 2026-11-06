@@ -485,18 +485,20 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             </p>
             <div className="bench-overview">
               <div className="bench-findings">
-                <h2 className="bench-findings-title">
-                  Key findings{run ? ` · ${longDate(run.day)} sample` : ""}
-                </h2>
+                <div className="bench-findings-header">
+                  <h2 className="bench-findings-title">Key findings</h2>
+                  {run && <time dateTime={run.day}>{longDate(run.day)} sample</time>}
+                </div>
                 {sampleUnavailable ? (
                   <p className="bench-note">{sampleStatus}</p>
                 ) : view.findings.length ? (
                   <ol>
                     {view.findings.map((f) => (
                       <li key={f.lead}>
-                        <span>
-                          <strong>{f.lead}</strong> {f.detail}
-                        </span>
+                        <div>
+                          <strong>{f.lead}</strong>{" "}
+                          {f.detail && <p>{f.detail}</p>}
+                        </div>
                       </li>
                     ))}
                   </ol>
