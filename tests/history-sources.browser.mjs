@@ -10,6 +10,8 @@ import { resolve } from "node:path";
 // selection, source/category filters, mobile layout, or empty history regressing.
 // History must use the selected source/category for every day, expose the active
 // filters, preserve empty intersections as gaps, and restore overall data on reset.
+// Removable chips must clear exactly one global filter, preserve keyboard focus,
+// stay beside Chart/Table, and disappear completely when no filters are active.
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const evidence = resolve("artifacts/history-sources");
@@ -191,7 +193,13 @@ try {
   }
   filteredScenario = true;
   history = structuredClone(filteredHistory);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(base, { waitUntil: "networkidle" });
+  const chips = historySection.getByRole("button", { name: /^Remove .* filter$/ });
+  const newsChip = historySection.getByRole("button", { name: "Remove News category filter", exact: true });
+  const wikiChip = historySection.getByRole("button", { name: "Remove Daily Wikipedia discoveries source filter", exact: true });
+  assert.equal(await chips.count(), 0);
+  assert.doesNotMatch(await historySection.innerText(), /All daily sources|All categories|Filters applied:/);
   async function historyRows(expected) {
     await historySection.getByRole("tab", { name: "Table", exact: true }).click();
     for (const [day, count, rate] of expected) {
@@ -204,25 +212,69 @@ try {
   }
   await select("Category", "News");
   await historyRows([["2026-11-04", 2, "50.0%"], ["2026-11-05", 4, "25.0%"], ["2026-11-06", 1, "100.0%"]]);
-  assert.match(await historySection.innerText(), /All daily sources/);
-  assert.match(await historySection.innerText(), /News/);
+  assert.equal(await newsChip.count(), 1);
+  assert.equal(await chips.count(), 1);
+  assert.equal(await historySection.getByRole("group", { name: "Applied filters" }).count(), 1);
+  assert.doesNotMatch(await historySection.innerText(), /All daily sources|All categories|Filters applied:/);
+  const { chipBox, tabsBox } = await historySection.evaluate(section => ({
+    chipBox: section.querySelector('button[aria-label="Remove News category filter"]').getBoundingClientRect().toJSON(),
+    tabsBox: section.querySelector('[role="tablist"]').getBoundingClientRect().toJSON(),
+  }));
+  assert.ok(Math.abs(chipBox.y + chipBox.height / 2 - tabsBox.y - tabsBox.height / 2) <= 4,
+    `The active chip belongs in the same toolbar row as Chart/Table: ${JSON.stringify({ chipBox, tabsBox })}`);
   checks.push("Category filtering updates every historical day with its own page count and rate, with active filters shown beside history");
   await page.getByRole("button", { name: "Reset filters", exact: true }).click();
   await select("Source", "Daily Wikipedia discoveries");
   await historyRows([["2026-11-04", 1, "0.0%"], ["2026-11-05", 2, "50.0%"], ["2026-11-06", 3, "66.7%"]]);
-  assert.match(await historySection.innerText(), /Daily Wikipedia discoveries/);
-  assert.match(await historySection.innerText(), /All categories/);
+  assert.equal(await wikiChip.count(), 1);
+  assert.equal(await chips.count(), 1);
+  assert.doesNotMatch(await historySection.innerText(), /All categories|Filters applied:/);
   checks.push("Wikipedia filtering updates every historical day and identifies the selected source beside history");
   await select("Category", "News");
   await historyRows([["2026-11-04", 0, "—"], ["2026-11-05", 0, "—"], ["2026-11-06", 0, "—"]]);
   assert.equal(await historySection.locator("svg circle title").count(), 0);
-  assert.match(await historySection.innerText(), /Daily Wikipedia discoveries/);
-  assert.match(await historySection.innerText(), /News/);
+  assert.equal(await chips.count(), 2);
+  assert.equal(await newsChip.count(), 1);
+  assert.equal(await wikiChip.count(), 1);
+  await page.setViewportSize({ width: 390, height: 1000 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   checks.push("An empty source/category intersection stays empty across all days without falling back to overall scores");
+  await newsChip.focus();
+  await page.keyboard.press("Enter");
+  assert.ok(await wikiChip.evaluate(button => document.activeElement === button));
+  assert.equal(await newsChip.count(), 0);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Daily Wikipedia discoveries/);
+  assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /All categories/);
+  await sampleCount(3);
+  await historyRows([["2026-11-04", 1, "0.0%"], ["2026-11-05", 2, "50.0%"], ["2026-11-06", 3, "66.7%"]]);
+  await wikiChip.focus();
+  await page.keyboard.press("Enter");
+  assert.ok(await historySection.getByRole("tab", { name: "Chart", exact: true }).evaluate(tab => document.activeElement === tab));
+  await sampleCount(5);
+  assert.equal(await chips.count(), 0);
+  checks.push("Keyboard category-chip removal preserves the source, updates all results, and moves focus to the remaining chip; removing the final chip focuses Chart");
+  await select("Source", "Daily Wikipedia discoveries");
+  await select("Category", "News");
+  await wikiChip.focus();
+  await page.keyboard.press("Enter");
+  assert.ok(await newsChip.evaluate(button => document.activeElement === button));
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /All daily sources/);
+  assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /News/);
+  await sampleCount(1);
+  await historyRows([["2026-11-04", 2, "50.0%"], ["2026-11-05", 4, "25.0%"], ["2026-11-06", 1, "100.0%"]]);
+  await historySection.getByRole("tab", { name: "Table", exact: true }).click();
+  await newsChip.focus();
+  await page.keyboard.press("Space");
+  assert.ok(await historySection.getByRole("tab", { name: "Table", exact: true }).evaluate(tab => document.activeElement === tab));
+  await sampleCount(5);
+  assert.equal(await chips.count(), 0);
+  checks.push("Keyboard source-chip removal preserves the category and global results; removing the final chip focuses the selected Table tab");
+  await select("Category", "News");
   await page.getByRole("button", { name: "Reset filters", exact: true }).click();
   await historyRows([["2026-11-04", 4, "50.0%"], ["2026-11-05", 7, "25.0%"], ["2026-11-06", 5, "55.6%"]]);
-  assert.match(await historySection.innerText(), /All daily sources/);
-  assert.match(await historySection.innerText(), /All categories/);
+  assert.equal(await chips.count(), 0);
+  assert.doesNotMatch(await historySection.innerText(), /All daily sources|All categories|Filters applied:/);
   checks.push("Reset restores the saved overall historical totals and category-weighted rates");
   includeWikipediaHistory = false;
   await page.goto(base, { waitUntil: "networkidle" });

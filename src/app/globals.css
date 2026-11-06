@@ -758,6 +758,9 @@ body::after {
 .bench-section [role="tablist"] {
   margin-bottom: var(--ds-space-6);
 }
+.bench-section .bench-history-controls [role="tablist"] {
+  margin-bottom: 0;
+}
 .bench-page [role="tab"] {
   min-height: var(--ds-space-8);
 }

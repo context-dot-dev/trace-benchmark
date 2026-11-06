@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Surface } from "@/lib/surface";
@@ -95,6 +95,7 @@ function Section({
   note,
   chart,
   table,
+  controls,
 }: {
   id: string;
   accent: string;
@@ -102,7 +103,14 @@ function Section({
   note: string;
   chart: ReactNode;
   table: ReactNode;
+  controls?: ReactNode;
 }) {
+  const viewTabs = (
+    <TabsList variant="segmented" aria-label={`${title} view`}>
+      <TabsTrigger value="chart">Chart</TabsTrigger>
+      <TabsTrigger value="table">Table</TabsTrigger>
+    </TabsList>
+  );
   return (
     <SiteSection id={id} lines className="bench-section">
       <Tabs defaultValue="chart">
@@ -112,10 +120,12 @@ function Section({
           description={note}
         />
         <SectionHeaderRule />
-        <TabsList variant="segmented" aria-label={`${title} view`}>
-          <TabsTrigger value="chart">Chart</TabsTrigger>
-          <TabsTrigger value="table">Table</TabsTrigger>
-        </TabsList>
+        {controls ? (
+          <div className="bench-history-controls mb-6 flex flex-wrap items-center justify-between gap-3">
+            {viewTabs}
+            {controls}
+          </div>
+        ) : viewTabs}
         <TabsContent value="chart">{chart}</TabsContent>
         <TabsContent value="table">{table}</TabsContent>
       </Tabs>
@@ -834,6 +844,15 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
   const sourceLabel = source === "all" ? "All daily sources" : "Daily Wikipedia discoveries";
   const categoryLabel = benchmarkCategories.find((c) => c.id === category)?.name ?? "All categories";
   const filterLabel = `${sourceLabel} · ${categoryLabel}`;
+  function clearHistoryFilter(filter: "source" | "category") {
+    const section = document.getElementById("history");
+    const remaining = filter === "source" ? "category" : "source";
+    const next = section?.querySelector<HTMLButtonElement>(`[data-history-filter="${remaining}"]`)
+      ?? section?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]');
+    next?.focus({ preventScroll: true });
+    if (filter === "source") setSource("all");
+    else setCategory("all");
+  }
   const visibleHistory = data.history.filter((run) => run.day >= firstSampleDay);
   const filteredHistory = filterHistory(visibleHistory, { source, category }, dataset.wikipediaHistory);
   const history = [...filteredHistory]
@@ -940,9 +959,8 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
             ]}
           />
         </div>
-        <p className="bench-note" role="status">
-          {hasFilters ? `Filters applied: ${filterLabel}.` : "Showing all daily sources and categories."}{" "}
-          Source and category filters apply to every chart, table, and download, including daily history.
+        <p className="sr-only" role="status">
+          {hasFilters ? `Results filtered by ${filterLabel}.` : "Showing all daily sources and categories."}
         </p>
         <div className="mt-6">
           {source === "all" && (
@@ -1102,7 +1120,35 @@ export function BenchmarkReport({ initial }: { initial: BenchmarkDataset }) {
           id="history"
           accent="over time"
           title="Daily results over time"
-          note={`Daily results from November 4, 2026 onward. ${hasFilters ? "Filters applied" : "Showing"}: ${filterLabel}. Each point uses the same source and category filters as the results above.`}
+          note="Daily results from November 4, 2026 onward."
+          controls={
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Applied filters">
+              {source !== "all" && (
+                <Button
+                  variant="outline-brand"
+                  size="sm"
+                  className="rounded-pill bg-blue-10 max-sm:min-h-11"
+                  data-history-filter="source"
+                  aria-label={`Remove ${sourceLabel} source filter`}
+                  onClick={() => clearHistoryFilter("source")}
+                >
+                  {sourceLabel}<X aria-hidden="true" strokeWidth={1.5} />
+                </Button>
+              )}
+              {category !== "all" && (
+                <Button
+                  variant="outline-brand"
+                  size="sm"
+                  className="rounded-pill bg-blue-10 max-sm:min-h-11"
+                  data-history-filter="category"
+                  aria-label={`Remove ${categoryLabel} category filter`}
+                  onClick={() => clearHistoryFilter("category")}
+                >
+                  {categoryLabel}<X aria-hidden="true" strokeWidth={1.5} />
+                </Button>
+              )}
+            </div>
+          }
           chart={<Trend history={history} filtered={hasFilters} />}
           table={
             <Table
