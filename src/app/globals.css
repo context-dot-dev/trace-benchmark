@@ -1354,11 +1354,31 @@ body:has(.bench-page)::after {
   font-size: var(--ds-text-body);
   font-weight: var(--ds-font-weight-regular);
 }
-.bench-eyebrow span {
+.bench-eyebrow > span:first-child {
   color: var(--ds-color-text-brand);
   font-family: var(--ds-font-mono);
   font-weight: 400;
   letter-spacing: 0;
+}
+.bench-trace-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2-5);
+  color: var(--bench-text);
+}
+.bench-trace-expansion {
+  color: var(--ds-color-text-secondary);
+}
+@media (max-width: 39.999rem) {
+  .bench-trace-name {
+    flex-direction: column;
+    gap: var(--ds-space-1);
+  }
+  .bench-trace-expansion {
+    font-size: var(--ds-text-body-sm);
+    line-height: var(--ds-leading-normal);
+    text-wrap: pretty;
+  }
 }
 .bench-frame h2,
 .bench-frame h1 {
