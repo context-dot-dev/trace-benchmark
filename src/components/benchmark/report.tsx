@@ -472,12 +472,12 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             index={1}
             as="h1"
             eyebrow={
-              <span className="bench-trace-name">
-                TRACE{" "}
-                <span className="bench-trace-expansion">
-                  Transparent Real-world Assessment of Content Extraction
+              <>
+                <span className="sm:hidden">Daily web scraping benchmark</span>
+                <span className="hidden sm:inline">
+                  TRACE (Transparent Real-world Assessment of Content Extraction)
                 </span>
-              </span>
+              </>
             }
             title="How reliably can web scrapers"
             accent="read a page?"
