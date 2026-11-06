@@ -4,7 +4,23 @@
   "type": "module",
   "version": "0.1.0",
   "overrides": {
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "undici": "^7.30.1",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.0"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    },
+    "@oclif/core": {
+      "minimatch": "^11.0.1"
+    },
+    "@swc/cli": {
+      "minimatch": "^11.0.1"
+    },
+    "@vercel/queue": {
+      "minimatch": "^11.0.1"
+    }
   },
   "scripts": {
     "dev": "next dev",
