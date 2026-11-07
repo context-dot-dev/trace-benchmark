@@ -5,6 +5,7 @@ import type { BenchmarkPage, PageOutcome } from "./combined";
 import {
   failureReason,
   failureReasons,
+  hostOf,
   isAccountLimited,
   NOT_SCORED_ERRORS,
   type FailureReason,
@@ -293,6 +294,309 @@ export function cost(rows: ProviderMetric[]): Cost[] {
     // When failures are not billed, a provider pays only for pages it returned.
     const perAccessed1k = rate ? (entry.billsFailures === false ? entry.per1k : entry.per1k / rate) : null;
     return { id, per1k: entry.per1k, rate, perAccessed1k, assumed: entry.billsFailures == null };
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Deeper looks: sites, failure detail, latency budgets, fallbacks, and clustered uncertainty
+
+/** A completed, timed request that counts toward latency, matching `latency()`. */
+const timedMs = (o: PageOutcome | undefined) =>
+  done(o) && o.ms != null && !(o.error && NOT_SCORED_ERRORS.has(o.error)) ? o.ms : null;
+const failed = (o: PageOutcome | undefined): o is PageOutcome =>
+  done(o) && failureReason({ ...o, elapsedMs: o.ms }) != null;
+const succeeded = (o: PageOutcome | undefined) => scored(o) && o.success === true;
+const sortedNumbers = (values: (number | null)[]) =>
+  values.filter((v): v is number => v != null).sort((a, b) => a - b);
+
+export type SiteProvider = {
+  /** Scored results on this site. */
+  n: number;
+  rate: number | null;
+  p50: number | null;
+  p95: number | null;
+  failed: number;
+  /** The most common failure reason on this site, if any page failed. */
+  topReason: FailureReason | null;
+};
+export type SiteResult = {
+  host: string;
+  pages: number;
+  /** The category most of this site's pages belong to. */
+  category: string;
+  /** Pages no provider could read. */
+  nobody: number;
+  /** Highest minus lowest provider rate on this site: large values mark sites that separate providers. */
+  spread: number | null;
+  /** Slowest minus fastest provider median on this site. */
+  latencyGap: number | null;
+  providers: Record<ProviderId, SiteProvider>;
+};
+/** Success and latency per site (hostname without "www."), largest sites first. */
+export function sites(pages: BenchmarkPage[], minPages = 1): SiteResult[] {
+  const groups = new Map<string, BenchmarkPage[]>();
+  for (const page of pages) {
+    const host = hostOf(page.url);
+    groups.set(host, [...(groups.get(host) ?? []), page]);
+  }
+  const out: SiteResult[] = [];
+  for (const [host, group] of groups) {
+    if (group.length < minPages) continue;
+    const categoryCounts = new Map<string, number>();
+    for (const p of group) categoryCounts.set(p.category, (categoryCounts.get(p.category) ?? 0) + 1);
+    const providerRows = Object.fromEntries(
+      ids.map((id) => {
+        const outcomes = group.map((p) => p.results[id]).filter(scored);
+        const ms = sortedNumbers(outcomes.map(timedMs));
+        const reasons = new Map<FailureReason, number>();
+        for (const o of outcomes) {
+          const reason = failureReason({ ...o, elapsedMs: o.ms });
+          if (reason) reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+        }
+        const fails = [...reasons.values()].reduce((a, b) => a + b, 0);
+        const row: SiteProvider = {
+          n: outcomes.length,
+          rate: outcomes.length ? outcomes.filter((o) => o.success === true).length / outcomes.length : null,
+          p50: quantile(ms, 0.5),
+          p95: quantile(ms, 0.95),
+          failed: fails,
+          topReason: [...reasons.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+        };
+        return [id, row];
+      }),
+    ) as Record<ProviderId, SiteProvider>;
+    const rates = ids.map((id) => providerRows[id].rate).filter((v): v is number => v != null);
+    const medians = ids.map((id) => providerRows[id].p50).filter((v): v is number => v != null);
+    out.push({
+      host,
+      pages: group.length,
+      category: [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0][0],
+      nobody: group.filter((p) => ids.every((id) => failed(p.results[id]))).length,
+      spread: rates.length > 1 ? Math.max(...rates) - Math.min(...rates) : null,
+      latencyGap: medians.length > 1 ? Math.max(...medians) - Math.min(...medians) : null,
+      providers: providerRows,
+    });
+  }
+  return out.sort((a, b) => b.pages - a.pages || a.host.localeCompare(b.host));
+}
+
+/** A readable label for the raw signal behind a failure: the provider's error code or the judge's label. */
+export function failureSignal(o: PageOutcome) {
+  if (o.error) return o.error;
+  if (o.access === "not_accessed") return "judge: not accessed";
+  if (o.quality && o.quality !== "substantive") return `judge: ${o.quality}`;
+  if (o.identity === "wrong_target") return "judge: wrong page";
+  if (o.identity && o.identity !== "match") return `judge: page ${o.identity}`;
+  if (o.success === false) return "judge: failed";
+  return "judge: unresolved";
+}
+
+export type FailureDetail = {
+  id: ProviderId;
+  /** Completed, scored results. */
+  total: number;
+  failed: number;
+  /** Failed pages at least one other provider read: the provider's own headroom. */
+  recoverable: number;
+  /** Failed pages every other provider read. */
+  exclusive: number;
+  /** Failed pages no provider read: likely gone, gated, or hostile to every scraper. */
+  universal: number;
+  /** Raw error codes and judge labels, most common first. */
+  signals: { signal: string; count: number }[];
+  /** Failure share per category, worst first. */
+  categories: { id: string; failed: number; total: number }[];
+  /** Sites with the most failures for this provider. */
+  hosts: { host: string; failed: number; pages: number; recoverable: number }[];
+  /** Share of failures coming from the five sites with the most failures. */
+  concentration: number | null;
+  /** Median time spent on a failed request. */
+  failedP50: number | null;
+};
+export function failureDetail(pages: BenchmarkPage[]): FailureDetail[] {
+  return ids.map((id) => {
+    const others = ids.filter((o) => o !== id);
+    let total = 0, count = 0, recoverable = 0, exclusive = 0, universal = 0;
+    const signals = new Map<string, number>();
+    const cats = new Map<string, { failed: number; total: number }>();
+    const hosts = new Map<string, { failed: number; pages: number; recoverable: number }>();
+    const failedMs: number[] = [];
+    for (const page of pages) {
+      const o = page.results[id];
+      if (!done(o)) continue;
+      total++;
+      const host = hostOf(page.url);
+      const h = hosts.get(host) ?? { failed: 0, pages: 0, recoverable: 0 };
+      const c = cats.get(page.category) ?? { failed: 0, total: 0 };
+      h.pages++;
+      c.total++;
+      if (failed(o)) {
+        count++;
+        c.failed++;
+        h.failed++;
+        const otherResults = others.map((x) => page.results[x]).filter(done);
+        const anyOther = otherResults.some((x) => x.success === true);
+        if (anyOther) {
+          recoverable++;
+          h.recoverable++;
+        } else universal++;
+        if (otherResults.length === others.length && otherResults.every((x) => x.success === true)) exclusive++;
+        const signal = failureSignal(o);
+        signals.set(signal, (signals.get(signal) ?? 0) + 1);
+        if (o.ms != null) failedMs.push(o.ms);
+      }
+      hosts.set(host, h);
+      cats.set(page.category, c);
+    }
+    const hostRows = [...hosts.entries()]
+      .map(([host, h]) => ({ host, ...h }))
+      .filter((h) => h.failed > 0)
+      .sort((a, b) => b.failed - a.failed || a.host.localeCompare(b.host));
+    const top = hostRows.slice(0, 5).reduce((sum, h) => sum + h.failed, 0);
+    return {
+      id,
+      total,
+      failed: count,
+      recoverable,
+      exclusive,
+      universal,
+      signals: [...signals.entries()].map(([signal, n]) => ({ signal, count: n })).sort((a, b) => b.count - a.count),
+      categories: [...cats.entries()]
+        .map(([cat, c]) => ({ id: cat, ...c }))
+        .sort((a, b) => b.failed / (b.total || 1) - a.failed / (a.total || 1)),
+      hosts: hostRows.slice(0, 10),
+      concentration: count ? top / count : null,
+      failedP50: median(failedMs),
+    };
+  });
+}
+
+/** Time budgets, in milliseconds, for "useful within a deadline". */
+export const BUDGETS_MS = [1_000, 2_000, 5_000, 10_000] as const;
+export type BudgetResult = {
+  id: ProviderId;
+  n: number;
+  rates: (number | null)[];
+  /** Share of the same timed requests that succeeded at any speed. */
+  any: number | null;
+};
+/**
+ * Share of timed requests that both succeeded and returned within each budget. An agent with a
+ * fixed time budget experiences this rate, not the unconstrained success rate.
+ */
+export function withinBudget(pages: BenchmarkPage[], budgets: readonly number[] = BUDGETS_MS): BudgetResult[] {
+  return ids.map((id) => {
+    const timed = pages.map((p) => p.results[id]).filter((o): o is PageOutcome => timedMs(o) != null);
+    return {
+      id,
+      n: timed.length,
+      rates: budgets.map((b) => (timed.length ? timed.filter((o) => o.success === true && o.ms! <= b).length / timed.length : null)),
+      any: timed.length ? timed.filter((o) => o.success === true).length / timed.length : null,
+    };
+  });
+}
+
+export type LatencyByCategory = { id: string; providers: Record<ProviderId, { n: number; p50: number | null; p95: number | null }> };
+export function latencyByCategory(pages: BenchmarkPage[], categoryIds: string[]): LatencyByCategory[] {
+  return categoryIds.map((category) => {
+    const group = pages.filter((p) => p.category === category);
+    return {
+      id: category,
+      providers: Object.fromEntries(
+        ids.map((id) => {
+          const ms = sortedNumbers(group.map((p) => timedMs(p.results[id])));
+          return [id, { n: ms.length, p50: quantile(ms, 0.5), p95: quantile(ms, 0.95) }];
+        }),
+      ) as LatencyByCategory["providers"],
+    };
+  });
+}
+
+export type Fallback = { a: ProviderId; b: ProviderId; pages: number; aRate: number; bRate: number; rate: number };
+/**
+ * What a two-provider fallback would reach: a page counts if either provider read it. Rates are
+ * shares of pages both providers completed, not category-weighted scores. `ceiling` is the share
+ * of pages at least one of the four providers read.
+ */
+export function fallbacks(pages: BenchmarkPage[]): { ceiling: number | null; pages: number; pairs: Fallback[] } {
+  const pairs: Fallback[] = [];
+  for (let i = 0; i < ids.length; i++)
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = ids[i], b = ids[j];
+      let n = 0, sa = 0, sb = 0, either = 0;
+      for (const page of pages) {
+        const ra = page.results[a], rb = page.results[b];
+        if (!done(ra) || !done(rb)) continue;
+        n++;
+        const x = ra.success === true, y = rb.success === true;
+        if (x) sa++;
+        if (y) sb++;
+        if (x || y) either++;
+      }
+      if (n) pairs.push({ a, b, pages: n, aRate: sa / n, bRate: sb / n, rate: either / n });
+    }
+  const complete = pages.filter((p) => ids.every((id) => done(p.results[id])));
+  return {
+    ceiling: complete.length ? complete.filter((p) => ids.some((id) => succeeded(p.results[id]))).length / complete.length : null,
+    pages: complete.length,
+    pairs: pairs.sort((x, y) => y.rate - x.rate),
+  };
+}
+
+export type Clustered = {
+  id: ProviderId;
+  /** 95% CI half-width treating pages from the same site as one cluster. */
+  ci: number | null;
+  /** The usual CI that treats every page as independent. */
+  naiveCi: number | null;
+  /** Sites in the sample: the number of independent clusters. */
+  sites: number;
+  /** Score when every site within a category counts equally, instead of every page. */
+  siteWeighted: number | null;
+};
+/**
+ * Pages from one site tend to succeed or fail together, so the usual binomial interval is too
+ * narrow when a few sites contribute many pages. This uses a cluster-robust (CR1) variance per
+ * category with sites as clusters, combined with the same equal category weights as the score.
+ */
+export function clustered(pages: BenchmarkPage[], categoryIds: string[]): Clustered[] {
+  return ids.map((id) => {
+    const counted = pages.filter((p) => !isAccountLimited(p.results[id]?.error));
+    let variance = 0, naive = 0, weighted = 0, ok = categoryIds.length > 0;
+    const allSites = new Set<string>();
+    for (const category of categoryIds) {
+      const group = counted.filter((p) => p.category === category);
+      if (!group.length) {
+        ok = false;
+        break;
+      }
+      const n = group.length;
+      const y = group.map((p) => (p.results[id]?.success === true ? 1 : 0));
+      const rate = y.reduce<number>((a, b) => a + b, 0) / n;
+      const residuals = new Map<string, { sum: number; hits: number; n: number }>();
+      group.forEach((p, i) => {
+        const host = hostOf(p.url);
+        allSites.add(host);
+        const r = residuals.get(host) ?? { sum: 0, hits: 0, n: 0 };
+        r.sum += y[i] - rate;
+        r.hits += y[i];
+        r.n++;
+        residuals.set(host, r);
+      });
+      const g = residuals.size;
+      const correction = g > 1 ? g / (g - 1) : 1;
+      variance += (correction * [...residuals.values()].reduce((s, r) => s + r.sum * r.sum, 0)) / (n * n);
+      naive += (rate * (1 - rate)) / n;
+      weighted += [...residuals.values()].reduce((s, r) => s + r.hits / r.n, 0) / g;
+    }
+    const k = categoryIds.length;
+    return {
+      id,
+      ci: ok ? (1.96 * Math.sqrt(variance)) / k : null,
+      naiveCi: ok ? (1.96 * Math.sqrt(naive)) / k : null,
+      sites: allSites.size,
+      siteWeighted: ok ? weighted / k : null,
+    };
   });
 }
 

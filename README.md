@@ -65,7 +65,8 @@ A Vercel Cron trigger runs every Friday at 00:15 UTC (`15 0 * * 5`) and starts o
 - **Latency:** p50, p90, p95, and p99 describe individual retrieval requests. Total collection time also includes dispatch, rate limits, judging, and persistence.
 - **Quality:** optional document-identity and substantive-content grades add detail beyond v6 page access. Those grades do not change the access score.
 - **Cost:** published provider prices are divided by the observed success rate. Pricing dates, billing assumptions, and exclusions are visible in the report.
-- **Failures:** timeouts, provider errors, block screens, missing content, unresolved judgments, and account limits are distinguished.
+- **Failures:** timeouts, provider errors, block screens, missing content, unresolved judgments, and account limits are distinguished. Failed pages are also split by whether another provider read them, with raw error codes and the sites behind them.
+- **Sites:** success and median latency per site show where providers differ. A site-clustered interval accounts for pages from one site passing or failing together.
 
 The [full methodology](docs/methodology.md) documents the prompts, cache checks, deadlines, denominator rules, legacy samples, and limitations.
 
@@ -118,6 +119,14 @@ curl -fsS https://trace.context.dev/api/report | jq '.latest'
 curl -fsSG https://trace.context.dev/api/download \
   --data-urlencode 'run=scraping-bench-v5:2026-11-06' \
   -o trace-results.ndjson
+```
+
+For a deeper look at one sample, `npm run analyze` reads `/api/benchmark` and prints a Markdown report: failure detail (recoverable versus universal failures, raw error codes, worst sites), success and latency per site, the sites that separate providers, latency by category, success within time budgets, two-provider fallbacks, and site-clustered intervals. It needs no database or keys.
+
+```sh
+npm run analyze                                    # latest sample from trace.context.dev
+npm run analyze -- --provider keenable             # plus pages this provider missed that another read, by site
+npm run analyze -- --run 'scraping-bench-v5:2026-11-06' --min-pages 20 --json
 ```
 
 Both JSON endpoints accept `?run=<run-id>`. `/api/report` also accepts `provider` and a zero-based `page`. Public downloads contain outcomes and provenance; raw scraped text, private grading evidence, and credentials are excluded.

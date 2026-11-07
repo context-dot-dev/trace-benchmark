@@ -36,6 +36,7 @@ import {
 } from "./charts";
 import { Trend, historyResult, scoringLabel } from "./history";
 import { dailyExamples } from "./sources";
+import { ClusteredTable, FailureDetailTable, FallbackTable, LatencyDetail, MIN_SITE_PAGES, SiteTable } from "./deep";
 
 export type SourceSummary = { total: number; categories: { id: string; count: number; examples: string[] }[] };
 
@@ -211,6 +212,10 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
     </div>
   );
   const { selected, rows, ranks, pairs, cats, lat, fails, funnel, quality, costs, history, stability, accessOnly } = view;
+  const { sites, failureDetail, budgets, latencyByCategory, fallbacks, clustered } = view;
+  const bigSites = sites.filter((s) => s.pages >= MIN_SITE_PAGES);
+  const topTenShare = selected.length ? sites.slice(0, 10).reduce((sum, s) => sum + s.pages, 0) / selected.length : 0;
+  const widest = [...clustered].filter((c) => c.ci != null && c.naiveCi).sort((a, b) => b.ci! / b.naiveCi! - a.ci! / a.naiveCi!)[0];
   const order = [...providers]
     .map((p) => p.id)
     .sort((a, b) => (rows.find((r) => r.id === b)?.rate ?? -1) - (rows.find((r) => r.id === a)?.rate ?? -1)) as ProviderId[];
@@ -289,6 +294,12 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             categories: cats,
             latency: lat,
             failures: fails,
+            failureDetail,
+            sites: bigSites,
+            latencyByCategory,
+            budgets: { budgetsMs: [1000, 2000, 5000, 10000], providers: budgets },
+            fallbacks,
+            clustered,
             quality: { funnel, signals: quality },
             cost: costs,
             pages: selected,
@@ -756,6 +767,16 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                 <p className="bench-notice">Response times were not recorded for this selection.</p>
               </>
             )}
+            {!sampleUnavailable && timedPages && (
+              <>
+                <h3 className="bench-subhead">Speed you can use</h3>
+                <p className="bench-note">
+                  A fast median means little if the answer fails. Each cell is the share of timed requests that
+                  succeeded <em>and</em> returned within the budget: the rate an agent with that time limit actually gets.
+                </p>
+                <LatencyDetail budgets={budgets} byCategory={latencyByCategory} order={order} />
+              </>
+            )}
             <Notes
               items={[
                 {
@@ -907,12 +928,66 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               Hover a segment for the count. Provider-reported failures and missed deadlines count as failures, even when
               the provider did not return an error code. {accessOnly ? "Wrong documents and thin pages count as accessed and appear under Quality." : "Thin pages and wrong documents count as failures under this scoring rule."}
             </p>
+            <h3 className="bench-subhead">Which failures could be avoided</h3>
+            <FailureDetailTable rows={failureDetail} order={order} />
+            <p className="bench-note">
+              “Others read it” counts failed pages that at least one other provider read, so the page was reachable.
+              “Only one to miss” counts failed pages every other provider read. “Nobody read it” counts pages every
+              provider failed: often removed, gated, or empty pages rather than a scraper problem. “Time to fail” is the
+              median time spent on a failed request. Signals are the raw provider error code, or the judge&apos;s label
+              when the request itself succeeded.
+            </p>
+            {fallbacks.pairs.length > 0 && (
+              <>
+                <h3 className="bench-subhead">Combining two providers</h3>
+                <FallbackTable pairs={fallbacks.pairs} />
+                <p className="bench-note">
+                  A fallback reads a page if either provider does. Rates are shares of pages both providers completed, not
+                  category-weighted scores. All four providers together read {percent(fallbacks.ceiling)} of{" "}
+                  {integer(fallbacks.pages)} pages, the ceiling for any combination.
+                </p>
+              </>
+            )}
+            </>)}
+          </Frame>
+
+          <Frame
+            id="sites"
+            index={9}
+            eyebrow="Sites"
+            title="Results by"
+            accent="site"
+            lede={
+              sites.length
+                ? `${integer(selected.length)} pages came from ${integer(sites.length)} sites; the ten largest supplied ${percent(topTenShare)} of them. A provider that fails one site's template often fails all of its pages, and speed varies more by site than by provider.`
+                : undefined
+            }
+          >
+            {chipRow}
+            {sampleUnavailable ? samplePlaceholder : (<>
+            <SiteTable sites={sites} order={order} />
+            <p className="bench-note">
+              Each cell shows the success rate and, below it, the median response time on that site. Black marks the best
+              rate and the fastest median in each row; hover a cell for the failure count and p95. Sites with fewer than{" "}
+              {MIN_SITE_PAGES} pages are not listed. “Median gap” is the slowest minus the fastest provider median.
+            </p>
+            <h3 className="bench-subhead">Uncertainty when pages share a site</h3>
+            <ClusteredTable rows={clustered} order={order} />
+            <p className="bench-note">
+              The headline interval treats every page as independent. Pages from one site tend to pass or fail together, so
+              this table also gives a cluster-robust interval that treats each site as one unit
+              {widest?.ci != null && widest.naiveCi
+                ? `; for ${providerName(widest.id)} it is ${(widest.ci / widest.naiveCi).toFixed(1)}× wider`
+                : ""}
+              . Read gaps smaller than the site-clustered interval with caution. “Every site counted equally” averages
+              site-level rates within each category, so a single large site cannot dominate a category.
+            </p>
             </>)}
           </Frame>
 
           <Frame
             id="history"
-            index={9}
+            index={10}
             eyebrow="History"
             title="Sample results"
             accent="over time"
@@ -967,7 +1042,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
 
           <Frame
             id="sources"
-            index={10}
+            index={11}
             method
             eyebrow="Sample & sources"
             title="Where the"
@@ -1031,7 +1106,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
 
           <Frame
             id="methodology"
-            index={11}
+            index={12}
             method
             eyebrow="Methodology"
             title="How the"
@@ -1191,7 +1266,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
 
           <Frame
             id="data"
-            index={12}
+            index={13}
             method
             eyebrow="Data & API"
             title="Check our"
@@ -1238,7 +1313,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             </div>
           </Frame>
 
-          <Frame id="faq" index={13} method eyebrow="FAQ" title="Common" accent="questions">
+          <Frame id="faq" index={14} method eyebrow="FAQ" title="Common" accent="questions">
             <div className="bench-faq">
               {faqItems(view).map((item) => (
                 <div key={item.q}>
@@ -1251,7 +1326,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
 
           <Frame
             id="citation"
-            index={14}
+            index={15}
             method
             eyebrow="Citation"
             title="Cite the"

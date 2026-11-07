@@ -107,3 +107,12 @@ export function redirected(requested: string, finalUrl: string | null | undefine
   if (!finalUrl) return null;
   return pageKey(requested) !== pageKey(finalUrl);
 }
+
+/** The site a page belongs to: its lowercase hostname without a leading "www.". */
+export function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return url;
+  }
+}

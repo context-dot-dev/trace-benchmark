@@ -35,6 +35,7 @@
     "grade": "tsx scripts/grade.ts",
     "audit": "tsx scripts/audit.ts",
     "resummarize": "tsx scripts/resummarize.ts",
+    "analyze": "tsx scripts/analyze.ts",
     "test:unit": "tsx tests/analysis.test.ts",
     "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts && tsx tests/history-filters.e2e.ts && tsx tests/batch-store.e2e.ts && tsx tests/collector-retry.e2e.ts && tsx tests/provider-pause.e2e.ts && tsx tests/judge-pause.e2e.ts && tsx tests/pacing-deadline.e2e.ts && tsx tests/continuous.e2e.ts && tsx tests/parallel.e2e.ts && tsx tests/grades.e2e.ts"
   },

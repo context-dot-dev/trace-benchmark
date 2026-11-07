@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { PanelLeft, PanelLeftOpen, ChevronUp, CalendarDays, X, House, ChartNoAxesColumn, ArrowLeftRight, Shapes, Timer, FileCheck2, DollarSign, CircleAlert, History, Database, FlaskConical, Code2, CircleHelp, Quote, type LucideIcon } from "lucide-react";
+import { PanelLeft, PanelLeftOpen, ChevronUp, CalendarDays, X, House, ChartNoAxesColumn, ArrowLeftRight, Shapes, Timer, FileCheck2, DollarSign, CircleAlert, Globe, History, Database, FlaskConical, Code2, CircleHelp, Quote, type LucideIcon } from "lucide-react";
 import { ContextMark } from "@/components/trace/provider-logo";
 import { ThemeToggle } from "@/components/trace/theme-toggle";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -17,6 +17,7 @@ export const sections: RailSection[] = [
   { id: "quality", label: "Quality", icon: FileCheck2 },
   { id: "cost", label: "Cost", icon: DollarSign },
   { id: "failures", label: "Failures", icon: CircleAlert },
+  { id: "sites", label: "Sites", icon: Globe },
   { id: "history", label: "History", icon: History },
   { id: "sources", label: "Sample & sources", group: "Method", icon: Database },
   { id: "methodology", label: "Methodology", icon: FlaskConical },
