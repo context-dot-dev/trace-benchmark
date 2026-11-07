@@ -140,7 +140,7 @@ export function faqItems(view: View) {
     },
     {
       q: "How often is the benchmark updated?",
-      a: "A new sample of about 2,500 never-tested pages is drawn every day at 00:15 UTC and sent to all four providers. Its scores fill in over the same UTC day.",
+      a: "A new sample of about 2,500 never-tested pages is drawn every Friday at 00:15 UTC and sent to all four providers. Its scores fill in as collection progresses.",
     },
     {
       q: "What does a success mean?",

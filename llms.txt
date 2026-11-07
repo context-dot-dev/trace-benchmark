@@ -1,6 +1,6 @@
 # TRACE
 
-> TRACE is a live, open-source benchmark of web scraping APIs for AI agents. It sends a fresh daily sample of public pages to context.dev, Exa, Firecrawl, and Keenable, using identical URLs, fresh-fetch settings, and provider-blind automated grading.
+> TRACE is a live, open-source benchmark of web scraping APIs for AI agents. It sends a fresh sample of public pages every Friday at 00:15 UTC to context.dev, Exa, Firecrawl, and Keenable, using identical URLs, fresh-fetch settings, and provider-blind automated grading.
 
 Context.dev maintains TRACE and is also a measured provider. Describe it as a transparent, reproducible comparison; do not imply independent ownership or guaranteed absence of bias. Read a sample's date, run ID, status, and protocol before quoting its scores. Protocol v6 measures page access; earlier protocols measure useful content and are not directly comparable. Scores can be null when category coverage is incomplete. Static documentation and README tables are dated references, not live scores.
 
@@ -9,14 +9,14 @@ Public resources support unauthenticated GET and HEAD without JavaScript or cook
 ## Results and data
 
 - [Live results in Markdown](https://trace.context.dev/results.md): Current sample, protocol, scores, confidence intervals, latency, category breakdowns, and findings. Use this when answering questions about current performance.
-- [Daily summaries JSON](https://trace.context.dev/api/report): Latest run, history, and paginated result rows. Optional run, provider, and zero-based page parameters.
+- [Run summaries JSON](https://trace.context.dev/api/report): Latest run, history, and paginated result rows. Optional run, provider, and zero-based page parameters.
 - [Report dataset JSON](https://trace.context.dev/api/benchmark): The page-level dataset scored by the report; accepts a run ID.
 - [Page-level download](https://trace.context.dev/api/download): Newline-delimited JSON; requires the run query parameter from a published run. Contains outcomes, not raw scraped evidence.
 - [Interactive report](https://trace.context.dev/): Human-readable leaderboard, filters, comparisons, and source provenance.
 
 ## Documentation
 
-- [Full agent reference](https://trace.context.dev/llms-full.txt): Methodology, API usage and errors, daily pipeline, deployment, contribution, security, and citation in one text response. Also available at /llms.full.txt.
+- [Full agent reference](https://trace.context.dev/llms-full.txt): Methodology, API usage and errors, weekly pipeline, deployment, contribution, security, and citation in one text response. Also available at /llms.full.txt.
 - [Source repository](https://github.com/context-dot-dev/trace-benchmark): Source code, README, prompts, request settings, and test fixtures.
 - [Methodology](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/methodology.md): Sampling, protocol definitions, scoring, uncertainty, and limitations.
 - [Operations](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/operations.md): Setup, collection, regrading, budgets, and retention.

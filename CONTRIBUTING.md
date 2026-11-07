@@ -40,7 +40,7 @@ After editing public documentation, run `npm run docs:agents`. The full agent re
 | `config/pricing.json` | Dated provider prices and billing assumptions |
 | `src/lib/benchmark/discovery.ts` | Public URL validation and candidate discovery |
 | `src/lib/benchmark/providers.ts` | Retrieval adapters, cache checks, and judge prompts |
-| `src/lib/benchmark/collect.ts` | Daily selection, budgets, and retention |
+| `src/lib/benchmark/collect.ts` | Sample selection, daily budgets, and retention |
 | `src/lib/benchmark/parallel.ts`, `batch-store.ts` | Concurrent workers and durable reservations |
 | `src/lib/benchmark/workflow.ts` | Continuous Workflow orchestration |
 | `src/lib/benchmark/analysis.ts`, `view.ts` | Shared statistics and report presentation data |

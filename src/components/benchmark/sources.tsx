@@ -60,7 +60,7 @@ export function BenchmarkSources({
     <SiteSection id="sources" lines className="bench-sources">
       <SectionHeading
         title="Where the pages come from"
-        description="Each day, we find pages through publisher feeds, public databases, sitemaps, and links added to English Wikipedia. All four providers retrieve the same selected pages."
+        description="Every Friday, we find pages through publisher feeds, public databases, sitemaps, and links added to English Wikipedia. All four providers retrieve the same selected pages."
       />
       <div className="grid gap-10 mt-10 md:grid-cols-2">
         <div>
@@ -69,7 +69,7 @@ export function BenchmarkSources({
             Publisher feeds announce articles, public registries list records
             such as filings and job openings, and sitemaps list website pages.
             We collect the linked pages, aiming for 300 previously unseen
-            pages in each of eight categories per day.
+            pages in each of eight categories per sample.
           </p>
           <p>
             We assign each page the category of the source that supplied it.
@@ -84,27 +84,27 @@ export function BenchmarkSources({
               if (details) details.open = true;
             }}
           >
-            See daily source examples
+            See source examples
           </a>
         </div>
         <div>
           <h3>Wikipedia</h3>
           <p>
-            We check English Wikipedia edits once a day for newly added links
+            Before each weekly sample, we check the previous UTC day’s English Wikipedia edits for newly added links
             and select linked pages that the benchmark has not tested before.
             We test the content on those websites, rather than the Wikipedia
             articles that link to them. A link added today may point to a page
             published earlier.
           </p>
           <Button variant="outline-brand" onClick={onViewDailyWikipedia}>
-            View daily Wikipedia results
+            View Wikipedia results
           </Button>
         </div>
       </div>
       <details id="daily-sources" className="mt-10">
-        <summary>Daily source examples by category</summary>
+        <summary>Source examples by category</summary>
         <p>
-          These feeds, APIs, and sitemaps supply the URLs for the daily sample.
+          These feeds, APIs, and sitemaps supply the URLs for the weekly sample.
           We follow those links and test whether each provider can recover
           content from the destination page.
         </p>
@@ -124,7 +124,7 @@ export function BenchmarkSources({
             Browse the complete source registry on GitHub ↗
           </a>
           . These are configured discovery sources, not a guarantee that every
-          source contributes to every daily sample.
+          source contributes to every sample.
         </p>
       </details>
     </SiteSection>

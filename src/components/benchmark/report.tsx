@@ -229,7 +229,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
       .reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.day]: (acc[r.day] ?? 0) + 1 }), {}),
   ).filter(([, n]) => n > 1);
   const measureWord = accessOnly ? "accessed" : "useful";
-  const sourceLabel = source === "all" ? "All daily sources" : "Daily Wikipedia discoveries";
+  const sourceLabel = source === "all" ? "All sources" : "Wikipedia discoveries";
   const categoryLabel = benchmarkCategories.find((c) => c.id === category)?.name ?? "All categories";
 
   function reset() {
@@ -360,8 +360,8 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
         label="Source"
         appearance="ghost"
         options={[
-          { value: "all", label: "All daily sources" },
-          { value: "wikipedia_daily", label: "Daily Wikipedia discoveries" },
+          { value: "all", label: "All sources" },
+          { value: "wikipedia_daily", label: "Wikipedia discoveries" },
         ]}
       />
       <Select
@@ -382,7 +382,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
         </button>
       )}
       <p className="sr-only" role="status">
-        {hasFilters ? `Results filtered by ${sourceLabel} · ${categoryLabel}.` : "Showing all daily sources and categories."}
+        {hasFilters ? `Results filtered by ${sourceLabel} · ${categoryLabel}.` : "Showing all sources and categories."}
       </p>
     </div>
   );
@@ -432,7 +432,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               {data.collecting ? "Collecting" : "Live"}
             </span>
             <span className="bench-status-copy">
-              <span>New sample every day at 00:15 UTC</span>
+              <span>New sample Fridays at 00:15 UTC</span>
               <span className="bench-status-completed">
                 {run?.finishedAt ? <>Last completed <time dateTime={run.finishedAt}>{utcTime(run.finishedAt)}</time></> : ""}
               </span>
@@ -464,7 +464,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             as="h1"
             eyebrow={
               <>
-                <span className="sm:hidden">Daily web scraping benchmark</span>
+                <span className="sm:hidden">Weekly web scraping benchmark</span>
                 <span className="hidden sm:inline">
                   TRACE (Transparent Real-world Assessment of Content Extraction)
                 </span>
@@ -477,7 +477,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               <HeroDotField fine streams miniStreams />
             </div>
             <p className="bench-intro-text">
-              Every day we send a new fresh sample of about 2,500 web pages to context.dev, Exa, Firecrawl, and Keenable.
+              Every Friday we send a new fresh sample of about 2,500 web pages to context.dev, Exa, Firecrawl, and Keenable.
               We publish how often each one gets through, how fast it answers, whether it returns the right page,
               what it costs, and why it fails.
             </p>
@@ -515,7 +515,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                 </dl>
                 <dl className="bench-stats-group">
                   <div>
-                    <dt>daily samples scored{history[0] ? ` since ${shortDate(history[0].day).replace(" ", "\u00a0")}` : ""}</dt>
+                    <dt>samples scored{history[0] ? ` since ${shortDate(history[0].day).replace(" ", "\u00a0")}` : ""}</dt>
                     <dd className="text-fg-brand">{integer(scoredSamples)}</dd>
                   </div>
                 </dl>
@@ -545,7 +545,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                     Sample <strong>{requestedRun.day}</strong> UTC{run ? ` · ${integer(selected.length)} pages` : ""}
                   </>
                 ) : (
-                  "No daily sample available"
+                  "No sample available"
                 )}
                 {sampleUnavailable ? ` · ${sampleLoading ? "Loading…" : sampleStatus}` : loading && " · Updating…"}
               </p>
@@ -553,14 +553,14 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             {error && <p role="alert" className="bench-notice">{error}</p>}
             {run && retainedDaily < run.pages && (
               <p className="bench-notice" role="status" data-retention-notice>
-                Only {integer(retainedDaily)} of {integer(run.pages)} daily page records are available for {run.day}.
+                Only {integer(retainedDaily)} of {integer(run.pages)} page records are available for {run.day}.
                 Older page records expire under the retention policy. The filters and scores below use available
-                records only; original daily scores remain available in the history under All daily sources.
+                records only; original scores remain available in the history under All sources.
               </p>
             )}
             {!sampleUnavailable && source === "wikipedia_daily" && selected.length === 0 && (
               <p className="bench-notice" role="status">
-                No daily Wikipedia pages match this sample and these filters. Choose another sample date to see available results.
+                No Wikipedia pages match this sample and these filters. Choose another sample date to see available results.
               </p>
             )}
             <ChartTabs
@@ -914,12 +914,12 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             id="history"
             index={9}
             eyebrow="History"
-            title="Daily results"
+            title="Sample results"
             accent="over time"
             lede={
               firstPlace?.scored
-                ? `Daily results from ${longDate(firstSampleDay)} onward. ${providerName(firstPlace.id)} ranked first in ${integer(firstPlace.firsts)} of ${integer(firstPlace.scored)} scored samples.`
-                : `Daily results from ${longDate(firstSampleDay)} onward.`
+                ? `Sample results from ${longDate(firstSampleDay)} onward. ${providerName(firstPlace.id)} ranked first in ${integer(firstPlace.firsts)} of ${integer(firstPlace.scored)} scored samples.`
+                : `Sample results from ${longDate(firstSampleDay)} onward.`
             }
           >
             <ChartTabs
@@ -928,7 +928,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               chart={<Trend history={history} filtered={hasFilters} />}
               table={
                 <Table
-                  label="Daily results history"
+                  label="Sample results history"
                   headers={["Date (UTC)", "Status", "Pages", ...providers.map((p) => p.name)]}
                   rows={filteredHistory.map((r) => ({
                     id: r.id,
@@ -953,8 +953,8 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             <Notes
               items={[
                 {
-                  title: "Reading the daily history",
-                  body: `Source and category filters apply to every daily result, including its page count and provider scores. Gaps mark missing scores or dates with no matching pages; they are not estimated. Source-filtered history requires complete retained page records, and category-only history uses saved daily summaries. A dash means no score is available.${duplicateDays.length ? ` ${duplicateDays.length === 1 ? "One day has" : `${duplicateDays.length} days have`} more than one run (${duplicateDays.map(([d]) => shortDate(d)).join(", ")}); the most recently created run is shown.` : ""}`,
+                  title: "Reading the sample history",
+                  body: `Source and category filters apply to every sample result, including its page count and provider scores. Gaps mark missing scores or dates with no matching pages; they are not estimated. Source-filtered history requires complete retained page records, and category-only history uses saved run summaries. A dash means no score is available.${duplicateDays.length ? ` ${duplicateDays.length === 1 ? "One day has" : `${duplicateDays.length} days have`} more than one run (${duplicateDays.map(([d]) => shortDate(d)).join(", ")}); the most recently created run is shown.` : ""}`,
                 },
                 {
                   title: "Same evidence, new rules",
@@ -972,12 +972,12 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
             eyebrow="Sample & sources"
             title="Where the"
             accent="pages come from"
-            lede={`Each day we collect new pages from ${integer(sources.total - 1)} public feeds, registries, and sitemaps, plus links freshly added to English Wikipedia. No page is ever tested twice.`}
+            lede={`Every Friday we collect new pages from ${integer(sources.total - 1)} public feeds, registries, and sitemaps, plus links freshly added to English Wikipedia. No page is ever tested twice.`}
           >
             <div className="bench-split is-table">
               <ol className="bench-steps">
-                <li><span><strong>Discover.</strong> On each source&apos;s schedule we poll publisher feeds, job boards, SEC and Federal Register listings, and sitemaps for new URLs. Wikipedia edits from the previous UTC day are checked once a day for new external links.</span></li>
-                <li><span><strong>Sample.</strong> At 00:15 UTC we draw up to 300 previously unseen pages per category, with at most 125 from one organization and 375 from one website.</span></li>
+                <li><span><strong>Discover.</strong> During weekly collection we poll due publisher feeds, job boards, SEC and Federal Register listings, and sitemaps for new URLs. Wikipedia edits from the previous UTC day are checked before each sample for new external links.</span></li>
+                <li><span><strong>Sample.</strong> Every Friday at 00:15 UTC we draw up to 300 previously unseen pages per category, with at most 125 from one organization and 375 from one website.</span></li>
                 <li><span><strong>Freeze.</strong> The sample is locked and sent to all four providers with caching turned off for every one.</span></li>
                 <li><span><strong>Grade.</strong> A blind judge reads each response. Every URL, verdict, and timing is published in the page-level data.</span></li>
               </ol>
@@ -1000,7 +1000,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                       document.getElementById("useful-content")?.scrollIntoView({ behavior: "smooth" });
                     }}
                   >
-                    View daily Wikipedia results
+                    View Wikipedia results
                   </Button>
                   <Button asChild variant="pill-outline" size="sm">
                     <a href={`${repo}/blob/main/config/sources.json`}>Browse all {integer(sources.total)} sources ↗</a>
@@ -1009,9 +1009,9 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               </div>
             </div>
             <details id="daily-sources" className="bench-details">
-              <summary>Daily source examples by category</summary>
+              <summary>Source examples by category</summary>
               <p>
-                These feeds, APIs, and sitemaps supply the URLs for the daily sample. We follow those links and test
+                These feeds, APIs, and sitemaps supply the URLs for the weekly sample. We follow those links and test
                 whether each provider can recover content from the destination page. We assign each page the category of
                 the source that supplied it. Pages are new to the benchmark, but may have been published earlier.
               </p>
@@ -1025,7 +1025,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                   </div>
                 ))}
               </dl>
-              <p>These are configured discovery sources, not a guarantee that every source contributes to every daily sample.</p>
+              <p>These are configured discovery sources, not a guarantee that every source contributes to every sample.</p>
             </details>
           </Frame>
 
@@ -1124,7 +1124,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                   cutoff. All of them count as timeouts.
                 </p>
                 <p>
-                  Scheduled collection checks every fifteen minutes, and workers continue through the queued sample.
+                  Scheduled collection starts every Friday at 00:15 UTC, and workers continue through the queued sample.
                   Limits are 4,000 requests per provider per UTC day, plus a separate grading budget. HTTP 401, 402, and
                   429 responses pause the affected provider across workers.
                   Results reflect our own account plans, and requests those limits reject are excluded from scores.
@@ -1141,29 +1141,29 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                 </p>
                 <p>
                   Grading evidence (the excerpts the judge reads) is compressed and kept for 30 days so samples can be
-                  regraded and audited. Page-level records are kept for 180 days, and daily summaries are kept permanently.
+                  regraded and audited. Page-level records are kept for 180 days, and run summaries are kept permanently.
                   Raw responses are not published.
                 </p>
               </details>
               <details>
-                <summary>Daily collection and Wikipedia discovery</summary>
+                <summary>Weekly collection and Wikipedia discovery</summary>
                 {run && run.pages < run.target && (
                   <p>
-                    The selected daily run collected {integer(run.pages)} of {integer(run.target)} targeted pages. In the
-                    unfiltered daily-only view, a missing category withholds the overall score.
+                    The selected run collected {integer(run.pages)} of {integer(run.target)} targeted pages. In the
+                    unfiltered view, a missing category withholds the overall score.
                   </p>
                 )}
                 <p>
-                  Wikipedia discovery runs once before the daily sample is created, using up to 1,200 non-bot article edits
+                  Wikipedia discovery runs once before the weekly sample is created, using up to 1,200 non-bot article edits
                   spread across the previous UTC day. We compare the old and new revision text. Only new external URLs
-                  that have not been tested before are eligible. The daily sample includes up to 300 of these pages in the
+                  that have not been tested before are eligible. The weekly sample includes up to 300 of these pages in the
                   Other category, without inferring their subject from the citing article. This is a sample of edits, not
-                  every link added to Wikipedia. If discovery fails, the other sources can still form the daily sample, and
-                  Wikipedia is checked again the next day.
+                  every link added to Wikipedia. If discovery fails, the other sources can still form the weekly sample, and
+                  Wikipedia is checked again during the next weekly collection.
                 </p>
                 <p>
                   This group receives the same weight as each other category when present; missing Wikipedia pages do not
-                  suppress the eight-category daily score.
+                  suppress the eight-category score.
                 </p>
               </details>
               <details>
@@ -1171,7 +1171,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                 <p>
                   The sample is drawn from sources we chose; it is not a random sample of the web. The judge can make
                   mistakes, which is why its agreement with human reviewers is published. Provider rate limits, request
-                  budgets, and the number of available pages can reduce a daily sample. Latency is measured from one
+                  budgets, and the number of available pages can reduce a sample. Latency is measured from one
                   region with caching turned off, which is slower than many real workloads.
                 </p>
                 {data.collecting && data.collecting.day >= firstSampleDay && data.collecting.id !== run?.id && (
@@ -1211,7 +1211,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                   </li>
                 )}
                 <li>
-                  <span>Daily summaries with intervals</span>
+                  <span>Run summaries with intervals</span>
                   <a href="/api/report">JSON <ArrowRight aria-hidden="true" /></a>
                 </li>
                 <li>

@@ -4,9 +4,9 @@ TRACE measures scraping on a changing sample of public web pages. Context.dev ma
 
 ## A shared, fresh sample
 
-The registry in [config/sources.json](../config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. Discovery follows each source's polling interval. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
+The registry in [config/sources.json](../config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. Discovery checks due sources against their polling intervals when the weekly Workflow runs. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
 
-From 00:15 UTC each day, the collector draws up to 300 previously untested URLs in each of eight core categories, plus Other when available. It groups candidates by organization, uses day-seeded hashes to order organizations and pages, and selects across those groups. Limits of 125 pages per organization and 375 per hostname apply across the sample. The maximum target is 2,700 pages; supply and budgets can reduce it.
+Every Friday at 00:15 UTC, the collector draws up to 300 previously untested URLs in each of eight core categories, plus Other when available. It groups candidates by organization, uses day-seeded hashes to order organizations and pages, and selects across those groups. Limits of 125 pages per organization and 375 per hostname apply across the sample. The maximum target is 2,700 pages; supply and budgets can reduce it.
 
 The sample is persisted before any provider runs. A durable seen-URL ledger excludes previously selected URLs from future samples. It prevents repeated test URLs; distinct URLs can still contain the same material, and providers may already know a page independently.
 
@@ -45,7 +45,7 @@ Access does not establish relevance, document identity, completeness, usefulness
 
 Earlier samples retain their own protocol and original substantive-content and document-identity judgments. An in-flight earlier sample completes under its original rules. Its score is not directly comparable with v6 access.
 
-The separate historical Wikipedia study in [public/data/wikipedia-study.json](../public/data/wikipedia-study.json) retains its original useful-content grades and is excluded from current daily access scores.
+The separate historical Wikipedia study in [public/data/wikipedia-study.json](../public/data/wikipedia-study.json) retains its original useful-content grades and is excluded from current access scores.
 
 Regrading writes additional rows to the `grades` table without overwriting collection judgments:
 
@@ -78,6 +78,6 @@ Cost estimates use dated published prices in [config/pricing.json](../config/pri
 
 The public report and downloads expose URLs, provenance, outcomes, timing, and retained result metadata. Code, provider settings, judge prompts, and protocol identifiers are in this repository. Private raw responses and grading evidence are not part of the public source or download.
 
-A rerun on the live web will not necessarily reproduce the same bytes or outcome: websites, provider infrastructure, account limits, and models change. Category balance reduces some concentration effects, but it does not remove source-selection bias. Daily scores, uncertainty, and failure reasons should be read together.
+A rerun on the live web will not necessarily reproduce the same bytes or outcome: websites, provider infrastructure, account limits, and models change. Category balance reduces some concentration effects, but it does not remove source-selection bias. Sample scores, uncertainty, and failure reasons should be read together.
 
 The implementation lives in [discovery.ts](../src/lib/benchmark/discovery.ts), [collect.ts](../src/lib/benchmark/collect.ts), [report.ts](../src/lib/benchmark/report.ts), [analysis.ts](../src/lib/benchmark/analysis.ts), and the shared [view builder](../src/lib/benchmark/view.ts).

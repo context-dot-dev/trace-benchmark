@@ -1,7 +1,7 @@
 <div align="center">
 
 <a href="https://trace.context.dev/">
-  <img src="docs/assets/trace-header-v2.png" alt="TRACE by context.dev: how reliably can web scrapers read a page? Each day a new fresh sample goes to context.dev, Exa, Firecrawl, and Keenable." width="960">
+  <img src="docs/assets/trace-header-v2.png" alt="TRACE by context.dev: how reliably can web scrapers read a page? Every Friday a new fresh sample goes to context.dev, Exa, Firecrawl, and Keenable." width="960">
 </a>
 
 <h1>TRACE</h1>
@@ -9,7 +9,7 @@
 <p>Transparent Real-world Assessment of Content Extraction</p>
 
 <p><strong>A live, open-source scrape benchmark for AI agents.</strong></p>
-<p>Fresh pages every day. The same sample for every provider. Results you can inspect.</p>
+<p>Fresh pages every Friday. The same sample for every provider. Results you can inspect.</p>
 
 <p>
   <a href="https://trace.context.dev/">Live leaderboard</a> ·
@@ -27,7 +27,7 @@
 
 An AI agent is only as useful as the pages it can read. Websites change, new pages appear, and a scraper that works on a familiar test set may struggle on tomorrow's web.
 
-TRACE compares **context.dev, Exa, Firecrawl, and Keenable** on a fresh daily sample of public pages. It measures whether each provider retrieves a page, how long the request takes, what fails, and what successful retrieval costs. The report includes category breakdowns, paired comparisons, history, and downloadable page-level outcomes.
+TRACE compares **context.dev, Exa, Firecrawl, and Keenable** on a fresh weekly sample of public pages. It measures whether each provider retrieves a page, how long the request takes, what fails, and what successful retrieval costs. The report includes category breakdowns, paired comparisons, history, and downloadable page-level outcomes.
 
 Context.dev builds and maintains TRACE and is also one of the providers tested. The benchmark is designed for a fair, reproducible comparison: every provider receives the same frozen sample, caching is disabled, the automated judge does not receive the provider's name, and the collector, prompts, settings, and scoring code are public. Source selection and automated grading still involve judgment; [the methodology](docs/methodology.md) makes those choices and limitations explicit.
 
@@ -46,17 +46,17 @@ Context.dev builds and maintains TRACE and is also one of the providers tested. 
 
 **Read the protocol alongside the score.** This published sample uses v5, which requires useful content from the requested page. The current collector creates v6 samples, which measure page access: did actual page data load instead of a block, error, login screen, or empty shell? Earlier samples retain their original scoring. Compare results within the same protocol.
 
-## How new data arrives every day
+## How new data arrives every Friday
 
-1. **Discover.** The [source registry](config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. Sources are polled on their own schedules. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
-2. **Sample.** From **00:15 UTC**, the collector selects up to 300 previously untested URLs per category, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
+1. **Discover.** The [source registry](config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. Due sources are polled when the weekly Workflow runs. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
+2. **Sample.** Every **Friday at 00:15 UTC**, the collector selects up to 300 previously untested URLs per category, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
 3. **Freeze and fetch.** The sample is saved before collection. All four providers receive the same URLs with fresh-fetch settings. Independent, rate-limited workers make one retrieval attempt per provider and page.
 4. **Judge.** A provider-blind automated judge evaluates the returned evidence under that sample's protocol. Failures and unresolved judgments remain visible. Account-limit rejections are reported separately.
 5. **Publish.** Scores fill in as results are saved. The report exposes the sample, category scores, head-to-head outcomes, latency, cost estimates, failures, and history. Previously selected URLs stay excluded from future samples.
 
 The eight core categories are **news, commerce, jobs, finance, research, legal and government, software and documentation, and community**. New Wikipedia links form an additional **Other** category when available.
 
-A Vercel Cron trigger runs every 15 minutes and starts one deduplicated Workflow. The Workflow continues collection between cron ticks; the daily sample is drawn once. See [collection, deployment, and retention](docs/operations.md).
+A Vercel Cron trigger runs every Friday at 00:15 UTC (`15 0 * * 5`) and starts one deduplicated Workflow. The Workflow continues through the queued sample without waiting for another cron tick. See [collection, deployment, and retention](docs/operations.md).
 
 ## How to read the results
 
@@ -87,7 +87,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). A fresh database starts without daily results. Collection is disabled by default; provider and judge credentials are needed only to collect new samples.
+Open [localhost:3000](http://localhost:3000). A fresh database starts without benchmark results. Collection is disabled by default; provider and judge credentials are needed only to collect new samples.
 
 To browse the published results locally without a database or provider keys, run:
 

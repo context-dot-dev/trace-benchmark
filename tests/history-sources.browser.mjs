@@ -182,7 +182,7 @@ try {
       "A sample whose records have not loaded must not claim zero pages");
     assert.deepEqual(await page.locator(".sample-metrics dd").allTextContents(), ["—", "—"]);
     assert.match(await page.locator("#results").innerText(), state);
-    assert.doesNotMatch(await page.locator("#results").innerText(), /No daily Wikipedia pages|0 pages match/);
+    assert.doesNotMatch(await page.locator("#results").innerText(), /No Wikipedia pages|0 pages match/);
     assert.equal(await page.locator("[data-download-results]").isDisabled(), true);
     for (const id of ["useful-content", "categories"]) {
       const section = page.locator(`#${id}`);
@@ -198,7 +198,7 @@ try {
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(base, { waitUntil: "networkidle" });
-    await select("Source", "Daily Wikipedia discoveries");
+    await select("Source", "Wikipedia discoveries");
     await sampleCount(1);
     const pending = await holdSample("2026-11-04");
     await select("Sample date (UTC)", "2026-11-04");
@@ -261,7 +261,7 @@ try {
   const deepLink = base + "?source=wikipedia_daily&category=commerce&run=2026-11-04&utm_source=e2e&tag=one&tag=two#history";
   await page.goto(deepLink, { waitUntil: "networkidle" });
   assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /Commerce/);
-  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Daily Wikipedia discoveries/);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Wikipedia discoveries/);
   assert.equal(await page.locator(".bench-sample strong").textContent(), "2026-11-04");
   for (const id of shared) {
     const chip = page.locator(`#${id}`).getByRole("button", { name: "Remove Commerce category filter", exact: true });
@@ -281,12 +281,12 @@ try {
   }
   await select("Category", "News");
   await query({ category: "news", source: "wikipedia_daily", run: "2026-11-04" });
-  await select("Source", "All daily sources");
+  await select("Source", "All sources");
   await query({ category: "news", source: null, run: "2026-11-04" });
   await sampleCount(1);
   await page.goBack();
   await query({ category: "news", source: "wikipedia_daily" });
-  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Daily Wikipedia discoveries/);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Wikipedia discoveries/);
   await sampleCount(0);
   await page.goBack();
   await query({ category: "commerce", source: "wikipedia_daily" });
@@ -301,7 +301,7 @@ try {
     await page.goto(deepLink.replace("category=commerce", "category=news"), { waitUntil: "networkidle" });
     const section = page.locator(`#${id}`);
     const categoryChip = section.getByRole("button", { name: "Remove News category filter", exact: true });
-    const sourceChip = section.getByRole("button", { name: "Remove Daily Wikipedia discoveries source filter", exact: true });
+    const sourceChip = section.getByRole("button", { name: "Remove Wikipedia discoveries source filter", exact: true });
     await section.getByRole("tab", { name: "Table", exact: true }).click();
     await categoryChip.focus();
     await page.keyboard.press("Enter");
@@ -340,7 +340,7 @@ try {
   await page.waitForFunction(() => document.querySelector(".bench-sample strong")?.textContent === "2026-11-05");
   checks.push("Date changes push history, omit latest defaults, hide stale results while loading, and reject late responses after a newer selection");
   await page.goto(base + "?source=invalid&category=invalid&run=2026-11-04", { waitUntil: "networkidle" });
-  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /All daily sources/);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /All sources/);
   assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /All categories/);
   assert.equal(await page.getByRole("button", { name: /^Remove .* filter$/ }).count(), 0);
   for (const invalid of ["missing-run", "2026-11-03"]) {
@@ -372,11 +372,11 @@ try {
   checks.push("Each historical daily sample excludes older daily and archived Wikipedia pages from its counts and scores");
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
-    await select("Source", "Daily Wikipedia discoveries");
+    await select("Source", "Wikipedia discoveries");
     await sampleCount(1);
     await select("Category", "News");
     await sampleCount(0);
-    assert.match(await page.locator("#results").innerText(), /No daily Wikipedia pages/);
+    assert.match(await page.locator("#results").innerText(), /No Wikipedia pages/);
     await page.getByRole("button", { name: "Reset filters", exact: true }).click();
     await sampleCount(2);
     await select("Category", "News");
@@ -397,9 +397,9 @@ try {
   await page.goto(base, { waitUntil: "networkidle" });
   const chips = historySection.getByRole("button", { name: /^Remove .* filter$/ });
   const newsChip = historySection.getByRole("button", { name: "Remove News category filter", exact: true });
-  const wikiChip = historySection.getByRole("button", { name: "Remove Daily Wikipedia discoveries source filter", exact: true });
+  const wikiChip = historySection.getByRole("button", { name: "Remove Wikipedia discoveries source filter", exact: true });
   assert.equal(await chips.count(), 0);
-  assert.doesNotMatch(await historySection.innerText(), /All daily sources|All categories|Filters applied:/);
+  assert.doesNotMatch(await historySection.innerText(), /All sources|All categories|Filters applied:/);
   async function historyRows(expected) {
     await historySection.getByRole("tab", { name: "Table", exact: true }).click();
     for (const [day, count, rate] of expected) {
@@ -415,7 +415,7 @@ try {
   assert.equal(await newsChip.count(), 1);
   assert.equal(await chips.count(), 1);
   assert.equal(await historySection.getByRole("group", { name: "Applied filters" }).count(), 1);
-  assert.doesNotMatch(await historySection.innerText(), /All daily sources|All categories|Filters applied:/);
+  assert.doesNotMatch(await historySection.innerText(), /All sources|All categories|Filters applied:/);
   const { chipBox, tabsBox } = await historySection.evaluate(section => ({
     chipBox: section.querySelector('button[aria-label="Remove News category filter"]').getBoundingClientRect().toJSON(),
     tabsBox: section.querySelector('[role="tablist"]').getBoundingClientRect().toJSON(),
@@ -424,7 +424,7 @@ try {
     `The active chip belongs in the same toolbar row as Chart/Table: ${JSON.stringify({ chipBox, tabsBox })}`);
   checks.push("Category filtering updates every historical day with its own page count and rate, with active filters shown beside history");
   await page.getByRole("button", { name: "Reset filters", exact: true }).click();
-  await select("Source", "Daily Wikipedia discoveries");
+  await select("Source", "Wikipedia discoveries");
   await historyRows([["2026-11-04", 1, "0.0%"], ["2026-11-05", 2, "50.0%"], ["2026-11-06", 3, "66.7%"]]);
   assert.equal(await wikiChip.count(), 1);
   assert.equal(await chips.count(), 1);
@@ -444,7 +444,7 @@ try {
   await page.keyboard.press("Enter");
   assert.ok(await wikiChip.evaluate(button => document.activeElement === button));
   assert.equal(await newsChip.count(), 0);
-  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Daily Wikipedia discoveries/);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /Wikipedia discoveries/);
   assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /All categories/);
   await sampleCount(3);
   await historyRows([["2026-11-04", 1, "0.0%"], ["2026-11-05", 2, "50.0%"], ["2026-11-06", 3, "66.7%"]]);
@@ -454,12 +454,12 @@ try {
   await sampleCount(5);
   assert.equal(await chips.count(), 0);
   checks.push("Keyboard category-chip removal preserves the source, updates all results, and moves focus to the remaining chip; removing the final chip focuses Chart");
-  await select("Source", "Daily Wikipedia discoveries");
+  await select("Source", "Wikipedia discoveries");
   await select("Category", "News");
   await wikiChip.focus();
   await page.keyboard.press("Enter");
   assert.ok(await newsChip.evaluate(button => document.activeElement === button));
-  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /All daily sources/);
+  assert.match(await page.getByRole("combobox", { name: "Source", exact: true }).textContent(), /All sources/);
   assert.match(await page.getByRole("combobox", { name: "Category", exact: true }).textContent(), /News/);
   await sampleCount(1);
   await historyRows([["2026-11-04", 2, "50.0%"], ["2026-11-05", 4, "25.0%"], ["2026-11-06", 1, "100.0%"]]);
@@ -474,11 +474,11 @@ try {
   await page.getByRole("button", { name: "Reset filters", exact: true }).click();
   await historyRows([["2026-11-04", 4, "50.0%"], ["2026-11-05", 7, "25.0%"], ["2026-11-06", 5, "55.6%"]]);
   assert.equal(await chips.count(), 0);
-  assert.doesNotMatch(await historySection.innerText(), /All daily sources|All categories|Filters applied:/);
+  assert.doesNotMatch(await historySection.innerText(), /All sources|All categories|Filters applied:/);
   checks.push("Reset restores the saved overall historical totals and category-weighted rates");
   includeWikipediaHistory = false;
   await page.goto(base, { waitUntil: "networkidle" });
-  await select("Source", "Daily Wikipedia discoveries");
+  await select("Source", "Wikipedia discoveries");
   await historyRows([["2026-11-04", "—", "—"], ["2026-11-05", "—", "—"], ["2026-11-06", "—", "—"]]);
   assert.match(await historySection.innerText(), /unavailable|not available/i);
   checks.push("Missing Wikipedia history is explicitly unavailable and never substitutes overall scores");

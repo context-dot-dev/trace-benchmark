@@ -55,9 +55,9 @@ export default async function Page({ searchParams }: PageProps<"/">) {
     {
       "@context": "https://schema.org",
       "@type": "Dataset",
-      name: "TRACE: daily web scraping API benchmark",
+      name: "TRACE: weekly web scraping API benchmark",
       description:
-        "Daily comparison of context.dev, Exa, Firecrawl, and Keenable on a new fresh sample of web pages each day: page access, latency, document quality, cost, and failure reasons, with page-level records.",
+        "Weekly comparison of context.dev, Exa, Firecrawl, and Keenable on a new fresh sample of web pages every Friday: page access, latency, document quality, cost, and failure reasons, with page-level records.",
       url: site,
       creator: { "@type": "Organization", name: "context.dev", url: "https://context.dev" },
       license: "https://opensource.org/licenses/MIT",
@@ -67,7 +67,7 @@ export default async function Page({ searchParams }: PageProps<"/">) {
       distribution: run
         ? [{ "@type": "DataDownload", encodingFormat: "application/x-ndjson", contentUrl: `${site}api/download?run=${encodeURIComponent(run.id)}` }]
         : [],
-      measurementTechnique: "Paired comparison on identical daily samples with an automated, provider-blind judge",
+      measurementTechnique: "Paired comparison on identical weekly samples with an automated, provider-blind judge",
       keywords: ["web scraping API", "benchmark", ...view.rows.map((r) => providerName(r.id))],
     },
     {
