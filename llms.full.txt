@@ -1,6 +1,6 @@
 # TRACE
 
-> TRACE is a live, open-source benchmark of web scraping APIs for AI agents. It sends a fresh daily sample of public pages to context.dev, Exa, Firecrawl, and Keenable, using identical URLs, fresh-fetch settings, and provider-blind automated grading.
+> TRACE is a live, open-source benchmark of web scraping APIs for AI agents. It sends a fresh sample of public pages every Friday at 00:15 UTC to context.dev, Exa, Firecrawl, and Keenable, using identical URLs, fresh-fetch settings, and provider-blind automated grading.
 
 Context.dev maintains TRACE and is also a measured provider. Describe it as a transparent, reproducible comparison; do not imply independent ownership or guaranteed absence of bias. Read a sample's date, run ID, status, and protocol before quoting its scores. Protocol v6 measures page access; earlier protocols measure useful content and are not directly comparable. Scores can be null when category coverage is incomplete. Static documentation and README tables are dated references, not live scores.
 
@@ -9,14 +9,14 @@ Public resources support unauthenticated GET and HEAD without JavaScript or cook
 ## Results and data
 
 - [Live results in Markdown](https://trace.context.dev/results.md): Current sample, protocol, scores, confidence intervals, latency, category breakdowns, and findings. Use this when answering questions about current performance.
-- [Daily summaries JSON](https://trace.context.dev/api/report): Latest run, history, and paginated result rows. Optional run, provider, and zero-based page parameters.
+- [Run summaries JSON](https://trace.context.dev/api/report): Latest run, history, and paginated result rows. Optional run, provider, and zero-based page parameters.
 - [Report dataset JSON](https://trace.context.dev/api/benchmark): The page-level dataset scored by the report; accepts a run ID.
 - [Page-level download](https://trace.context.dev/api/download): Newline-delimited JSON; requires the run query parameter from a published run. Contains outcomes, not raw scraped evidence.
 - [Interactive report](https://trace.context.dev/): Human-readable leaderboard, filters, comparisons, and source provenance.
 
 ## Documentation
 
-- [Full agent reference](https://trace.context.dev/llms-full.txt): Methodology, API usage and errors, daily pipeline, deployment, contribution, security, and citation in one text response. Also available at /llms.full.txt.
+- [Full agent reference](https://trace.context.dev/llms-full.txt): Methodology, API usage and errors, weekly pipeline, deployment, contribution, security, and citation in one text response. Also available at /llms.full.txt.
 - [Source repository](https://github.com/context-dot-dev/trace-benchmark): Source code, README, prompts, request settings, and test fixtures.
 - [Methodology](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/methodology.md): Sampling, protocol definitions, scoring, uncertainty, and limitations.
 - [Operations](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/operations.md): Setup, collection, regrading, budgets, and retention.
@@ -59,7 +59,7 @@ Source: https://github.com/context-dot-dev/trace-benchmark/blob/main/README.md
 
 An AI agent is only as useful as the pages it can read. Websites change, new pages appear, and a scraper that works on a familiar test set may struggle on tomorrow's web.
 
-TRACE compares **context.dev, Exa, Firecrawl, and Keenable** on a fresh daily sample of public pages. It measures whether each provider retrieves a page, how long the request takes, what fails, and what successful retrieval costs. The report includes category breakdowns, paired comparisons, history, and downloadable page-level outcomes.
+TRACE compares **context.dev, Exa, Firecrawl, and Keenable** on a fresh weekly sample of public pages. It measures whether each provider retrieves a page, how long the request takes, what fails, and what successful retrieval costs. The report includes category breakdowns, paired comparisons, history, and downloadable page-level outcomes.
 
 Context.dev builds and maintains TRACE and is also one of the providers tested. The benchmark is designed for a fair, reproducible comparison: every provider receives the same frozen sample, caching is disabled, the automated judge does not receive the provider's name, and the collector, prompts, settings, and scoring code are public. Source selection and automated grading still involve judgment; [the methodology](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/methodology.md) makes those choices and limitations explicit.
 
@@ -78,17 +78,17 @@ Context.dev builds and maintains TRACE and is also one of the providers tested. 
 
 **Read the protocol alongside the score.** This published sample uses v5, which requires useful content from the requested page. The current collector creates v6 samples, which measure page access: did actual page data load instead of a block, error, login screen, or empty shell? Earlier samples retain their original scoring. Compare results within the same protocol.
 
-## How new data arrives every day
+## How new data arrives every Friday
 
-1. **Discover.** The [source registry](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. Sources are polled on their own schedules. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
-2. **Sample.** From **00:15 UTC**, the collector selects up to 300 previously untested URLs per category, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
+1. **Discover.** The [source registry](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. Due sources are polled when the weekly Workflow runs. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
+2. **Sample.** Every **Friday at 00:15 UTC**, the collector selects up to 300 previously untested URLs per category, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
 3. **Freeze and fetch.** The sample is saved before collection. All four providers receive the same URLs with fresh-fetch settings. Independent, rate-limited workers make one retrieval attempt per provider and page.
 4. **Judge.** A provider-blind automated judge evaluates the returned evidence under that sample's protocol. Failures and unresolved judgments remain visible. Account-limit rejections are reported separately.
 5. **Publish.** Scores fill in as results are saved. The report exposes the sample, category scores, head-to-head outcomes, latency, cost estimates, failures, and history. Previously selected URLs stay excluded from future samples.
 
 The eight core categories are **news, commerce, jobs, finance, research, legal and government, software and documentation, and community**. New Wikipedia links form an additional **Other** category when available.
 
-A Vercel Cron trigger runs every 15 minutes and starts one deduplicated Workflow. The Workflow continues collection between cron ticks; the daily sample is drawn once. See [collection, deployment, and retention](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/operations.md).
+A Vercel Cron trigger runs every Friday at 00:15 UTC (`15 0 * * 5`) and starts one deduplicated Workflow. The Workflow continues through the queued sample without waiting for another cron tick. See [collection, deployment, and retention](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/operations.md).
 
 ## How to read the results
 
@@ -119,7 +119,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). A fresh database starts without daily results. Collection is disabled by default; provider and judge credentials are needed only to collect new samples.
+Open [localhost:3000](http://localhost:3000). A fresh database starts without benchmark results. Collection is disabled by default; provider and judge credentials are needed only to collect new samples.
 
 To browse the published results locally without a database or provider keys, run:
 
@@ -194,9 +194,9 @@ TRACE measures scraping on a changing sample of public web pages. Context.dev ma
 
 ## A shared, fresh sample
 
-The registry in [config/sources.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. Discovery follows each source's polling interval. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
+The registry in [config/sources.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. Discovery checks due sources against their polling intervals when the weekly Workflow runs. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
 
-From 00:15 UTC each day, the collector draws up to 300 previously untested URLs in each of eight core categories, plus Other when available. It groups candidates by organization, uses day-seeded hashes to order organizations and pages, and selects across those groups. Limits of 125 pages per organization and 375 per hostname apply across the sample. The maximum target is 2,700 pages; supply and budgets can reduce it.
+Every Friday at 00:15 UTC, the collector draws up to 300 previously untested URLs in each of eight core categories, plus Other when available. It groups candidates by organization, uses day-seeded hashes to order organizations and pages, and selects across those groups. Limits of 125 pages per organization and 375 per hostname apply across the sample. The maximum target is 2,700 pages; supply and budgets can reduce it.
 
 The sample is persisted before any provider runs. A durable seen-URL ledger excludes previously selected URLs from future samples. It prevents repeated test URLs; distinct URLs can still contain the same material, and providers may already know a page independently.
 
@@ -235,7 +235,7 @@ Access does not establish relevance, document identity, completeness, usefulness
 
 Earlier samples retain their own protocol and original substantive-content and document-identity judgments. An in-flight earlier sample completes under its original rules. Its score is not directly comparable with v6 access.
 
-The separate historical Wikipedia study in [public/data/wikipedia-study.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/public/data/wikipedia-study.json) retains its original useful-content grades and is excluded from current daily access scores.
+The separate historical Wikipedia study in [public/data/wikipedia-study.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/public/data/wikipedia-study.json) retains its original useful-content grades and is excluded from current access scores.
 
 Regrading writes additional rows to the `grades` table without overwriting collection judgments:
 
@@ -268,7 +268,7 @@ Cost estimates use dated published prices in [config/pricing.json](https://githu
 
 The public report and downloads expose URLs, provenance, outcomes, timing, and retained result metadata. Code, provider settings, judge prompts, and protocol identifiers are in this repository. Private raw responses and grading evidence are not part of the public source or download.
 
-A rerun on the live web will not necessarily reproduce the same bytes or outcome: websites, provider infrastructure, account limits, and models change. Category balance reduces some concentration effects, but it does not remove source-selection bias. Daily scores, uncertainty, and failure reasons should be read together.
+A rerun on the live web will not necessarily reproduce the same bytes or outcome: websites, provider infrastructure, account limits, and models change. Category balance reduces some concentration effects, but it does not remove source-selection bias. Sample scores, uncertainty, and failure reasons should be read together.
 
 The implementation lives in [discovery.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/discovery.ts), [collect.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/collect.ts), [report.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/report.ts), [analysis.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/analysis.ts), and the shared [view builder](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/view.ts).
 
@@ -293,13 +293,13 @@ npm run dev
 
 Collection is off by default. To display published data instead of using a local database, run `BENCHMARK_DATA_ORIGIN=https://trace.context.dev npm run dev`. The origin is server configuration; only point it at a report service you trust.
 
-## Deployment and daily collection
+## Deployment and weekly collection
 
 The backend runs in Vercel Functions and uses PostgreSQL through Drizzle; the hosted deployment uses Neon. Configure `DATABASE_URL` directly in Vercel with a pooled, TLS-protected database connection. Apply migrations before enabling collection.
 
-Set the four provider API keys and `TYPESAFE_API_KEY` listed in [the environment template](https://github.com/context-dot-dev/trace-benchmark/blob/main/.env.example). Generate a random `CRON_SECRET` and set `TRACE_WORKER_ENABLED=1` in the production environment. The [cron configuration](https://github.com/context-dot-dev/trace-benchmark/blob/main/vercel.json) calls `/api/cron` every 15 minutes. That route requires its bearer secret and rejects non-production deployments.
+Set the four provider API keys and `TYPESAFE_API_KEY` listed in [the environment template](https://github.com/context-dot-dev/trace-benchmark/blob/main/.env.example). Generate a random `CRON_SECRET` and set `TRACE_WORKER_ENABLED=1` in the production environment. The [cron configuration](https://github.com/context-dot-dev/trace-benchmark/blob/main/vercel.json) calls `/api/cron` every Friday at 00:15 UTC (`15 0 * * 5`). Deploy the configuration to production to apply the schedule. That route requires its bearer secret and rejects non-production deployments.
 
-One deduplicated Vercel Workflow performs discovery, freezes the daily sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. Cron remains available for discovery and recovery. Sample dates use UTC.
+One deduplicated Vercel Workflow performs discovery, freezes the weekly sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. Due sources are polled during the weekly Workflow. To resume paused or failed collection before the next Friday, call `/api/cron` with its bearer secret. Sample dates use UTC.
 
 All clients retain a 30-second full-body retrieval deadline and judging retains a 60-second deadline. Collection duration depends on supply, provider latency, account capacity, judge throughput, and database performance.
 
@@ -350,7 +350,7 @@ Reviewers receive the URL and the evidence the judge saw, without the provider i
 | `TRACE_EVIDENCE_MAX_MB` | 900 | Evidence size cap; oldest evidence is removed first |
 | `TRACE_RECORD_DAYS` | 180 | Days to keep page-level rows for completed runs |
 
-Daily summaries remain after page-level rows expire. Evidence volume depends on the sample and returned content. Retention removes expired evidence without rewriting completed historical outcomes.
+Run summaries remain after page-level rows expire. Evidence volume depends on the sample and returned content. Retention removes expired evidence without rewriting completed historical outcomes.
 
 After changing summary rules, `npm run resummarize -- --write` recomputes stored summaries from the page-level records that remain. Review comparability before changing a protocol's interpretation.
 
@@ -416,7 +416,7 @@ After editing public documentation, run `npm run docs:agents`. The full agent re
 | `config/pricing.json` | Dated provider prices and billing assumptions |
 | `src/lib/benchmark/discovery.ts` | Public URL validation and candidate discovery |
 | `src/lib/benchmark/providers.ts` | Retrieval adapters, cache checks, and judge prompts |
-| `src/lib/benchmark/collect.ts` | Daily selection, budgets, and retention |
+| `src/lib/benchmark/collect.ts` | Sample selection, daily budgets, and retention |
 | `src/lib/benchmark/parallel.ts`, `batch-store.ts` | Concurrent workers and durable reservations |
 | `src/lib/benchmark/workflow.ts` | Continuous Workflow orchestration |
 | `src/lib/benchmark/analysis.ts`, `view.ts` | Shared statistics and report presentation data |

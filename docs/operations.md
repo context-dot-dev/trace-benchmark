@@ -13,13 +13,13 @@ npm run dev
 
 Collection is off by default. To display published data instead of using a local database, run `BENCHMARK_DATA_ORIGIN=https://trace.context.dev npm run dev`. The origin is server configuration; only point it at a report service you trust.
 
-## Deployment and daily collection
+## Deployment and weekly collection
 
 The backend runs in Vercel Functions and uses PostgreSQL through Drizzle; the hosted deployment uses Neon. Configure `DATABASE_URL` directly in Vercel with a pooled, TLS-protected database connection. Apply migrations before enabling collection.
 
-Set the four provider API keys and `TYPESAFE_API_KEY` listed in [the environment template](../.env.example). Generate a random `CRON_SECRET` and set `TRACE_WORKER_ENABLED=1` in the production environment. The [cron configuration](../vercel.json) calls `/api/cron` every 15 minutes. That route requires its bearer secret and rejects non-production deployments.
+Set the four provider API keys and `TYPESAFE_API_KEY` listed in [the environment template](../.env.example). Generate a random `CRON_SECRET` and set `TRACE_WORKER_ENABLED=1` in the production environment. The [cron configuration](../vercel.json) calls `/api/cron` every Friday at 00:15 UTC (`15 0 * * 5`). Deploy the configuration to production to apply the schedule. That route requires its bearer secret and rejects non-production deployments.
 
-One deduplicated Vercel Workflow performs discovery, freezes the daily sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. Cron remains available for discovery and recovery. Sample dates use UTC.
+One deduplicated Vercel Workflow performs discovery, freezes the weekly sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. Due sources are polled during the weekly Workflow. To resume paused or failed collection before the next Friday, call `/api/cron` with its bearer secret. Sample dates use UTC.
 
 All clients retain a 30-second full-body retrieval deadline and judging retains a 60-second deadline. Collection duration depends on supply, provider latency, account capacity, judge throughput, and database performance.
 
@@ -70,7 +70,7 @@ Reviewers receive the URL and the evidence the judge saw, without the provider i
 | `TRACE_EVIDENCE_MAX_MB` | 900 | Evidence size cap; oldest evidence is removed first |
 | `TRACE_RECORD_DAYS` | 180 | Days to keep page-level rows for completed runs |
 
-Daily summaries remain after page-level rows expire. Evidence volume depends on the sample and returned content. Retention removes expired evidence without rewriting completed historical outcomes.
+Run summaries remain after page-level rows expire. Evidence volume depends on the sample and returned content. Retention removes expired evidence without rewriting completed historical outcomes.
 
 After changing summary rules, `npm run resummarize -- --write` recomputes stored summaries from the page-level records that remain. Review comparability before changing a protocol's interpretation.
 

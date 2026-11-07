@@ -17,7 +17,7 @@ export async function GET() {
     const lines = [
       "# TRACE",
       "",
-      "> Daily benchmark of web scraping APIs (context.dev, Exa, Firecrawl, Keenable). Every day a new fresh sample of about 2,500 never-tested web pages goes to all four providers with caching turned off. A provider-blind automated judge grades each response. Published by context.dev, which is also one of the providers tested.",
+      "> Weekly benchmark of web scraping APIs (context.dev, Exa, Firecrawl, Keenable). Every Friday at 00:15 UTC a new fresh sample of about 2,500 never-tested web pages goes to all four providers with caching turned off. A provider-blind automated judge grades each response. Published by context.dev, which is also one of the providers tested.",
       "",
       run ? `Latest sample: ${run.day} UTC; run ID: ${run.id}; protocol: ${run.protocol}; status: ${run.status}; scored for ${run.protocol === ACCESS_PROTOCOL ? "page access" : "useful content"}; ${view.selected.length} pages.` : "No sample is available yet.",
       "",
@@ -43,7 +43,7 @@ export async function GET() {
       ...faqItems(view).flatMap((item) => [`### ${item.q}`, item.a, ""]),
       "## Links",
       "- [Full report](https://trace.context.dev/)",
-      "- [Daily summaries API](https://trace.context.dev/api/report)",
+      "- [Run summaries API](https://trace.context.dev/api/report)",
       ...(run ? [`- [Page-level records for ${run.day}](https://trace.context.dev/api/download?run=${encodeURIComponent(run.id)})`] : []),
       "- [Source code](https://github.com/context-dot-dev/trace-benchmark)",
     ];
