@@ -36,7 +36,8 @@
     "audit": "tsx scripts/audit.ts",
     "resummarize": "tsx scripts/resummarize.ts",
     "test:unit": "tsx tests/analysis.test.ts",
-    "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts && tsx tests/history-filters.e2e.ts && tsx tests/batch-store.e2e.ts && tsx tests/collector-retry.e2e.ts && tsx tests/provider-pause.e2e.ts && tsx tests/judge-pause.e2e.ts && tsx tests/pacing-deadline.e2e.ts && tsx tests/continuous.e2e.ts && tsx tests/parallel.e2e.ts && tsx tests/grades.e2e.ts"
+    "test:e2e": "tsx tests/benchmark.e2e.ts && tsx tests/wikipedia.e2e.ts && tsx tests/access.e2e.ts && tsx tests/history-filters.e2e.ts && tsx tests/batch-store.e2e.ts && tsx tests/collector-retry.e2e.ts && tsx tests/provider-pause.e2e.ts && tsx tests/judge-pause.e2e.ts && tsx tests/pacing-deadline.e2e.ts && tsx tests/continuous.e2e.ts && tsx tests/parallel.e2e.ts && tsx tests/grades.e2e.ts",
+    "test:spa": "tsx tests/spa-prepare.e2e.ts && tsx tests/spa-sample.e2e.ts && tsx tests/spa.e2e.ts && tsx tests/spa-audit.e2e.ts && tsx tests/spa-compare.e2e.ts && tsx tests/spa-coverage.e2e.ts"
   },
   "dependencies": {
     "@databuddy/sdk": "^3.4.7",
@@ -71,6 +72,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "playwright-core": "1.64.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
