@@ -40,7 +40,17 @@ function pageLink(url: string) {
   return escape(url);
 }
 function table(id: string, headers: string[], rows: string) {
-  return `<div class="table-scroll" role="region" aria-labelledby="${id}" tabindex="0"><table><thead><tr>${headers.map((header) => `<th scope="col">${escape(header)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  let rowIndex = 0;
+  const body = rows.replace(/<tr>([\s\S]*?)<\/tr>/g, (_, row: string) => {
+    const rowId = `${id}-row-${rowIndex++}`;
+    let column = 0;
+    const cells = row.replace(/<(th|td)([^>]*)>([\s\S]*?)<\/\1>/g, (_, tag: string, attributes: string, content: string) => {
+      const index = column++, label = escape(headers[index]);
+      return `<${tag}${attributes} role="${index ? "cell" : "rowheader"}" ${index ? "" : `id="${rowId}"`} headers="${id}-col-${index}${index ? ` ${rowId}` : ""}" data-label="${label}"><span class="cell-label" aria-hidden="true">${label}</span><span class="cell-value">${content}</span></${tag}>`;
+    });
+    return `<tr role="row">${cells}</tr>`;
+  });
+  return `<div class="table-scroll" role="region" aria-labelledby="${id}" tabindex="0"><table role="table" aria-labelledby="${id}"><thead role="rowgroup"><tr role="row">${headers.map((header, index) => `<th scope="col" role="columnheader" id="${id}-col-${index}">${escape(header)}</th>`).join("")}</tr></thead><tbody role="rowgroup">${body}</tbody></table></div>`;
 }
 
 export async function renderReport(report: SpaReport, sourceHref = "report.json"): Promise<string> {
@@ -53,7 +63,7 @@ export async function renderReport(report: SpaReport, sourceHref = "report.json"
     const row = report.providers[provider];
     return `<tr><th scope="row">${names[provider]}</th><td>${rate(row.access)}</td><td>${escape(row.access.failure)}</td><td>${escape(row.access.unknown)}</td><td>${escape(row.accountExcluded)}</td><td>${escape(row.notAttempted)}</td></tr>`;
   }).join("");
-  const platformRows = Object.entries(report.platforms).map(([platform, group]) => `<tr><th scope="row">${escape(platform)}</th><td>${escape(group.pages)}</td>${providers.map((provider) => `<td>${rate(group.providers[provider].access)}</td>`).join("")}</tr>`).join("");
+  const platformRows = Object.entries(report.platforms).flatMap(([platform, group]) => providers.map((provider) => `<tr><th scope="row">${escape(platform)}</th><td>${names[provider]}</td><td>${escape(group.pages)}</td><td>${rate(group.providers[provider].access)}</td></tr>`)).join("");
   const latencyRows = providers.flatMap((provider) => (["all", "successful"] as const).map((kind) => {
     const row = report.providers[provider].latencyMs[kind];
     return `<tr><th scope="row">${names[provider]}</th><td>${kind === "all" ? "All eligible reads" : "Accessed pages"}</td><td>${escape(row.n)}</td>${[row.p50, row.p90, row.p95, row.p99].map((value) => `<td>${milliseconds(value)}</td>`).join("")}</tr>`;
@@ -76,9 +86,10 @@ h1{font-size:var(--ds-text-h3);line-height:var(--ds-leading-heading);letter-spac
 h2{font-size:var(--ds-text-h5);font-weight:var(--ds-font-weight-medium);margin:var(--ds-space-0) var(--ds-space-0) var(--ds-space-3)}
 h3{font-size:var(--ds-text-body);font-weight:var(--ds-font-weight-medium);margin-block:var(--ds-space-4) var(--ds-space-2)}
 p{margin-block:var(--ds-space-0) var(--ds-space-4)}
+p,li{max-inline-size:var(--ds-layout-text)}
 section,aside{margin-block:var(--ds-space-8)}
 aside{padding:var(--ds-space-5);background:var(--ds-color-bg-tint);border-radius:var(--ds-radius-card)}
-small{white-space:nowrap;display:block;font-size:var(--ds-text-caption);color:var(--ds-color-text-secondary);margin-top:var(--ds-space-1)}
+small{display:block;font-size:var(--ds-text-caption);color:var(--ds-color-text-secondary);margin-top:var(--ds-space-1)}
 .muted{color:var(--ds-color-text-secondary)}
 .table-scroll{overflow:auto;background:var(--ds-color-bg-default);border-radius:var(--ds-radius-card);box-shadow:var(--ds-shadow-card)}
 table{width:100%;border-collapse:collapse;font-size:var(--ds-text-body-sm);font-variant-numeric:tabular-nums;text-align:left}
@@ -95,10 +106,23 @@ a{color:var(--ds-color-text-brand);text-underline-offset:var(--ds-space-1)}
 a:focus-visible,summary:focus-visible,.table-scroll:focus-visible{outline:var(--ds-space-px) solid var(--ds-color-focus-ring);outline-offset:var(--ds-space-1)}
 ul{padding-left:var(--ds-space-6);margin-block:var(--ds-space-3)}
 li{margin-block:var(--ds-space-2)}
+.cell-label{display:none}
+@media(max-width:43.2rem){
+  .table-scroll{overflow:visible}
+  table,tbody{display:block}
+  thead{position:absolute;inline-size:var(--ds-space-px);block-size:var(--ds-space-px);overflow:hidden;clip-path:inset(50%)}
+  tbody{padding:var(--ds-space-3)}
+  tbody tr{display:block}
+  tbody tr+tr{margin-top:var(--ds-space-6)}
+  tbody th,tbody td{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ds-space-3);padding:var(--ds-space-2) var(--ds-space-0);border:0}
+  tbody th{display:block;font-size:var(--ds-text-body)}
+  td .cell-label{display:block;color:var(--ds-color-text-secondary)}
+  .cell-value{min-inline-size:var(--ds-space-0);overflow-wrap:anywhere}
+}
 </style></head><body><main>
 <header><h1>SPA scraping comparison</h1><p>${escape(report.sample.pages.toLocaleString("en-US"))} verified company-careers SPA URLs · ${escape(report.sample.uniqueHosts)} hosts · ${escape(report.sample.uniqueOrganizations)} organization names</p><p>${report.sample.sampleSizeMet ? "Cohort target met." : `Pilot: fewer than ${report.sample.requiredForFinal} pages.`}</p><p>Access means actual page data loaded, including company prose. It does not establish that a job list rendered or that content is complete, relevant, or the requested document.</p></header>
 <section aria-labelledby="access"><h2 id="access">Page access</h2>${table("access", ["Provider", "Accessed", "Failed", "Unresolved", "Account excluded", "Unsent"], accessRows)}<p class="muted">Eligible attempted pages form each rate's denominator, including unresolved outcomes. Intervals are per-page Wilson 95% confidence intervals.</p><p>Matched determinate pairs: ${escape(report.paired.shared)}. Context-only access: ${escape(report.paired.contextOnly)}; Firecrawl-only access: ${escape(report.paired.firecrawlOnly)}; exact McNemar p=${report.paired.p.toPrecision(4)}.</p></section>
-<section aria-labelledby="platforms"><h2 id="platforms">Access by platform</h2>${table("platforms", ["Platform", "Pages", "Context.dev access", "Firecrawl access"], platformRows)}</section>
+<section aria-labelledby="platforms"><h2 id="platforms">Access by platform</h2>${table("platforms", ["Platform", "Provider", "Pages", "Accessed"], platformRows)}</section>
 <section aria-labelledby="latency"><h2 id="latency">Retrieval latency</h2>${table("latency", ["Provider", "Reads", "Count", "p50 ms", "p90 ms", "p95 ms", "p99 ms"], latencyRows)}<p class="muted">Read time excludes queue wait and grading. Cached, interrupted, and account-limit responses are excluded.</p></section>
 <section aria-labelledby="completion"><h2 id="completion">Completion</h2><p>Collection complete: ${escape(report.sample.collectionComplete)}. Access grading complete: ${accessComplete}.</p><p class="muted">Legacy quality grading complete: ${qualityComplete}; ${escape(qualityUnknown)} unresolved. This separate legacy status does not change access grading completion.</p></section>
 <aside aria-labelledby="legacy-warning"><h2 id="legacy-warning">Legacy quality grades are exploratory and unreliable</h2><p>The legacy rubric can penalize populated career listings as generic listings. Its labels and rates do not provide a valid job-list rendering or extraction-quality comparison for this cohort and are excluded from the comparison tables.</p><p>Original grades remain unchanged in the <a href="${escape(sourceHref)}">source JSON evidence</a>. Grading uses excerpts and cannot establish complete extraction or browser-reference recall.</p></aside>

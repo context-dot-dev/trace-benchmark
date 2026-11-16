@@ -5,6 +5,8 @@ import { once } from "node:events";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { chromium } from "playwright-core";
 
 // Failures covered before implementation: unverified/duplicate URLs entering paid calls;
 // hash routes lost; mismatched provider settings; judge identity leaking; cached responses
@@ -15,6 +17,8 @@ import path from "node:path";
 // Report failures: legacy quality rates promoted as reliable outcomes; access confused
 // with job-list rendering; complete access hidden by unresolved legacy quality; offline
 // presentation triggering paid calls or rewriting evidence; unescaped report evidence.
+// Mobile tables must expose every labeled value without horizontal scrolling;
+// changing their visual layout must preserve table semantics and keyboard disclosures.
 // An attempted cohort with cached/interrupted reads or unfinished judgments must
 // expose collection/grading readiness independently from cohort size.
 const out = path.resolve("artifacts/spa-compare-e2e");
@@ -252,6 +256,45 @@ try {
   assert.ok(offlineHtml.includes('&lt;script&gt;alert(&quot;platform&quot;)&lt;/script&gt;'));
   assert.ok(!/<th[^>]*>[^<]*(?:quality|target content)/i.test(offlineHtml));
   checks.push("Offline token-based rendering leaves source JSON and provider/judge calls unchanged, separates completed access from legacy quality, removes quality comparison rates, and escapes untrusted evidence");
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.route(/^https?:/, (route) => route.abort());
+    await page.goto(pathToFileURL(offlineOutput).href);
+    const mobile = await page.evaluate(() => ({
+      width: innerWidth, pageWidth: document.documentElement.scrollWidth,
+      tables: [...document.querySelectorAll<HTMLElement>(".table-scroll")].map((table) => ({ client: table.clientWidth, scroll: table.scrollWidth })),
+      cells: [...document.querySelectorAll<HTMLElement>("tbody td,tbody th")].map((cell) => ({ left: cell.getBoundingClientRect().left, right: cell.getBoundingClientRect().right, client: cell.clientWidth, scroll: cell.scrollWidth })),
+      semantics: [...document.querySelectorAll("table")].every((table) => table.getAttribute("role") === "table" && table.querySelectorAll('[role="columnheader"]').length > 0),
+      labels: [...document.querySelectorAll<HTMLElement>("tbody td")].every((cell) => Boolean(cell.dataset.label) && Boolean(cell.getAttribute("headers")) && cell.getAttribute("headers")!.split(/\s+/).every((id) => Boolean(document.getElementById(id))) && [...cell.querySelectorAll<HTMLElement>(".cell-label")].some((label) => getComputedStyle(label).display !== "none")),
+    }));
+    assert.ok(mobile.tables.every((table) => table.scroll <= table.client + 1), JSON.stringify(mobile));
+    assert.ok(mobile.cells.every((cell) => cell.left >= 0 && cell.right <= mobile.width + 1 && cell.scroll <= cell.client + 1), JSON.stringify(mobile));
+    assert.ok(mobile.pageWidth <= mobile.width);
+    assert.equal(mobile.semantics, true);
+    assert.equal(mobile.labels, true);
+    const summary = page.locator("#evidence").locator("..").locator("details summary").first();
+    await page.keyboard.press("Tab");
+    await summary.focus();
+    assert.equal(await summary.evaluate((node) => document.activeElement === node), true);
+    await summary.press("Enter");
+    assert.equal(await summary.evaluate((node) => (node.parentElement as HTMLDetailsElement).open), true);
+    assert.notEqual(await summary.evaluate((node) => getComputedStyle(node).outlineStyle), "none");
+    await summary.press("Space");
+    assert.equal(await summary.evaluate((node) => (node.parentElement as HTMLDetailsElement).open), false);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const measure = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.cssText = "display:block;width:75ch";
+      document.body.append(probe);
+      const cap = probe.getBoundingClientRect().width;
+      probe.remove();
+      return { cap, longest: Math.max(...[...document.querySelectorAll("main p,main li")].map((node) => node.getBoundingClientRect().width)) };
+    });
+    assert.ok(measure.longest <= measure.cap + 1, JSON.stringify(measure));
+    assert.equal(calls.length, callsBeforeOffline);
+  } finally { await browser.close(); }
+  checks.push("At 390px every table value is visible with a label, explicit table/header semantics survive stacking, disclosures work by keyboard, and desktop prose stays below 75 characters per line");
 } catch (error) {
   failure = error instanceof Error ? error.stack : String(error);
   throw error;
