@@ -261,6 +261,13 @@ const fixture = createServer(async (req, res) => {
     );
   else if (url.pathname === "/exa")
     res.end(JSON.stringify({ results: [{ text, url: requested }] }));
+  else if (url.pathname === "/specstream")
+    res.end(
+      JSON.stringify({
+        results: [{ status: "ok", text, url: requested, final_url: requested, read_from: "live" }],
+        price_usd: 0.0008,
+      }),
+    );
   else res.end(JSON.stringify({ content: text }));
 });
 fixture.listen(0, "127.0.0.1");
@@ -317,7 +324,7 @@ try {
   assert.equal(rows.rows.length, cases.length * providers.length);
   for (const c of cases) {
     const results = rows.rows.filter((r) => r.url.endsWith("/" + c.id));
-    assert.equal(results.length, 4);
+    assert.equal(results.length, providers.length);
     for (const row of results) {
       assert.equal(row.success, c.expected, `${c.id}: success`);
       assert.equal(row.identity, null, `${c.id}: no identity judgment`);

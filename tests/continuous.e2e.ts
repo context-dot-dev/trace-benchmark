@@ -29,6 +29,7 @@ const defaultLimits: Record<string, { concurrency: number; requestsPerSecond: nu
   exa: { concurrency: 512, requestsPerSecond: 5 },
   firecrawl: { concurrency: 50, requestsPerSecond: 100 },
   keenable: { concurrency: 100, requestsPerSecond: 8 },
+  specstream: { concurrency: 64, requestsPerSecond: 10 },
 };
 const requests: { provider: string; url: string; started: number; ended?: number; mode: string }[] = [];
 const active: Record<string, number> = {};
@@ -69,6 +70,7 @@ const fixture = createServer(async (req, res) => {
     ? { markdown: { requested: true, success: true, data: text }, url, key_metadata: { credits_consumed: 1 } }
     : provider === "exa" ? { results: [{ text, url }], costDollars: { total: 0.001 } }
     : provider === "firecrawl" ? { success: true, data: { markdown: text, metadata: { statusCode: 200 } } }
+    : provider === "specstream" ? { results: [{ status: "ok", text, url, final_url: url, read_from: "live" }], price_usd: 0.0008 }
     : { content: text, url };
   const serialized = JSON.stringify(result);
   if (mode === "slow") {
@@ -88,6 +90,7 @@ const childEnv: NodeJS.ProcessEnv = {
   DATABASE_URL: databaseUrl,
   CONTEXT_API_KEY: "fixture-key", EXA_API_KEY: "fixture-key",
   FIRECRAWL_API_KEY: "fixture-key", KEENABLE_API_KEY: "fixture-key",
+  SPECSTREAM_API_KEY: "fixture-key",
   TYPESAFE_API_KEY: "fixture-key", CRON_SECRET: "fixture-cron-secret",
   TRACE_WORKER_ENABLED: "1", VERCEL_ENV: "production",
   BENCHMARK_DATA_ORIGIN: "", BENCHMARK_E2E_FIXTURE: fixtureBase,

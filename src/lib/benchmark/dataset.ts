@@ -133,10 +133,17 @@ const wikipediaPages: BenchmarkPage[] = study.pages.map((p) => ({
   revision: p.revision,
   plainHttp: p.results.plain_http.success,
   results: Object.fromEntries(
-    providers.map((provider) => [
-      provider.id,
-      { ...p.results[provider.id], state: "done" },
-    ]),
+    providers.flatMap((provider) => {
+      const outcome = (
+        p.results as Record<
+          string,
+          { success: boolean; error: string | null } | undefined
+        >
+      )[provider.id];
+      return outcome
+        ? [[provider.id, { ...outcome, state: "done" as const }]]
+        : [];
+    }),
   ),
 }));
 const wikipediaHistory = unstable_cache(

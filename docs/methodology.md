@@ -22,6 +22,7 @@ Each provider receives the same URLs through its production client, with compara
 | Exa | `maxAgeHours: 0` | `statuses[].source` |
 | Firecrawl | `maxAge: 0`, `storeInCache: false` | `metadata.cacheState` |
 | Keenable | `live=true` | `usage.sku` must be `fetch.live` |
+| SpecStream | Default live read | `results[0].read_from` must not be `archive` |
 
 An observed cache hit is recorded as `CACHED_RESPONSE`, remains unresolved, and is excluded from latency. It does not receive a successful grade. The benchmark relies on provider cache metadata; it cannot independently prove what happened inside a provider.
 

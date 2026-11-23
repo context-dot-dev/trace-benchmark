@@ -1095,6 +1095,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                     ["exa", "maxAgeHours: 0", "statuses[].source"],
                     ["firecrawl", "maxAge: 0, storeInCache: false", "metadata.cacheState"],
                     ["keenable", "live=true", "usage.sku must be fetch.live"],
+                    ["specstream", "Default live read", "results[0].read_from must not be archive"],
                   ].map(([id, setting, field]) => ({ id, cells: [<Name key={id} id={id} />, <code key="s">{setting}</code>, <code key="f">{field}</code>] }))}
                 />
               </details>
@@ -1109,6 +1110,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
                     ["exa", "/contents", "maxAgeHours: 0", "Full text", "27 s"],
                     ["firecrawl", "/v2/scrape", "maxAge: 0, storeInCache: false", "Main content only", "27 s"],
                     ["keenable", "/v1/fetch", "live=true", "Default", "30 s cutoff (no setting)"],
+                    ["specstream", "/v1/extract", "Default live read", "Main content only", "30 s cutoff (no setting)"],
                   ].map(([id, endpoint, fresh, content, deadline]) => ({
                     id,
                     cells: [<Name key={id} id={id} />, <code key="e">{endpoint}</code>, <code key="f">{fresh}</code>, content, deadline],

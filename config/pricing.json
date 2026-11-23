@@ -29,6 +29,13 @@
       "per1k": 4.0,
       "billsFailures": false,
       "source": "https://keenable.ai/pricing"
+    },
+    "specstream": {
+      "plan": "Pay as you go",
+      "price": "$0.80 per 1,000 pages",
+      "per1k": 0.8,
+      "billsFailures": false,
+      "source": "https://specstream.ai/pricing"
     }
   }
 }

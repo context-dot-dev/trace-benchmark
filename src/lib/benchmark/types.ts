@@ -23,6 +23,12 @@ export const providers = [
     color: "var(--color-provider-keenable)",
     logo: "/logos/keenable.png",
   },
+  {
+    id: "specstream",
+    name: "SpecStream",
+    color: "var(--color-provider-specstream)",
+    logo: "/logos/specstream.svg",
+  },
 ] as const;
 export const categories = [
   { id: "news", name: "News" },

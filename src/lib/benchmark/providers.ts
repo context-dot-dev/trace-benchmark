@@ -13,6 +13,7 @@ const endpoints: Record<Provider, string> = {
   exa: "https://api.exa.ai/contents",
   firecrawl: "https://api.firecrawl.dev/v2/scrape",
   keenable: "https://api.keenable.ai/v1/fetch",
+  specstream: "https://api.specstream.ai/v1/extract",
 };
 const access = {
   type: "choice",
@@ -156,6 +157,13 @@ export function createReaders(
             maxAgeHours: 0,
             livecrawlTimeout: 27000,
           };
+        } else if (provider === "specstream") {
+          headers.Authorization = "Bearer " + keys[provider];
+          body = {
+            urls: [target.url],
+            format: "markdown",
+            include: ["response"],
+          };
         } else {
           headers["X-API-Key"] = keys[provider];
           const u = new URL(url);
@@ -232,6 +240,25 @@ export function createReaders(
           text = data.results[0].text;
           receipt.finalUrl = data.results[0].url ?? null;
           receipt.costUsd = number(data.costDollars?.total);
+        } else if (provider === "specstream") {
+          const item = data.results?.[0];
+          if (!item || typeof item !== "object")
+            throw new Error("INVALID_CONTENT_RESPONSE");
+          // SpecStream reports read_from as "live", "site" (site API/feed), or "archive".
+          // Archive captures are not fresh live reads from the source.
+          if (item.read_from === "archive")
+            throw new Error("CACHED_RESPONSE");
+          if (item.status !== "ok") {
+            receipt.success = false;
+            throw new Error(
+              (item.status_code ?? 200) >= 400
+                ? "ORIGIN_ERROR"
+                : "INVALID_CONTENT_RESPONSE",
+            );
+          }
+          text = item.text;
+          receipt.finalUrl = item.final_url ?? item.url ?? null;
+          receipt.costUsd = number(data.price_usd);
         } else {
           // Keenable bills a live fetch as "fetch.live" and an indexed copy as "fetch".
           // Anything other than a live fetch was not read fresh from the source.

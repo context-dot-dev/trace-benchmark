@@ -40,6 +40,7 @@ const fixture = createServer(async (req, res) => {
   } : provider === "context" ? { markdown: { requested: true, success: true, data: text }, url }
     : provider === "exa" ? { results: [{ text, url }] }
     : provider === "firecrawl" ? { success: true, data: { markdown: text } }
+    : provider === "specstream" ? { results: [{ status: "ok", text, url, final_url: url, read_from: "live" }], price_usd: 0.0008 }
     : { content: text, url }));
 });
 fixture.listen(0, "127.0.0.1");

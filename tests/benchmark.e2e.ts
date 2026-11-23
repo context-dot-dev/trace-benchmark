@@ -62,6 +62,13 @@ const fixture = createServer(async (req, res) => {
         costDollars: { total: 0.001 },
       }),
     );
+  else if (req.url === "/specstream")
+    res.end(
+      JSON.stringify({
+        results: [{ status: "ok", text, url: data.urls[0], final_url: data.urls[0], read_from: "live" }],
+        price_usd: 0.0008,
+      }),
+    );
   else res.end(JSON.stringify({ content: text }));
 });
 fixture.listen(0, "127.0.0.1");
@@ -152,16 +159,16 @@ try {
   let data = await report(store);
   assert.equal(data.latest?.pages, 8);
   assert.equal(data.latest?.status, "completed");
-  assert.equal(data.latest?.providers.length, 4);
+  assert.equal(data.latest?.providers.length, providers.length);
   assert.ok(
     data.latest?.providers.every((p) => p.useful === 8 && p.total === 8),
   );
-  assert.equal(requests.filter((r) => r.path != "/judge").length, 32);
+  assert.equal(requests.filter((r) => r.path != "/judge").length, 8 * providers.length);
   checks.push(
-    "Concurrent ticks freeze one shared sample and complete all four providers",
+    "Concurrent ticks freeze one shared sample and complete all providers",
   );
   await runTick(store, options);
-  assert.equal(requests.filter((r) => r.path != "/judge").length, 32);
+  assert.equal(requests.filter((r) => r.path != "/judge").length, 8 * providers.length);
   checks.push("Repeated ticks do not repeat billed requests");
   for (const request of requests.filter((r) => r.path === "/judge")) {
     assert.deepEqual(Object.keys(request.body.state).sort(), ["sampled", "text"]);
@@ -170,7 +177,7 @@ try {
   const settled = await store.db.execute(
     sql`select used from scraping_bench.budgets where day='2026-10-28' and bucket='judge'`,
   );
-  assert.equal(settled.rows[0].used, 3200);
+  assert.equal(settled.rows[0].used, 8 * providers.length * 100);
   checks.push(
     "Grading is provider-blind and reservations settle to observed token usage",
   );

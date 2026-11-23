@@ -132,12 +132,17 @@ export function categoryResults(pages: BenchmarkPage[], categoryIds: string[]): 
         return [provider, outcomes.length ? outcomes.filter((o) => o.success === true).length / outcomes.length : null];
       }),
     ) as Partial<Record<ProviderId, number | null>>;
-    const nobody = group.filter((page) =>
-      ids.every((provider) => {
-        const o = page.results[provider];
-        return done(o) && o.success !== true;
-      }),
-    ).length;
+    const activeIds = ids.filter((provider) =>
+      group.some((page) => done(page.results[provider])),
+    );
+    const nobody = activeIds.length
+      ? group.filter((page) =>
+          activeIds.every((provider) => {
+            const o = page.results[provider];
+            return done(o) && o.success !== true;
+          }),
+        ).length
+      : 0;
     const order = ids.filter((p) => rates[p] != null).sort((x, y) => (rates[y] ?? 0) - (rates[x] ?? 0));
     const [leader, runnerUp] = order;
     if (!leader || !runnerUp) return { id, pages: group.length, rates, nobody, leader: leader ?? null, runnerUp: null, verdict: "none", p: null };
