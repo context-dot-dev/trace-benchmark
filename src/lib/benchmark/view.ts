@@ -9,15 +9,21 @@ import {
 } from "./combined";
 import {
   categoryResults,
+  clustered,
   cost,
+  failureDetail,
   failures,
+  fallbacks,
   findings,
   funnel,
   latency,
+  latencyByCategory,
   pairwise,
   places,
   qualitySignals,
+  sites,
   stability,
+  withinBudget,
 } from "./analysis";
 import { filterHistory, firstSampleDay } from "./history";
 import { ACCESS_PROTOCOL, categories, providers } from "./types";
@@ -87,6 +93,12 @@ export function buildView(dataset: BenchmarkDataset, filters: Filters) {
     cats,
     lat,
     fails: failures(selected),
+    failureDetail: failureDetail(selected),
+    sites: sites(selected),
+    budgets: withinBudget(selected),
+    latencyByCategory: latencyByCategory(selected, categoryList.map((c) => c.id)),
+    fallbacks: fallbacks(selected),
+    clustered: clustered(selected, categoryIds),
     funnel: funnel(selected, accessOnly),
     quality: qualitySignals(selected),
     costs: cost(rows),

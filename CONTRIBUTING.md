@@ -44,6 +44,7 @@ After editing public documentation, run `npm run docs:agents`. The full agent re
 | `src/lib/benchmark/parallel.ts`, `batch-store.ts` | Concurrent workers and durable reservations |
 | `src/lib/benchmark/workflow.ts` | Continuous Workflow orchestration |
 | `src/lib/benchmark/analysis.ts`, `view.ts` | Shared statistics and report presentation data |
+| `scripts/analyze.ts` | Command-line deep dive into one published sample (`npm run analyze`) |
 | `src/app/api/` | Read-only public results and authenticated cron trigger |
 | `src/components/benchmark/` | Report interface |
 | `tests/` | Statistical, integration, and browser verification |

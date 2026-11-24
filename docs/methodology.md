@@ -64,6 +64,8 @@ Failures, unresolved judgments, and pending outcomes remain in the denominator. 
 
 Scores include an approximate 95% confidence interval derived from per-category binomial variance. Pairwise comparisons use exact McNemar tests on shared pages with discordant outcomes. The report groups providers into shared places when the paired test does not separate them at the 95% level. These are pairwise tests; the report does not claim a family-wide multiple-comparison correction.
 
+Pages from one site tend to succeed or fail together; sites contribute up to 375 pages each. As a robustness check, the Sites section also reports a cluster-robust (CR1) 95% interval that treats each hostname (without `www.`) as one cluster within each category, combined with the same equal category weights, and a site-weighted score that averages site-level rates within each category. These do not change the headline score or places. Gaps smaller than the site-clustered interval deserve caution.
+
 The API retains names such as `useful` for compatibility. Interpret those fields using the run's `protocol`.
 
 ## Latency, quality, and cost
@@ -71,6 +73,12 @@ The API retains names such as `useful` for compatibility. Interpret those fields
 Latency percentiles cover individual retrieval requests, with successful-only percentiles also available. Excluded account-limit responses, interrupted requests, and observed cached responses do not contribute to the latency distribution. Retrieval latency is distinct from total collection time.
 
 The quality funnel separates returned content, page access, document identity, and substantive content. Missing optional grades are unavailable rather than inferred from an access success. Redirects and response length are descriptive signals, not quality scores.
+
+Latency is also reported by category and by site. A time-budget table gives the share of timed requests that both succeeded and finished within 1, 2, 5, and 10 seconds; it uses page counts rather than category weights.
+
+## Failure analysis
+
+Each failure keeps its normalized reason (timeout, HTTP error, no content, barrier, thin or wrong page, unresolved) and its raw signal: the provider's error code, or the judge's label when the request itself succeeded. Failed pages are further split by what other providers did on the same page: read by at least one other provider (recoverable), read by every other provider, or read by none. Pages no provider read are often removed, gated, or empty rather than evidence against one provider. Failures are also grouped by site. A fallback table reports how many pages each pair of providers reads together, and the share any provider reads is the ceiling for any combination. Fallback and time-budget rates are shares of pages both providers completed, not category-weighted scores.
 
 Cost estimates use dated published prices in [config/pricing.json](../config/pricing.json), divided by the observed success rate. Where failed-request billing is unknown, the report states its assumption. Account terms and prices can change.
 

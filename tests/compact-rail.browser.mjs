@@ -17,8 +17,8 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const evidence = resolve("artifacts/compact-rail/browser");
 mkdirSync(evidence, { recursive: true });
-const labels = ["Overview", "Leaderboard", "Head-to-head", "Categories", "Latency", "Quality", "Cost", "Failures", "History", "Sample & sources", "Methodology", "Data & API", "FAQ", "Citation"];
-const ids = ["overview", "useful-content", "head-to-head", "categories", "latency", "quality", "cost", "failures", "history", "sources", "methodology", "data", "faq", "citation"];
+const labels = ["Overview", "Leaderboard", "Head-to-head", "Categories", "Latency", "Quality", "Cost", "Failures", "Sites", "History", "Sample & sources", "Methodology", "Data & API", "FAQ", "Citation"];
+const ids = ["overview", "useful-content", "head-to-head", "categories", "latency", "quality", "cost", "failures", "sites", "history", "sources", "methodology", "data", "faq", "citation"];
 const providers = ["context", "exa", "firecrawl", "keenable"];
 const day = "2026-11-05";
 const run = `scraping-bench-v5:${day}`;
@@ -65,7 +65,7 @@ async function tooltip(link, label, keyboard = false) {
 }
 async function compact(label, height) {
   await page.waitForTimeout(200);
-  assert.equal(await links.count(), 14);
+  assert.equal(await links.count(), 15);
   const geometry = await panel.evaluate(el => {
     const rect = el.getBoundingClientRect();
     const nav = el.querySelector(".bench-rail-nav").getBoundingClientRect();
@@ -88,7 +88,7 @@ async function compact(label, height) {
   const themeBox = await theme.boundingBox();
   assert.ok(themeBox && themeBox.y + themeBox.height <= height, `${label}: theme control remains reachable`);
   await noOverflow(label);
-  checks.push(`${label}: compact geometry, named icon links, all 14 destinations and theme control reachable, no page overflow`);
+  checks.push(`${label}: compact geometry, named icon links, all 15 destinations and theme control reachable, no page overflow`);
 }
 try {
   const deadline = Date.now() + 60000;
@@ -124,9 +124,9 @@ try {
       }).length };
   });
   try {
-    assert.ok(allFit.scrollHeight <= allFit.clientHeight + 1 && allFit.visible === 14,
-      `600px viewport shows all 14 destinations without nav scrolling: ${JSON.stringify(allFit)}`);
-    checks.push("600px viewport exposes all 14 section icons without requiring nav scrolling");
+    assert.ok(allFit.scrollHeight <= allFit.clientHeight + 1 && allFit.visible === 15,
+      `600px viewport shows all 15 destinations without nav scrolling: ${JSON.stringify(allFit)}`);
+    checks.push("600px viewport exposes all 15 section icons without requiring nav scrolling");
   } catch (error) { shortScreenFailures.push(error); }
   await page.setViewportSize({ width: 1440, height: 450 });
   await page.evaluate(() => {
@@ -182,7 +182,7 @@ try {
   await page.locator(".bench-pill-main").click();
   const dialog = page.getByRole("dialog", { name: "Sections and sample" });
   await dialog.waitFor({ state: "visible" });
-  assert.equal(await dialog.locator("nav a").count(), 14);
+  assert.equal(await dialog.locator("nav a").count(), 15);
   for (const text of await dialog.locator(".bench-nav-text").all()) assert.equal(await text.isVisible(), true);
   await noOverflow("Mobile sheet");
   await page.screenshot({ path: resolve(evidence, "mobile-sheet.png") });
