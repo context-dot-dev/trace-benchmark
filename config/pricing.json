@@ -4,8 +4,8 @@
   "providers": {
     "context": {
       "plan": "Pro",
-      "price": "$99 for 125,000 pages",
-      "per1k": 0.792,
+      "price": "$90 for 100,000 pages",
+      "per1k": 0.9,
       "billsFailures": false,
       "source": "https://www.context.dev/pricing"
     },
