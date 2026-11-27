@@ -4,7 +4,7 @@ TRACE measures scraping on a changing sample of public web pages. Context.dev ma
 
 ## A shared, fresh sample
 
-The registry in [config/sources.json](../config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. A daily job polls every source that is due under its polling interval, and the weekly Workflow polls again before sampling. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
+The registry in [config/sources.json](../config/sources.json) contains 244 sources: 243 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. A daily job polls every source that is due under its polling interval, and the weekly Workflow polls again before sampling. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
 
 Every Friday at 00:15 UTC, the collector draws up to 300 previously untested URLs in each of eight core categories, plus Other when available. It groups candidates by organization, uses day-seeded hashes to order organizations and pages, and selects across those groups. Limits of 125 pages per organization and 375 per hostname apply across the sample. The maximum target is 2,700 pages; supply and budgets can reduce it.
 

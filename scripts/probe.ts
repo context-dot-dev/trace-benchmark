@@ -1,8 +1,9 @@
 // Runs the neutral difficulty probe outside the collector, without a database.
 //
-//   npx tsx scripts/probe.ts sources [--category news] [--per-source 40] [--out probes.json]
+//   npx tsx scripts/probe.ts sources [--category news] [--per-source 40] [--registry file] [--out probes.json]
 //       Discover every registry source now and probe a day-seeded sample of its candidates.
 //       Shows which sources still supply pages that need more than a plain HTTP GET.
+//       --registry tests proposed sources from another file before they are added.
 //   npx tsx scripts/probe.ts urls <file> [--out probes.json]
 //       Probe URLs from a text file (one per line) or a TRACE NDJSON download.
 import { createHash } from "node:crypto";
@@ -52,7 +53,9 @@ if (mode === "sources") {
   const category = flag("category");
   const perSource = Number(flag("per-source", "40"));
   const day = new Date().toISOString().slice(0, 10);
-  const selected = (registry as Source[]).filter((s) => !category || s.category === category);
+  const file = flag("registry");
+  const sources = file ? (JSON.parse(readFileSync(file, "utf8")) as Source[]) : (registry as Source[]);
+  const selected = sources.filter((s) => !category || s.category === category);
   const items: Omit<Row, "probe">[] = [];
   const supply: string[] = [];
   await probeMany(selected, async (source) => {
