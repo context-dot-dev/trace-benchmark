@@ -371,10 +371,13 @@ html::-webkit-scrollbar {
   fill: var(--ds-color-bg-default);
   stroke: var(--ds-color-text-muted);
 }
-.bench-coverage.is-absent {
-  fill: none;
-  stroke: var(--ds-color-text-muted);
-  stroke-width: 1.5;
+.bench-history .bench-history-bridge {
+  opacity: 0.45;
+}
+.bench-history .bench-coverage-track {
+  stroke: var(--ds-color-border-default);
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 .bench-history-key {
   display: flex;
@@ -403,15 +406,6 @@ html::-webkit-scrollbar {
 }
 .bench-history-range > p span::before {
   content: "· ";
-}
-.bench-history-key .is-absent {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  font-style: normal;
-  font-size: var(--ds-text-body);
-  font-weight: var(--ds-font-weight-medium);
 }
 .bench-scroll[aria-label="Daily quality history"] td:nth-child(2),
 .bench-scroll[aria-label="Daily quality history"] td:nth-child(3) {
