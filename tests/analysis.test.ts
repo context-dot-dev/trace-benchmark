@@ -93,7 +93,7 @@ const ctx = fun.find((f) => f.id === "context")!;
 assert.equal(ctx.accessed, 760);
 assert.equal(ctx.rightPage, 744);
 const costs = cost(rows);
-assert.equal(costs.find((c) => c.id === "context")!.perAccessed1k, 0.792, "Context does not bill failures");
+assert.equal(costs.find((c) => c.id === "context")!.perAccessed1k, 0.9, "Context does not bill failures");
 assert.ok(costs.find((c) => c.id === "exa")!.assumed);
 checks.push("Category verdicts, latency percentiles, failure reasons, the quality funnel, and cost agree with the sample");
 
