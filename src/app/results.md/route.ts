@@ -1,7 +1,7 @@
 import { benchmarkDataset } from "@/lib/benchmark/dataset";
 import { buildView, categoryName, defaultFilters, faqItems, providerName } from "@/lib/benchmark/view";
 import { percent } from "@/lib/benchmark/format";
-import { ACCESS_PROTOCOL } from "@/lib/benchmark/types";
+import { isAccessProtocol } from "@/lib/benchmark/types";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET() {
       "",
       "> Weekly benchmark of web scraping APIs (context.dev, Exa, Firecrawl, Keenable). Every Friday at 00:15 UTC a new fresh sample of about 2,500 never-tested web pages goes to all four providers with caching turned off. A provider-blind automated judge grades each response. Published by context.dev, which is also one of the providers tested.",
       "",
-      run ? `Latest sample: ${run.day} UTC; run ID: ${run.id}; protocol: ${run.protocol}; status: ${run.status}; scored for ${run.protocol === ACCESS_PROTOCOL ? "page access" : "useful content"}; ${view.selected.length} pages.` : "No sample is available yet.",
+      run ? `Latest sample: ${run.day} UTC; run ID: ${run.id}; protocol: ${run.protocol}; status: ${run.status}; scored for ${isAccessProtocol(run.protocol) ? "page access" : "useful content"}; ${view.selected.length} pages.` : "No sample is available yet.",
       "",
       `## ${view.accessOnly ? "Pages accessed" : "Pages with useful content"} (95% confidence interval)`,
       ...ranked.map((r) => {

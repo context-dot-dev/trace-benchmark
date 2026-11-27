@@ -26,7 +26,7 @@ try {
       .where(eq(attempts.runId, run.id));
     // Records past their retention window are gone; keep the stored summary for those runs.
     if (!rows.length) continue;
-    const summary = summarize(run.id, run.day, run.protocol, rows, run.summary.target, run.finishedAt);
+    const summary = summarize(run.id, run.day, run.protocol, rows, run.summary.target, run.finishedAt, run.summary.sampling);
     console.log(
       run.id,
       summary.providers.map((p) => `${p.id} ${pct(run.summary.providers.find((o) => o.id === p.id)?.rate)} -> ${pct(p.rate)}`).join(" | "),

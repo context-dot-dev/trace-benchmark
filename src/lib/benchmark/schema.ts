@@ -11,6 +11,7 @@ import {
   customType,
 } from "drizzle-orm/pg-core";
 import type { RunSummary, WikipediaProvenance } from "./types";
+import type { ProbeLabel } from "./probe";
 export const schema = pgSchema("scraping_bench");
 const bytes = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
@@ -40,6 +41,23 @@ export const candidates = schema.table(
   },
   (t) => [index("candidate_category_idx").on(t.category, t.discoveredAt)],
 );
+// One plain HTTP GET per candidate URL, recorded before sampling. Keyed by sha256(url), the same
+// identity the seen ledger uses, so a probe survives a candidate being rediscovered.
+export const probes = schema.table(
+  "probes",
+  {
+    id: text("id").primaryKey(),
+    url: text("url").notNull(),
+    version: text("version").notNull(),
+    verdict: text("verdict").notNull(),
+    reason: text("reason").notNull(),
+    status: integer("status"),
+    textChars: integer("text_chars").notNull().default(0),
+    elapsedMs: integer("elapsed_ms").notNull(),
+    probedAt: timestamp("probed_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("probe_time_idx").on(t.probedAt)],
+);
 export const seen = schema.table("seen", {
   id: text("id").primaryKey(),
   day: text("day").notNull(),
@@ -58,6 +76,8 @@ export const attempts = schema.table(
     title: text("title").notNull(),
     category: text("category").notNull(),
     provenance: jsonb("provenance").$type<WikipediaProvenance>(),
+    /** Neutral difficulty probe that admitted the page to a hard-first sample. */
+    probe: jsonb("probe").$type<ProbeLabel>(),
     state: text("state").notNull(),
     claim: text("claim"),
     leaseUntil: timestamp("lease_until", { withTimezone: true }),

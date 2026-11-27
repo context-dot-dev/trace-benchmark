@@ -20,7 +20,7 @@ import {
   stability,
 } from "./analysis";
 import { filterHistory, firstSampleDay } from "./history";
-import { ACCESS_PROTOCOL, categories, providers } from "./types";
+import { isAccessProtocol, categories, providers } from "./types";
 
 /** URL-backed filters: source is "all" or "wikipedia_daily"; run is "latest" or a run id. */
 export type Filters = { source: string; category: string; run?: string };
@@ -46,7 +46,7 @@ export function buildView(dataset: BenchmarkDataset, filters: Filters) {
       : visibleHistory.find((r) => r.id === selection);
   // The page data belongs to report.latest; while another run loads, nothing is scored.
   const run = report.latest && report.latest.id === requestedRun?.id ? report.latest : null;
-  const accessRun = requestedRun?.protocol === ACCESS_PROTOCOL;
+  const accessRun = isAccessProtocol(requestedRun?.protocol);
   const accessOnly = accessRun;
   const pages = normalizePages(dataset.pages, report.latest);
   const dailyPages = pages.filter((p) => p.source !== "wikipedia" && p.day >= firstSampleDay && p.day === run?.day);

@@ -103,6 +103,7 @@ try {
   const sitemap = await (await fetch(base + "/sitemap.xml")).text();
   assert.ok(sitemap.includes("<loc>https://trace.context.dev/</loc>"));
   assert.equal((await fetch(base + "/api/cron")).status, 401);
+  assert.equal((await fetch(base + "/api/discover")).status, 401);
   for (const path of ["/llms.txt", "/llms-full.txt", "/results.md"]) {
     assert.equal((await fetch(base + path, { method: "POST" })).status, 405);
   }

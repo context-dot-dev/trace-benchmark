@@ -1,7 +1,7 @@
 import { gunzipSync } from "node:zlib";
 import { and, desc, eq, getTableColumns, isNotNull, isNull, sql } from "drizzle-orm";
 import { attempts, grades, runs } from "./schema";
-import { ACCESS_PROTOCOL } from "./types";
+import { ACCESS_PROTOCOL, isAccessProtocol } from "./types";
 import { createReaders, type Readers } from "./providers";
 import type { Store } from "./store";
 
@@ -17,7 +17,7 @@ export type Rubric = "access" | "quality";
 export async function gradeCandidates(store: Store, runId: string, rubric: Rubric) {
   const [run] = await store.db.select().from(runs).where(eq(runs.id, runId));
   if (!run) throw new Error("Unknown run " + runId);
-  if (rubric === "access" && run.protocol === ACCESS_PROTOCOL)
+  if (rubric === "access" && isAccessProtocol(run.protocol))
     return { run, rows: [] as (typeof attempts.$inferSelect)[] };
   const rows = await store.db
     .select(getTableColumns(attempts))
@@ -31,7 +31,7 @@ export async function gradeCandidates(store: Store, runId: string, rubric: Rubri
         isNotNull(attempts.evidence),
         isNull(grades.id),
         // Quality is only meaningful for pages that loaded.
-        ...(rubric === "quality" && run.protocol === ACCESS_PROTOCOL ? [eq(attempts.success, true)] : []),
+        ...(rubric === "quality" && isAccessProtocol(run.protocol) ? [eq(attempts.success, true)] : []),
       ),
     )
     .orderBy(attempts.id);

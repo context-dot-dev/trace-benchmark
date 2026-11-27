@@ -3,6 +3,8 @@ import {
   and,
   desc,
   eq,
+  getTableColumns,
+  gt,
   inArray,
   isNotNull,
   isNull,
@@ -16,18 +18,29 @@ import {
   attempts,
   budgets,
   candidates,
+  probes,
   runs,
   seen,
   sources,
   worker,
 } from "./schema";
 import {
+  ACCESS_PROTOCOL,
   categories,
+  HARD_PROTOCOL,
   providers,
-  PROTOCOL,
   type Candidate,
   type RunSummary,
+  type SamplingSummary,
 } from "./types";
+import {
+  PROBE_VERSION,
+  probeMany,
+  probePage,
+  probeId,
+  type Probe,
+  type ProbeLabel,
+} from "./probe";
 import { createReaders, type Readers } from "./providers";
 import { runProvider, providerWorkers } from "./parallel";
 import { discoverSource, type Source } from "./discovery";
@@ -49,6 +62,148 @@ export function authorizeCron(
   return env.VERCEL_ENV === "production" ? 200 : 403;
 }
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
+function envNumber(name: string, fallback: number) {
+  const value = Number(process.env[name] ?? fallback);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+// Hard-first sampling (protocol v7) admits pages that a neutral plain HTTP GET could not read.
+// TRACE_SAMPLING=all restores the v6 sample, which draws from every discovered page.
+export type SamplingMode = "hard-first" | "all";
+export const samplingMode = (env: Record<string, string | undefined> = process.env): SamplingMode =>
+  env.TRACE_SAMPLING === "all" ? "all" : "hard-first";
+export const protocolFor = (mode: SamplingMode) => (mode === "all" ? ACCESS_PROTOCOL : HARD_PROTOCOL);
+export type ProbeFn = (url: string, signal: AbortSignal) => Promise<Probe>;
+const defaultProbe: ProbeFn = (url, signal) => probePage(url, { signal });
+/** A probe older than this is repeated, because sites change their defenses. */
+const PROBE_FRESH_MS = 14 * 86400000;
+/** Newest unseen candidates considered per category. */
+const POOL_LIMIT = 20000;
+/** Pages one organization may contribute to a sample, and pages one hostname may contribute. */
+const ORGANIZATION_CAP = 125;
+const HOST_CAP = 375;
+export const samplingLimits = () => ({
+  // Easy pages top up a category with too few hard pages to this size, so every core category
+  // stays scored. Set TRACE_MIN_PER_CATEGORY=0 to sample hard pages only.
+  minPerCategory: envNumber("TRACE_MIN_PER_CATEGORY", 50),
+  maxProbesPerCategory: envNumber("TRACE_PROBE_MAX_PER_CATEGORY", 2000),
+  probeConcurrency: Math.max(1, envNumber("TRACE_PROBE_CONCURRENCY", 24)),
+});
+
+type PoolRow = Candidate & { probe: ProbeLabel | null };
+type Reader = Pick<Store["db"], "select">;
+/** Unseen candidates in a category, newest first, with any fresh probe of the same URL. */
+async function loadPool(db: Reader, category: string, clock: Date): Promise<PoolRow[]> {
+  const rows = await db
+    .select({
+      ...getTableColumns(candidates),
+      verdict: probes.verdict,
+      reason: probes.reason,
+    })
+    .from(candidates)
+    .leftJoin(
+      probes,
+      and(
+        sql`${probes.id}=encode(sha256(convert_to(${candidates.url},'UTF8')),'hex')`,
+        eq(probes.version, PROBE_VERSION),
+        gt(probes.probedAt, new Date(clock.getTime() - PROBE_FRESH_MS)),
+      ),
+    )
+    .where(
+      and(
+        eq(candidates.category, category),
+        sql`not exists(select 1 from scraping_bench.seen s where s.id=${candidates.id} or s.id=encode(sha256(convert_to(${candidates.url},'UTF8')),'hex'))`,
+      ),
+    )
+    .orderBy(desc(candidates.discoveredAt))
+    .limit(POOL_LIMIT);
+  return rows.map(({ verdict, reason, ...c }) => ({
+    ...c,
+    probe: verdict ? ({ verdict, reason, version: PROBE_VERSION } as ProbeLabel) : null,
+  }));
+}
+/**
+ * Day-seeded round-robin across organizations: the order in which selection considers pages.
+ * Organizations and their pages are each ordered by a hash of the day, so the sample is
+ * deterministic for a day and no organization is favored.
+ */
+export function interleave<T extends { id: string; organization: string }>(rows: T[], day: string) {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) groups.set(row.organization, [...(groups.get(row.organization) ?? []), row]);
+  const ordered = [...groups].sort((a, b) => hash(day + a[0]).localeCompare(hash(day + b[0])));
+  for (const [, group] of ordered) group.sort((a, b) => hash(day + a.id).localeCompare(hash(day + b.id)));
+  const out: T[] = [];
+  for (let round = 0; out.length < rows.length; round++)
+    for (const [, group] of ordered) if (round < group.length) out.push(group[round]);
+  return out;
+}
+
+/**
+ * Probes unprobed candidates in the order selection will consider them, until each category has
+ * enough hard pages for its quota (with headroom for organization and host caps), has used its
+ * probe budget, or the deadline passes. Returns `done` when no further probing would help.
+ */
+export async function probeCandidates(
+  store: Store,
+  options: {
+    day: string;
+    perCategory?: number;
+    deadlineMs?: number;
+    probe?: ProbeFn;
+    now?: () => Date;
+  },
+) {
+  const now = options.now ?? (() => new Date());
+  const { maxProbesPerCategory, probeConcurrency } = samplingLimits();
+  const target = Math.ceil((options.perCategory ?? 300) * 1.2);
+  const probe = options.probe ?? defaultProbe;
+  // Hard pages count toward the target only while their organization is under its sample cap,
+  // so a category dominated by one hard organization keeps probing for others.
+  type Queue = { todo: PoolRow[]; byOrganization: Map<string, number>; hard: number };
+  const addHard = (queue: Queue, organization: string) => {
+    const before = queue.byOrganization.get(organization) ?? 0;
+    queue.byOrganization.set(organization, before + 1);
+    if (before < ORGANIZATION_CAP) queue.hard++;
+  };
+  const queues: Queue[] = [];
+  for (const category of [...categories, { id: "other" }]) {
+    const pool = interleave(await loadPool(store.db, category.id, now()), options.day);
+    const queue: Queue = { todo: [], byOrganization: new Map(), hard: 0 };
+    for (const row of pool) if (row.probe?.verdict === "hard") addHard(queue, row.organization);
+    const probed = pool.filter((row) => row.probe).length;
+    if (queue.hard < target)
+      queue.todo = pool.filter((row) => !row.probe).slice(0, Math.max(0, maxProbesPerCategory - probed));
+    queues.push(queue);
+  }
+  // Alternate categories so one slow host cannot hold up the rest.
+  const work: { row: PoolRow; queue: Queue }[] = [];
+  for (let round = 0; queues.some((q) => round < q.todo.length); round++)
+    for (const queue of queues) if (round < queue.todo.length) work.push({ row: queue.todo[round], queue });
+  const signal = AbortSignal.timeout(options.deadlineMs ?? 200_000);
+  const probed = new Set<string>();
+  await probeMany(work, async ({ row, queue }) => {
+    const id = probeId(row.url);
+    if (queue.hard >= target || probed.has(id)) return;
+    probed.add(id);
+    const result = await probe(row.url, signal);
+    // A probe cut short by our own deadline says nothing about the page.
+    if (signal.aborted) return;
+    const values = {
+      id,
+      url: row.url,
+      version: result.version,
+      verdict: result.verdict,
+      reason: result.reason,
+      status: result.status,
+      textChars: result.textChars,
+      elapsedMs: result.elapsedMs,
+      probedAt: now(),
+    };
+    await store.db.insert(probes).values(values).onConflictDoUpdate({ target: probes.id, set: values });
+    if (result.verdict === "hard") addHard(queue, row.organization);
+  }, probeConcurrency, signal);
+  return { probed: probed.size, done: !signal.aborted };
+}
 type TickOptions = {
   now?: () => Date;
   readers?: Readers;
@@ -57,6 +212,12 @@ type TickOptions = {
   perCategory?: number;
   maxPages?: number;
   deadlineMs?: number;
+  sampling?: SamplingMode;
+  probe?: ProbeFn;
+  /** Deadline for probing inside this tick before a hard-first sample is drawn. */
+  probeDeadlineMs?: number;
+  /** false discovers without drawing a pending sample, so probing can run in its own steps. */
+  select?: boolean;
 };
 export async function runTick(store: Store, options: TickOptions = {}) {
   const now = options.now ?? (() => new Date());
@@ -112,8 +273,18 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       ).length;
     if (options.discover !== false)
       await discoverDue(store, clock, samplePending, options.discovery);
-    if (samplePending)
-      await selectSample(store, day, options.perCategory ?? 300, clock);
+    const mode = options.sampling ?? samplingMode();
+    if (samplePending && options.select !== false) {
+      if (mode === "hard-first")
+        await probeCandidates(store, {
+          day,
+          perCategory: options.perCategory ?? 300,
+          deadlineMs: options.probeDeadlineMs ?? 120_000,
+          probe: options.probe,
+          now,
+        });
+      await selectSample(store, day, options.perCategory ?? 300, clock, mode);
+    }
     if (options.maxPages !== 0) {
       const configured = providerWorkers();
       const workers = options.maxPages === undefined ? configured : providers.map(({ id }) => ({
@@ -159,6 +330,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
         rows,
         run.summary.target,
         finished,
+        run.summary.sampling,
       );
       await store.db
         .update(runs)
@@ -174,7 +346,7 @@ export async function runTick(store: Store, options: TickOptions = {}) {
     if (errors.length) await store.db.update(worker).set({
       error: [...new Set(errors.map((row) => row.error))].join("; "),
     }).where(and(eq(worker.id, "collector"), eq(worker.claim, token)));
-    return { status: "advanced", processed, day };
+    return { status: "advanced", processed, day, samplePending: samplePending && options.select === false, mode };
   } catch (error) {
     await store.db
       .update(worker)
@@ -187,6 +359,44 @@ export async function runTick(store: Store, options: TickOptions = {}) {
       .set({ claim: null, leaseUntil: null, lastTick: now() })
       .where(and(eq(worker.id, "collector"), eq(worker.claim, token)));
   }
+}
+/** Sources polled per discovery pass; a pass runs them concurrently. */
+const DISCOVERY_BATCH = 48;
+/**
+ * Daily supply refresh between weekly samples. It polls every due source, in passes of 48, and
+ * then probes new candidates, so a week of feed items accumulates and the Friday sample starts
+ * mostly probed. Polling only inside the weekly Workflow reached at most 96 of the registry's
+ * sources a week and kept one snapshot of each feed. No provider or judge is called.
+ */
+export async function refreshSupply(
+  store: Store,
+  options: {
+    now?: () => Date;
+    probe?: ProbeFn;
+    deadlineMs?: number;
+    discovery?: TickOptions["discovery"];
+  } = {},
+) {
+  const now = options.now ?? (() => new Date());
+  const started = Date.now();
+  const budget = options.deadlineMs ?? 270_000;
+  let polled = 0;
+  for (let pass = 0; pass < 8 && Date.now() - started < budget / 2; pass++) {
+    // The first pass also collects yesterday's Wikipedia links once they are due.
+    const count = await discoverDue(store, now(), pass === 0, options.discovery);
+    polled += count;
+    if (count < DISCOVERY_BATCH) break;
+  }
+  const remaining = budget - (Date.now() - started);
+  if (samplingMode() !== "hard-first" || remaining < 10_000)
+    return { polled, probed: 0, done: samplingMode() !== "hard-first" };
+  const result = await probeCandidates(store, {
+    day: now().toISOString().slice(0, 10),
+    probe: options.probe,
+    now,
+    deadlineMs: remaining,
+  });
+  return { polled, ...result };
 }
 async function discoverDue(
   store: Store,
@@ -217,7 +427,8 @@ async function discoverDue(
       ),
     )
     .orderBy(sources.nextPoll)
-    .limit(48);
+    .limit(DISCOVERY_BATCH);
+  const polled = due.length;
   if (samplePending)
     due.push(
       ...(await store.db
@@ -280,16 +491,21 @@ async function discoverDue(
       }
     }),
   );
+  return polled;
 }
+
 async function selectSample(
   store: Store,
   day: string,
   perCategory: number,
   clock: Date,
+  mode: SamplingMode,
 ) {
+  const protocol = protocolFor(mode);
+  const { minPerCategory } = samplingLimits();
   await store.db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(74012492)`);
-    const runId = PROTOCOL + ":" + day;
+    const runId = protocol + ":" + day;
     if (
       (await tx.select({ id: runs.id }).from(runs).where(eq(runs.day, day)))
         .length
@@ -306,58 +522,36 @@ async function selectSample(
       Math.max(0, Math.floor(remaining / (categories.length + 1))),
     );
     if (!perCategory) return;
-    const selected: Candidate[] = [];
+    const selected: PoolRow[] = [];
     const prior = new Set<string>();
     const orgCounts = new Map<string, number>();
     const hostCounts = new Map<string, number>();
+    const sampling: SamplingSummary["categories"] = {};
     for (const category of [...categories, { id: "other" }]) {
-      const pool = await tx
-        .select()
-        .from(candidates)
-        .where(
-          and(
-            eq(candidates.category, category.id),
-            sql`not exists(select 1 from scraping_bench.seen s where s.id=${candidates.id} or s.id=encode(sha256(convert_to(${candidates.url},'UTF8')),'hex'))`,
-          ),
-        )
-        .orderBy(desc(candidates.discoveredAt))
-        .limit(6000);
-      const groups = new Map<string, Candidate[]>();
-      for (const c of pool) {
-        if (prior.has(c.id) || prior.has(hash(c.url))) continue;
-        const group = groups.get(c.organization) ?? [];
-        group.push(c);
-        groups.set(c.organization, group);
-      }
-      const ordered = [...groups].sort((a, b) =>
-        hash(day + a[0]).localeCompare(hash(day + b[0])),
-      );
-      for (const [, rows] of ordered)
-        rows.sort((a, b) => hash(day + a.id).localeCompare(hash(day + b.id)));
+      const ordered = interleave(await loadPool(tx, category.id, clock), day);
       let count = 0;
-      while (count < perCategory) {
-        let moved = false;
-        for (const [org, rows] of ordered) {
-          if (count >= perCategory) break;
-          if ((orgCounts.get(org) ?? 0) >= 125) continue;
-          const c = rows.shift();
-          if (!c) continue;
-          moved = true;
+      // Walks the day's order and takes pages that pass the organization and host caps.
+      const take = (admit: (c: PoolRow) => boolean, limit: number) => {
+        for (const c of ordered) {
+          if (count >= limit) break;
+          if (!admit(c) || (orgCounts.get(c.organization) ?? 0) >= ORGANIZATION_CAP) continue;
           const host = new URL(c.url).hostname;
-          if (
-            prior.has(c.id) ||
-            prior.has(hash(c.url)) ||
-            (hostCounts.get(host) ?? 0) >= 375
-          )
+          if (prior.has(c.id) || prior.has(hash(c.url)) || (hostCounts.get(host) ?? 0) >= HOST_CAP)
             continue;
           selected.push(c);
           prior.add(c.id);
           prior.add(hash(c.url));
-          orgCounts.set(org, (orgCounts.get(org) ?? 0) + 1);
+          orgCounts.set(c.organization, (orgCounts.get(c.organization) ?? 0) + 1);
           hostCounts.set(host, (hostCounts.get(host) ?? 0) + 1);
           count++;
         }
-        if (!moved) break;
+      };
+      if (mode === "all") take(() => true, perCategory);
+      else {
+        take((c) => c.probe?.verdict === "hard", perCategory);
+        const hard = count;
+        take((c) => c.probe?.verdict === "easy", Math.min(perCategory, minPerCategory));
+        sampling[category.id] = { hard, easy: count - hard };
       }
     }
     if (!selected.length) return;
@@ -390,13 +584,14 @@ async function selectSample(
         title: c.title,
         category: c.category,
         provenance: c.provenance,
+        probe: mode === "all" ? null : c.probe,
         state: "queued",
       })),
     );
     const summary: RunSummary = {
       id: runId,
       day,
-      protocol: PROTOCOL,
+      protocol,
       status: selected.length ? "collecting" : "insufficient_supply",
       pages: selected.length,
       target: perCategory * (categories.length + 1),
@@ -408,11 +603,12 @@ async function selectSample(
           selected.filter((p) => p.category === c.id).length,
         ]),
       ),
+      ...(mode === "all" ? {} : { sampling: { method: "hard-first", probe: PROBE_VERSION, categories: sampling } }),
     };
     await tx.insert(runs).values({
       id: runId,
       day,
-      protocol: PROTOCOL,
+      protocol,
       status: summary.status,
       summary,
       createdAt: clock,
@@ -490,4 +686,7 @@ async function retainEvidence(store: Store, clock: Date) {
     .where(
       lt(candidates.discoveredAt, new Date(clock.getTime() - 30 * 86400000)),
     );
+  await store.db
+    .delete(probes)
+    .where(lt(probes.probedAt, new Date(clock.getTime() - 30 * 86400000)));
 }

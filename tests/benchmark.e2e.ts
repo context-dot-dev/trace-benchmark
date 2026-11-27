@@ -5,6 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { sql } from "drizzle-orm";
 import { openStore, migrateStore } from "../src/lib/benchmark/store.ts";
 import { runTick, authorizeCron } from "../src/lib/benchmark/collect.ts";
+import { hardProbe } from "./probe-fixture.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { report } from "../src/lib/benchmark/report.ts";
 import { discoverSource } from "../src/lib/benchmark/discovery.ts";
@@ -139,6 +140,7 @@ try {
   const options = {
     now: () => clock,
     readers,
+    probe: hardProbe,
     discover: false,
     perCategory: 1,
     maxPages: 8,

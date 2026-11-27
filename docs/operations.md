@@ -19,7 +19,7 @@ The backend runs in Vercel Functions and uses PostgreSQL through Drizzle; the ho
 
 Set the four provider API keys and `TYPESAFE_API_KEY` listed in [the environment template](../.env.example). Generate a random `CRON_SECRET` and set `TRACE_WORKER_ENABLED=1` in the production environment. The [cron configuration](../vercel.json) calls `/api/cron` every Friday at 00:15 UTC (`15 0 * * 5`). Deploy the configuration to production to apply the schedule. That route requires its bearer secret and rejects non-production deployments.
 
-One deduplicated Vercel Workflow performs discovery, freezes the weekly sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. Due sources are polled during the weekly Workflow. To resume paused or failed collection before the next Friday, call `/api/cron` with its bearer secret. Sample dates use UTC.
+One deduplicated Vercel Workflow performs discovery, freezes the weekly sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. A second cron calls `/api/discover` daily at 12:45 UTC (`45 12 * * *`). It polls every due source in passes of 48, collects the previous day's Wikipedia links, and probes new candidates for 270 seconds at most. It makes no provider or judge calls. The weekly Workflow polls due sources again before sampling. To resume paused or failed collection before the next Friday, call `/api/cron` with its bearer secret. Sample dates use UTC.
 
 All clients retain a 30-second full-body retrieval deadline and judging retains a 60-second deadline. Collection duration depends on supply, provider latency, account capacity, judge throughput, and database performance.
 
@@ -32,6 +32,27 @@ Defaults are configuration choices, not statements of the capacity available to 
 HTTP 401, 402, and 429 pause affected providers across shards. Judge rejections pause grading while retrieved evidence is retained. Unsent reservations are refunded; in-flight calls finish normally. Interrupted paid retrievals are not automatically repeated.
 
 A 30–60-second collection needs capacity for the full sample. The repository's full-scale fixture grants 1,024 concurrent requests and 200 requests per second per provider, and 1,000 judge requests per second. Its 60-second assertion measures the pipeline against local HTTP fixtures; it is not a live-provider or hosted-scheduler service guarantee. Discovery and sample preparation are outside that timed collection measurement.
+
+## Hard-first sampling
+
+Protocol v7 probes candidates with one plain HTTP GET before drawing the sample; see [the methodology](methodology.md#protocol-v7-hard-first-sample). The Workflow discovers sources, runs bounded probe steps of up to 200 seconds (at most 12), and then freezes the sample. Probing uses the same private-address protection as discovery and at most two connections per site.
+
+| Setting | Default | Meaning |
+| :--- | ---: | :--- |
+| `TRACE_SAMPLING` | `hard-first` | `all` restores the unprobed v6 sample |
+| `TRACE_MIN_PER_CATEGORY` | 50 | Easy pages top up a category with fewer hard pages to this size; `0` samples hard pages only |
+| `TRACE_PROBE_MAX_PER_CATEGORY` | 2000 | Probe budget per category for one sample |
+| `TRACE_PROBE_CONCURRENCY` | 24 | Probes in flight across all sites |
+
+Probe results are kept for 30 days in the `probes` table and reused for 14. To see which sources still supply hard pages, run the probe without a database:
+
+```sh
+# Discover every source now and probe 40 candidates from each.
+npx tsx scripts/probe.ts sources --per-source 40
+# Probe the URLs of a published sample.
+curl -fsSG https://trace.context.dev/api/download --data-urlencode 'run=scraping-bench-v6:2026-11-27' -o sample.ndjson
+npx tsx scripts/probe.ts urls sample.ndjson
+```
 
 ## Grading after collection
 

@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { database } from "@/lib/benchmark/store";
 import { attempts, runs } from "@/lib/benchmark/schema";
+import { missingSchemaFallback } from "@/lib/benchmark/report";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export async function GET(request: Request) {
@@ -17,8 +18,9 @@ export async function GET(request: Request) {
   const stream = new ReadableStream({
     async pull(controller) {
       try {
-        const rows = await db
+        const page = (withProbe: boolean) => db
           .select({
+            ...(withProbe ? { probe: attempts.probe } : {}),
             id: attempts.id,
             day: attempts.day,
             url: attempts.url,
@@ -39,6 +41,8 @@ export async function GET(request: Request) {
           .orderBy(asc(attempts.id))
           .limit(500)
           .offset(offset);
+        // Before the probe migration, rows are served without the difficulty label.
+        const rows = (await missingSchemaFallback(() => page(true), null)) ?? (await page(false));
         if (!rows.length) {
           controller.close();
           return;

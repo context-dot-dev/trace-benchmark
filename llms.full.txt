@@ -76,12 +76,12 @@ Context.dev builds and maintains TRACE and is also one of the providers tested. 
 
 ¹ Category-weighted scores; ± values are percentage points for the 95% confidence interval. Latency includes successful and unsuccessful timed requests with caching off. Values come from the [published page-level dataset](https://trace.context.dev/api/benchmark?run=scraping-bench-v5%3A2026-11-06), scored with the same code as the report. This table is a dated snapshot; the [live leaderboard](https://trace.context.dev/) updates as new results arrive.
 
-**Read the protocol alongside the score.** This published sample uses v5, which requires useful content from the requested page. The current collector creates v6 samples, which measure page access: did actual page data load instead of a block, error, login screen, or empty shell? Earlier samples retain their original scoring. Compare results within the same protocol.
+**Read the protocol alongside the score.** This published sample uses v5, which requires useful content from the requested page. v6 samples measure page access: did actual page data load instead of a block, error, login screen, or empty shell? The current collector creates v7 samples, which apply the same access test to a hard-first sample: pages that a plain HTTP request could not already read. Earlier samples retain their original scoring. Compare results within the same protocol.
 
 ## How new data arrives every Friday
 
-1. **Discover.** The [source registry](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. Due sources are polled when the weekly Workflow runs. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
-2. **Sample.** Every **Friday at 00:15 UTC**, the collector selects up to 300 previously untested URLs per category, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
+1. **Discover.** The [source registry](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. A daily job at 12:45 UTC polls every due source and probes new candidates, so a week of feed items is available on Friday. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
+2. **Sample.** Every **Friday at 00:15 UTC**, the collector selects up to 300 previously untested URLs per category, preferring pages that a plain HTTP request could not read, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
 3. **Freeze and fetch.** The sample is saved before collection. All four providers receive the same URLs with fresh-fetch settings. Independent, rate-limited workers make one retrieval attempt per provider and page.
 4. **Judge.** A provider-blind automated judge evaluates the returned evidence under that sample's protocol. Failures and unresolved judgments remain visible. Account-limit rejections are reported separately.
 5. **Publish.** Scores fill in as results are saved. The report exposes the sample, category scores, head-to-head outcomes, latency, cost estimates, failures, and history. Previously selected URLs stay excluded from future samples.
@@ -194,7 +194,7 @@ TRACE measures scraping on a changing sample of public web pages. Context.dev ma
 
 ## A shared, fresh sample
 
-The registry in [config/sources.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. Discovery checks due sources against their polling intervals when the weekly Workflow runs. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
+The registry in [config/sources.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/config/sources.json) contains 198 sources: 197 public feeds, registries, APIs, and sitemaps, and one English Wikipedia recent-changes source. A daily job polls every source that is due under its polling interval, and the weekly Workflow polls again before sampling. Wikipedia discovery compares revisions from the previous UTC day to identify newly added external links, retaining the article, revision, and timestamp as provenance.
 
 Every Friday at 00:15 UTC, the collector draws up to 300 previously untested URLs in each of eight core categories, plus Other when available. It groups candidates by organization, uses day-seeded hashes to order organizations and pages, and selects across those groups. Limits of 125 pages per organization and 375 per hostname apply across the sample. The maximum target is 2,700 pages; supply and budgets can reduce it.
 
@@ -219,9 +219,31 @@ Provider-specific concurrency and request pacing obey configured account limits.
 
 The exact adapters are in [providers.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/providers.ts); dispatch and reservations are in [parallel.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/parallel.ts) and [batch-store.ts](https://github.com/context-dot-dev/trace-benchmark/blob/main/src/lib/benchmark/batch-store.ts).
 
+## Protocol v7: hard-first sample
+
+The current collector creates `scraping-bench-v7` samples. They use the v6 page-access rubric below on a different sample: pages that a plain HTTP request cannot already read.
+
+Most pages from feeds and sitemaps are published by sites that want to be read. On the November 27, 2026 v6 sample, all four providers accessed 83% of pages, so most of the sample could not separate them. v7 spends the sample on pages that need real scraping.
+
+**Neutral probe.** Before the sample is drawn, each candidate is requested once with a plain HTTP GET: a declared research user agent, no JavaScript, browser, proxy, cookies, or retry, a 15-second deadline, at most 5 MB, and up to five redirects with the same private-address checks as discovery. The probe classifies the response without consulting any provider:
+
+| Verdict | Responses |
+| :--- | :--- |
+| easy | 2xx HTML with at least 1,500 readable characters after scripts, styles, the document head, and markup are removed; or a non-HTML file (such as a PDF) that the request downloaded |
+| hard | 401 or 403, 429, 5xx, a bot-management interstitial (Cloudflare, DataDome, PerimeterX, Imperva, AWS WAF, Kasada, Akamai), a timeout, a connection failure, a redirect loop, or HTML with fewer than 1,500 readable characters |
+| dead | 404 or 410, or a host that does not resolve; never sampled |
+
+**Selection.** The collector walks candidates in the same day-seeded order and under the same organization and hostname limits as v6, and admits hard pages first. A category with fewer hard pages than its quota is topped up with easy pages to 50 pages, so every core category stays scored. The run summary reports hard and easy pages per category, and each page's probe label is part of the page-level download.
+
+**Probe budget.** Probing follows the same order and stops for a category once it holds 120% of its quota in hard pages that its organizations can still contribute under their cap, or after 2,000 probes. A probe is reused for 14 days and repeated after that, because sites change their defenses. A probe interrupted by the collector's own deadline is discarded.
+
+**Validation.** Probing the 2,494 pages of the November 27, 2026 v6 sample afterwards, all four providers accessed 92% of the 1,882 easy pages, and category-weighted provider scores on them ranged from 96.3% to 98.3%. On the 584 hard pages, all four providers accessed 57%, and scores ranged from 78.2% to 94.1%. Dead pages failed for every provider 86% of the time. The probe rules were fixed before these provider outcomes were compared, with one exception: downloaded non-HTML files were first counted as hard and were moved to easy because a plain request does retrieve them. That change affects every provider alike.
+
+**Limits.** Difficulty is defined from one simple client's point of view. A site that treats the declared research client differently from a browser counts as hard, even if the page is otherwise static. The probe also cannot tell a slow page from a defended one. Source coverage still bounds the sample: categories whose sources serve mostly static pages contribute mostly easy top-up pages. v7 scores are not comparable with v6 scores, because the samples are drawn differently. `TRACE_SAMPLING=all` restores the v6 sample.
+
 ## Protocol v6: page access
 
-The current collector creates `scraping-bench-v6` samples. A success means actual page data loaded instead of only a barrier, error, or empty shell.
+`scraping-bench-v6` samples draw from every discovered page. A success means actual page data loaded instead of only a barrier, error, or empty shell.
 
 Partial previews, populated listings, publication landing pages, and raw file data count as accessed. Mandatory login screens, CAPTCHA challenges, main-page errors, and empty shells fail when no actual page data loaded. A cookie banner or a broken secondary widget does not fail an otherwise populated page.
 
@@ -233,7 +255,7 @@ Access does not establish relevance, document identity, completeness, usefulness
 
 ## Earlier protocols and optional grades
 
-Earlier samples retain their own protocol and original substantive-content and document-identity judgments. An in-flight earlier sample completes under its original rules. Its score is not directly comparable with v6 access.
+Earlier samples retain their own protocol and original substantive-content and document-identity judgments. An in-flight earlier sample completes under its original rules. Its score is not directly comparable with v6 or v7 access.
 
 The separate historical Wikipedia study in [public/data/wikipedia-study.json](https://github.com/context-dot-dev/trace-benchmark/blob/main/public/data/wikipedia-study.json) retains its original useful-content grades and is excluded from current access scores.
 
@@ -299,7 +321,7 @@ The backend runs in Vercel Functions and uses PostgreSQL through Drizzle; the ho
 
 Set the four provider API keys and `TYPESAFE_API_KEY` listed in [the environment template](https://github.com/context-dot-dev/trace-benchmark/blob/main/.env.example). Generate a random `CRON_SECRET` and set `TRACE_WORKER_ENABLED=1` in the production environment. The [cron configuration](https://github.com/context-dot-dev/trace-benchmark/blob/main/vercel.json) calls `/api/cron` every Friday at 00:15 UTC (`15 0 * * 5`). Deploy the configuration to production to apply the schedule. That route requires its bearer secret and rejects non-production deployments.
 
-One deduplicated Vercel Workflow performs discovery, freezes the weekly sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. Due sources are polled during the weekly Workflow. To resume paused or failed collection before the next Friday, call `/api/cron` with its bearer secret. Sample dates use UTC.
+One deduplicated Vercel Workflow performs discovery, freezes the weekly sample, and dispatches independent provider workers. Judging uses a separate pool; database claims, request budgets, and results are persisted in batches. Bounded steps continue without waiting for another cron tick. A second cron calls `/api/discover` daily at 12:45 UTC (`45 12 * * *`). It polls every due source in passes of 48, collects the previous day's Wikipedia links, and probes new candidates for 270 seconds at most. It makes no provider or judge calls. The weekly Workflow polls due sources again before sampling. To resume paused or failed collection before the next Friday, call `/api/cron` with its bearer secret. Sample dates use UTC.
 
 All clients retain a 30-second full-body retrieval deadline and judging retains a 60-second deadline. Collection duration depends on supply, provider latency, account capacity, judge throughput, and database performance.
 
@@ -312,6 +334,27 @@ Defaults are configuration choices, not statements of the capacity available to 
 HTTP 401, 402, and 429 pause affected providers across shards. Judge rejections pause grading while retrieved evidence is retained. Unsent reservations are refunded; in-flight calls finish normally. Interrupted paid retrievals are not automatically repeated.
 
 A 30–60-second collection needs capacity for the full sample. The repository's full-scale fixture grants 1,024 concurrent requests and 200 requests per second per provider, and 1,000 judge requests per second. Its 60-second assertion measures the pipeline against local HTTP fixtures; it is not a live-provider or hosted-scheduler service guarantee. Discovery and sample preparation are outside that timed collection measurement.
+
+## Hard-first sampling
+
+Protocol v7 probes candidates with one plain HTTP GET before drawing the sample; see [the methodology](https://github.com/context-dot-dev/trace-benchmark/blob/main/docs/methodology.md#protocol-v7-hard-first-sample). The Workflow discovers sources, runs bounded probe steps of up to 200 seconds (at most 12), and then freezes the sample. Probing uses the same private-address protection as discovery and at most two connections per site.
+
+| Setting | Default | Meaning |
+| :--- | ---: | :--- |
+| `TRACE_SAMPLING` | `hard-first` | `all` restores the unprobed v6 sample |
+| `TRACE_MIN_PER_CATEGORY` | 50 | Easy pages top up a category with fewer hard pages to this size; `0` samples hard pages only |
+| `TRACE_PROBE_MAX_PER_CATEGORY` | 2000 | Probe budget per category for one sample |
+| `TRACE_PROBE_CONCURRENCY` | 24 | Probes in flight across all sites |
+
+Probe results are kept for 30 days in the `probes` table and reused for 14. To see which sources still supply hard pages, run the probe without a database:
+
+```sh
+# Discover every source now and probe 40 candidates from each.
+npx tsx scripts/probe.ts sources --per-source 40
+# Probe the URLs of a published sample.
+curl -fsSG https://trace.context.dev/api/download --data-urlencode 'run=scraping-bench-v6:2026-11-27' -o sample.ndjson
+npx tsx scripts/probe.ts urls sample.ndjson
+```
 
 ## Grading after collection
 
