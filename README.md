@@ -48,7 +48,7 @@ Context.dev builds and maintains TRACE and is also one of the providers tested. 
 
 ## How new data arrives every Friday
 
-1. **Discover.** The [source registry](config/sources.json) contains 197 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. A daily job at 12:45 UTC polls every due source and probes new candidates, so a week of feed items is available on Friday. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
+1. **Discover.** The [source registry](config/sources.json) contains 243 public feeds, registries, APIs, and sitemaps, plus English Wikipedia's recent changes. A daily job at 12:45 UTC polls every due source and probes new candidates, so a week of feed items is available on Friday. Wikipedia discovery compares revisions from the previous UTC day and collects newly added external links.
 2. **Sample.** Every **Friday at 00:15 UTC**, the collector selects up to 300 previously untested URLs per category, preferring pages that a plain HTTP request could not read, usually about 2,500 pages in total, with a maximum target of 2,700. Selection is deterministic for the day, balances organizations, and caps any one organization at 125 pages and any one hostname at 375.
 3. **Freeze and fetch.** The sample is saved before collection. All four providers receive the same URLs with fresh-fetch settings. Independent, rate-limited workers make one retrieval attempt per provider and page.
 4. **Judge.** A provider-blind automated judge evaluates the returned evidence under that sample's protocol. Failures and unresolved judgments remain visible. Account-limit rejections are reported separately.

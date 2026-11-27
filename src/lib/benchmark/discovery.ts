@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 import { lookup } from "node:dns";
 import { Agent, fetch as publicFetch } from "undici";
 import ipaddr from "ipaddr.js";
@@ -16,6 +17,8 @@ export type Source = {
   sitemap_filter?: string;
   url_contains?: string;
   actor?: string;
+  /** Commerce sources: product pages contain this path (default "/products/", the Shopify layout). */
+  eligibility?: { path_contains?: string };
 };
 /** Resolves hostnames itself and refuses private, loopback, and other non-unicast destinations. */
 export const publicDispatcher = new Agent({
@@ -59,6 +62,15 @@ export function canonical(url: string) {
       u.searchParams.delete(key);
   return u.href;
 }
+/**
+ * Source text from response bytes. Large retailers publish gzip-compressed sitemap files
+ * (.xml.gz) that arrive as plain bytes rather than with a Content-Encoding header.
+ */
+export function decodeSource(body: Buffer) {
+  if (body[0] === 0x1f && body[1] === 0x8b)
+    return gunzipSync(body, { maxOutputLength: 60_000_000 }).toString("utf8");
+  return body.toString("utf8");
+}
 export async function fetchPublic(url: string, deadline?: AbortSignal) {
   const signal = AbortSignal.any([
     AbortSignal.timeout(20000),
@@ -93,7 +105,7 @@ export async function fetchPublic(url: string, deadline?: AbortSignal) {
       if (size > 12_000_000) throw new Error("SOURCE_TOO_LARGE");
       chunks.push(chunk);
     }
-    return Buffer.concat(chunks).toString("utf8");
+    return decodeSource(Buffer.concat(chunks));
   }
   throw new Error("TOO_MANY_REDIRECTS");
 }
@@ -127,7 +139,7 @@ export async function discoverSource(
       const clean = canonical(String(url));
       if (
         source.category === "commerce" &&
-        !new URL(clean).pathname.includes("/products/")
+        !new URL(clean).pathname.includes(source.eligibility?.path_contains ?? "/products/")
       )
         return;
       const id = createHash("sha256")
