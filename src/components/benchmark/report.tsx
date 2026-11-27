@@ -954,7 +954,7 @@ export function BenchmarkReport({ initial, sources }: { initial: BenchmarkDatase
               items={[
                 {
                   title: "Reading the sample history",
-                  body: `Source and category filters apply to every sample result, including its page count and provider scores. Gaps mark missing scores or dates with no matching pages; they are not estimated. Source-filtered history requires complete retained page records, and category-only history uses saved run summaries. A dash means no score is available.${duplicateDays.length ? ` ${duplicateDays.length === 1 ? "One day has" : `${duplicateDays.length} days have`} more than one run (${duplicateDays.map(([d]) => shortDate(d)).join(", ")}); the most recently created run is shown.` : ""}`,
+                  body: `Source and category filters apply to every sample result, including its page count and provider scores. Lines join consecutive scored samples; dates without a score or without matching pages are not estimated. Source-filtered history requires complete retained page records, and category-only history uses saved run summaries. A dash means no score is available.${duplicateDays.length ? ` ${duplicateDays.length === 1 ? "One day has" : `${duplicateDays.length} days have`} more than one run (${duplicateDays.map(([d]) => shortDate(d)).join(", ")}); the most recently created run is shown.` : ""}`,
                 },
                 {
                   title: "Same evidence, new rules",

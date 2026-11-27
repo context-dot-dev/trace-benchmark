@@ -371,10 +371,27 @@ html::-webkit-scrollbar {
   fill: var(--ds-color-bg-default);
   stroke: var(--ds-color-text-muted);
 }
-.bench-coverage.is-absent {
+.bench-history .bench-history-series path {
   fill: none;
-  stroke: var(--ds-color-text-muted);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bench-history .bench-history-series circle {
+  stroke: var(--ds-color-bg-default);
   stroke-width: 1.5;
+}
+.bench-history .bench-history-end {
+  font-weight: var(--ds-font-weight-medium);
+}
+.bench-history .bench-history-end-name {
+  fill: var(--ds-color-text-muted);
+  font-weight: var(--ds-font-weight-regular);
+}
+.bench-history .bench-coverage-track {
+  stroke: var(--ds-color-border-default);
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 .bench-history-key {
   display: flex;
@@ -403,15 +420,6 @@ html::-webkit-scrollbar {
 }
 .bench-history-range > p span::before {
   content: "· ";
-}
-.bench-history-key .is-absent {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  font-style: normal;
-  font-size: var(--ds-text-body);
-  font-weight: var(--ds-font-weight-medium);
 }
 .bench-scroll[aria-label="Daily quality history"] td:nth-child(2),
 .bench-scroll[aria-label="Daily quality history"] td:nth-child(3) {
