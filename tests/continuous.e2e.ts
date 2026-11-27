@@ -8,6 +8,7 @@ import path from "node:path";
 import { sql } from "drizzle-orm";
 import { openStore, migrateStore } from "../src/lib/benchmark/store.ts";
 import { runTick } from "../src/lib/benchmark/collect.ts";
+import { hardProbe } from "./probe-fixture.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { categories, providers } from "../src/lib/benchmark/types.ts";
 import registry from "../config/sources.json";
@@ -154,7 +155,7 @@ try {
   }));
   await store.seedCandidates(candidates);
   await runTick(store, {
-    now: () => clock, discover: false, maxPages: 0,
+    now: () => clock, discover: false, maxPages: 0, probe: hardProbe,
     readers: createReaders({ keys: Object.fromEntries([...providers.map((p) => p.id), "judge"].map((p) => [p, "fixture-key"])) }),
   });
   for (const source of registry)

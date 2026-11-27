@@ -5,9 +5,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { sql } from "drizzle-orm";
 import { openStore, migrateStore } from "../src/lib/benchmark/store.ts";
 import { runTick } from "../src/lib/benchmark/collect.ts";
+import { hardProbe } from "./probe-fixture.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { report } from "../src/lib/benchmark/report.ts";
-import { categories, providers } from "../src/lib/benchmark/types.ts";
+import { categories, providers, PROTOCOL } from "../src/lib/benchmark/types.ts";
 
 const approvedQuestions = {
   access: {
@@ -281,6 +282,7 @@ let clock = new Date("2026-11-10T00:20:00Z");
 const options = {
   now: () => clock,
   readers,
+  probe: hardProbe,
   discover: false,
   perCategory: cases.length,
   maxPages: 100,
@@ -309,7 +311,7 @@ try {
   await runTick(store, options);
   await runTick(store, options);
   const data = await report(store);
-  assert.equal(data.latest?.protocol, "scraping-bench-v6");
+  assert.equal(data.latest?.protocol, PROTOCOL);
   assert.equal(data.latest?.status, "completed");
   const rows = await store.db.execute(
     sql`select provider,url,success,content,identity,confidence,error,judge_calls from scraping_bench.attempts order by url,provider`,
@@ -390,13 +392,13 @@ try {
     insert into scraping_bench.runs (id,day,protocol,status,created_at,summary)
     select 'scraping-bench-v5:2026-11-11',day,'scraping-bench-v5',status,created_at,
       summary || '{"id":"scraping-bench-v5:2026-11-11","protocol":"scraping-bench-v5"}'::jsonb
-    from scraping_bench.runs where id='scraping-bench-v6:2026-11-11'
+    from scraping_bench.runs where id=${PROTOCOL + ":2026-11-11"}
   `);
   await store.db.execute(
     sql`update scraping_bench.attempts set run_id='scraping-bench-v5:2026-11-11' where day='2026-11-11'`,
   );
   await store.db.execute(
-    sql`delete from scraping_bench.runs where id='scraping-bench-v6:2026-11-11'`,
+    sql`delete from scraping_bench.runs where id=${PROTOCOL + ":2026-11-11"}`,
   );
   await store.db.execute(
     sql`update scraping_bench.attempts set state='done',success=true,content='substantive',identity='match',confidence=0.99 where day='2026-11-11' and url like '%/preview'`,
@@ -449,7 +451,7 @@ try {
   await seed(legacyCases);
   await runTick(store, options);
   const next = await report(store);
-  assert.equal(next.latest?.protocol, "scraping-bench-v6");
+  assert.equal(next.latest?.protocol, PROTOCOL);
   assert.ok(
     next.latest?.providers.every(
       (p) => p.useful === 2 && p.failed === 1 && p.unknown === 0,
@@ -461,7 +463,7 @@ try {
     "scraping-bench-v5",
   );
   checks.push(
-    "An in-flight v5 run preserves completed judgments and uses old prompts/length rules for remaining rows; the next day starts v6 without duplicate billing",
+    "An in-flight v5 run preserves completed judgments and uses old prompts/length rules for remaining rows; the next day starts the current protocol without duplicate billing",
   );
   await mkdir("artifacts/access-judge", { recursive: true });
   await writeFile(

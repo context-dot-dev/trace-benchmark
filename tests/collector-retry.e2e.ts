@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { mkdir, writeFile } from "node:fs/promises";
 import { sql } from "drizzle-orm";
 import { runTick } from "../src/lib/benchmark/collect.ts";
+import { hardProbe } from "./probe-fixture.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { migrateStore, openStore } from "../src/lib/benchmark/store.ts";
 import { categories, providers } from "../src/lib/benchmark/types.ts";
@@ -73,7 +74,7 @@ try {
     end $$`);
   await store.db.execute(sql`create trigger e2e_failed_save before update on scraping_bench.attempts
     for each row execute function scraping_bench.e2e_fail_first_save()`);
-  const options = { now: () => clock, readers, discover: false, maxPages: 8, deadlineMs: 20000 };
+  const options = { now: () => clock, readers, probe: hardProbe, discover: false, maxPages: 8, deadlineMs: 20000 };
   await assert.rejects(runTick(store, options));
   activeAtRejection = { ...active };
   await runTick(store, { ...options, maxPages: 0 });

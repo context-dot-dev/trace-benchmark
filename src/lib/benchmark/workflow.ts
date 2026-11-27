@@ -1,16 +1,35 @@
 import { sleep } from "workflow";
-import { runTick } from "./collect";
+import { probeCandidates, runTick } from "./collect";
 import { database } from "./store";
 import { providerWorkers, runProvider, type ProviderWorker } from "./parallel";
 import { gradeRun, runsNeedingQuality } from "./grades";
 
-async function prepare() {
+// select=false discovers sources without drawing a pending sample, so a hard-first sample can be
+// probed in its own steps first.
+async function prepare(select = true) {
   "use step";
 
   if (process.env.VERCEL_ENV !== "production" || process.env.TRACE_WORKER_ENABLED !== "1")
-    return { status: "disabled" as const, workers: [] };
-  const result = await runTick(database(), { maxPages: 0 });
-  return { status: result.status, workers: providerWorkers() };
+    return { status: "disabled" as const, workers: [], samplePending: false, hardFirst: false };
+  const result = await runTick(database(), { maxPages: 0, select });
+  return {
+    status: result.status,
+    workers: providerWorkers(),
+    samplePending: "samplePending" in result && result.samplePending === true,
+    hardFirst: "mode" in result && result.mode === "hard-first",
+  };
+}
+
+// One bounded pass of the neutral difficulty probe over candidates for today's sample.
+async function probeSample() {
+  "use step";
+
+  if (process.env.VERCEL_ENV !== "production" || process.env.TRACE_WORKER_ENABLED !== "1")
+    return { probed: 0, done: true };
+  return probeCandidates(database(), {
+    day: new Date().toISOString().slice(0, 10),
+    deadlineMs: 200_000,
+  });
 }
 
 async function collectProvider(config: ProviderWorker) {
@@ -51,12 +70,25 @@ async function gradeQuality() {
 export async function collectContinuously() {
   "use workflow";
 
-  let prepared = await prepare();
+  let prepared = await prepare(false);
   while (prepared.status === "busy") {
     await sleep("30s");
-    prepared = await prepare();
+    prepared = await prepare(false);
   }
   if (prepared.status === "disabled") return;
+  if (prepared.samplePending) {
+    // Each pass stops at its deadline; 12 passes bound the probe phase to about 40 minutes.
+    if (prepared.hardFirst)
+      for (let pass = 0; pass < 12; pass++) {
+        const result = await probeSample();
+        if (result.done || result.probed === 0) break;
+      }
+    prepared = await prepare();
+    while (prepared.status === "busy") {
+      await sleep("30s");
+      prepared = await prepare();
+    }
+  }
   const results = await Promise.allSettled(prepared.workers.map(async (config) => {
     while (true) {
       const result = await collectProvider(config);

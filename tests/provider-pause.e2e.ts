@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { mkdir, writeFile } from "node:fs/promises";
 import { sql } from "drizzle-orm";
 import { runTick } from "../src/lib/benchmark/collect.ts";
+import { hardProbe } from "./probe-fixture.ts";
 import { runProvider } from "../src/lib/benchmark/parallel.ts";
 import { createReaders } from "../src/lib/benchmark/providers.ts";
 import { migrateStore, openStore } from "../src/lib/benchmark/store.ts";
@@ -56,7 +57,7 @@ try {
     title: "Target " + i, category: categories[i % categories.length].id,
     organization: "fixture-" + i, sourceId: "fixture", discoveredAt: clock,
   })));
-  await runTick(store, { readers, now: () => clock, discover: false, maxPages: 0 });
+  await runTick(store, { readers, probe: hardProbe, now: () => clock, discover: false, maxPages: 0 });
   const chosen = await store.db.execute(sql`select url from scraping_bench.attempts where provider='exa'
     and mod(abs(hashtext(id)::bigint),2)=0 order by page_id limit 1`);
   onlyFailUrl = String(chosen.rows[0].url);
@@ -87,7 +88,7 @@ try {
       title: "Target " + i, category: categories[i % categories.length].id,
       organization: "fixture-" + i, sourceId: "fixture", discoveredAt: clock,
     })));
-    await runTick(store, { readers, now: () => clock, discover: false, maxPages: 0 });
+    await runTick(store, { readers, probe: hardProbe, now: () => clock, discover: false, maxPages: 0 });
     const options = { provider: "exa" as const, shard: 0, shards: 1, concurrency: 8,
       requestsPerSecond: 4, readers, now: () => clock };
     const first = await runProvider(store, options);

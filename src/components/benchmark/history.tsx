@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { percent } from "@/lib/benchmark/format";
-import { ACCESS_PROTOCOL, providers, type RunSummary } from "@/lib/benchmark/types";
+import { isAccessProtocol, providers, type RunSummary } from "@/lib/benchmark/types";
 import { Name, integer } from "./charts";
 
 export const patterns = ["", "8 4", "2 4", "10 3 2 3"];
@@ -60,12 +60,12 @@ export const dateLabel = (time: number, long = false) =>
     timeZone: "UTC",
   });
 export const scoringLabel = (protocol: string) =>
-  protocol === ACCESS_PROTOCOL ? "Page access" : "Useful content";
+  isAccessProtocol(protocol) ? "Page access" : "Useful content";
 export function historyResult(run: RunSummary, provider: string) {
   const result = run.providers.find((metric) => metric.id === provider);
   if (run.status !== "completed" || !result?.total) return "—";
   return result.rate == null
-    ? `${integer(result.useful)} / ${integer(result.total)} ${run.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"}`
+    ? `${integer(result.useful)} / ${integer(result.total)} ${isAccessProtocol(run.protocol) ? "accessed" : "useful"}`
     : percent(result.rate);
 }
 export function Trend({ history, filtered }: { history: RunSummary[]; filtered: boolean }) {
@@ -386,7 +386,7 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
                     r.providers.every((p) => p.rate == null) && (
                       <p>
                         This sample does not cover every category, so no overall score is reported.
-                        The results below show {r.protocol === ACCESS_PROTOCOL ? "accessed" : "useful"} pages out of all pages tested.
+                        The results below show {isAccessProtocol(r.protocol) ? "accessed" : "useful"} pages out of all pages tested.
                       </p>
                     )}
                   <dl>

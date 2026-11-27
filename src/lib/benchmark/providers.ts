@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import {
-  ACCESS_PROTOCOL,
+  isAccessProtocol,
   PROTOCOL,
   type Grade,
   type Provider,
@@ -277,7 +277,7 @@ export function createReaders(
       receipt: Pick<Receipt, "text" | "chars">,
       protocol = PROTOCOL,
     ): Promise<Grade> {
-      const accessOnly = protocol === ACCESS_PROTOCOL;
+      const accessOnly = isAccessProtocol(protocol);
       try {
         if (!keys.judge) throw new Error("MISSING_CREDENTIAL");
         const response = await fetch(

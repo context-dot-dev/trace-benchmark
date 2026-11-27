@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { cachedReport } from "./cached-report";
 import { database } from "./store";
 import { attempts, grades } from "./schema";
-import { ACCESS_PROTOCOL, providers, type RunSummary } from "./types";
+import { isAccessProtocol, providers, type RunSummary } from "./types";
 import { sourceHistory } from "./source-history";
 import { redirected } from "./outcomes";
 import { missingSchemaFallback } from "./report";
@@ -62,7 +62,7 @@ const dailyPages = unstable_cache(
     );
     const regrade = new Map(extra.filter((g) => g.rubric === "access").map((g) => [g.attemptId, g]));
     const quality = new Map(extra.filter((g) => g.rubric === "quality").map((g) => [g.attemptId, g]));
-    const accessRun = protocol === ACCESS_PROTOCOL;
+    const accessRun = isAccessProtocol(protocol);
     const pages = new Map<string, BenchmarkPage>();
     for (const row of rows) {
       const provider = providers.find((p) => p.id === row.provider);

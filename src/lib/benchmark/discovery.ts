@@ -17,7 +17,8 @@ export type Source = {
   url_contains?: string;
   actor?: string;
 };
-const dispatcher = new Agent({
+/** Resolves hostnames itself and refuses private, loopback, and other non-unicast destinations. */
+export const publicDispatcher = new Agent({
   connections: 2,
   connect: {
     lookup(hostname, options, callback) {
@@ -65,7 +66,7 @@ export async function fetchPublic(url: string, deadline?: AbortSignal) {
   ]);
   for (let redirects = 0; redirects < 4; redirects++) {
     const response = await publicFetch(canonical(url), {
-      dispatcher,
+      dispatcher: publicDispatcher,
       signal,
       redirect: "manual",
       headers: {

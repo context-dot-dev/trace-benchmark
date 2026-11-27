@@ -1,6 +1,6 @@
 import { and, desc, eq, count, sql } from "drizzle-orm";
 import { attempts, runs, sources, worker } from "./schema";
-import { categories, providers, type Report, type RunSummary } from "./types";
+import { categories, providers, type Report, type RunSummary, type SamplingSummary } from "./types";
 import type { Store } from "./store";
 import { isAccountLimited, providerFailed } from "./outcomes";
 export function summarize(
@@ -19,6 +19,8 @@ export function summarize(
   >[],
   target: number,
   finishedAt: Date | null,
+  /** Carried over from sample selection; it cannot be rebuilt from attempt rows. */
+  sampling?: SamplingSummary,
 ): RunSummary {
   const scoredCategories = [
     ...categories,
@@ -49,6 +51,7 @@ export function summarize(
     target,
     finishedAt: finishedAt?.toISOString() ?? null,
     categories: counts,
+    ...(sampling ? { sampling } : {}),
     providers: providers.map((provider) => {
       const all = rows.filter((r) => r.provider === provider.id);
       // Rejections from our own account limits say nothing about the provider; leave them

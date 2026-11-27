@@ -101,6 +101,8 @@ export type RunSummary = {
   finishedAt: string | null;
   providers: ProviderMetric[];
   categories: Record<string, number>;
+  /** Present on hard-first (v7) samples. */
+  sampling?: SamplingSummary;
 };
 export type AuditSummary = {
   rubric: string;
@@ -143,4 +145,15 @@ export type PublicResult = {
   day: string;
 };
 export const ACCESS_PROTOCOL = "scraping-bench-v6";
-export const PROTOCOL = ACCESS_PROTOCOL;
+/** Same page-access rubric as v6, on a hard-first sample: pages a plain HTTP GET cannot read. */
+export const HARD_PROTOCOL = "scraping-bench-v7";
+export const PROTOCOL = HARD_PROTOCOL;
+/** Protocols scored for page access (v6 and later) rather than useful content. */
+export const isAccessProtocol = (protocol: string | null | undefined) =>
+  protocol === ACCESS_PROTOCOL || protocol === HARD_PROTOCOL;
+export type SamplingSummary = {
+  method: "hard-first";
+  probe: string;
+  /** Pages per category admitted as hard, and easy pages added to keep a thin category scored. */
+  categories: Record<string, { hard: number; easy: number }>;
+};
