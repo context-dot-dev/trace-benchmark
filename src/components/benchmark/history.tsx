@@ -10,9 +10,11 @@ export const patterns = ["", "8 4", "2 4", "10 3 2 3"];
 export function Legend({
   active,
   onSelect,
+  solid = false,
 }: {
   active?: string | null;
   onSelect?: (id: string) => void;
+  solid?: boolean;
 }) {
   return (
     <div className="bench-legend">
@@ -28,7 +30,7 @@ export function Legend({
                 stroke={p.color}
                 strokeWidth="3"
                 strokeLinecap="round"
-                strokeDasharray={patterns[i]}
+                strokeDasharray={solid ? undefined : patterns[i]}
               />
             </svg>
             <Name id={p.id} />
@@ -91,14 +93,16 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
   const latestSample = latestCompleted ?? history.findLast((sample) => sample.pages > 0) ?? history.at(-1);
   const defaultDay = latestSample ? Date.parse(latestSample.day) : lastDay;
   const dayCount = Math.round((lastDay - firstDay) / dayMs) + 1;
+  // Leave room on the right to label each line with its latest score, plus
+  // the provider name when there is space for it.
+  const namedLabels = width >= 640;
   const plotLeft = 46,
-    plotRight = width - 32;
+    plotRight = width - (namedLabels ? 150 : 62);
   const position = (time: number) =>
     dayCount === 1
       ? (plotLeft + plotRight) / 2
       : plotLeft +
         ((time - firstDay) * (plotRight - plotLeft)) / (lastDay - firstDay);
-  const protocols = [...new Set(history.map((r) => r.protocol))];
   const latestBySample = new Map<string, RunSummary>();
   for (const sample of history) {
     const key = `${sample.day}:${sample.protocol}`;
@@ -125,14 +129,28 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
     );
   const inspectedDay = nearestSampledDay(hoveredDay ?? selectedDay ?? defaultDay);
   const inspectedIndex = sampledDays.indexOf(inspectedDay);
-  const x = (r: RunSummary) => {
-    const sameDay = runsOnDay(Date.parse(r.day));
-    return (
-      position(Date.parse(r.day)) +
-      (sameDay.indexOf(r) - (sameDay.length - 1) / 2) *
-        Math.min(8, ((plotRight - plotLeft) / Math.max(1, dayCount - 1)) * 0.4)
-    );
+  // One continuous line per provider through every scored sample, whatever
+  // the gap between runs. A day with several samples uses its latest score.
+  const scoreOn = (time: number, provider: string) => {
+    for (const run of runsOnDay(time).toReversed()) {
+      const rate =
+        run.status === "completed"
+          ? run.providers.find((metric) => metric.id === provider)?.rate
+          : null;
+      if (rate != null) return rate;
+    }
+    return null;
   };
+  const series = providers.map((provider) => ({
+    provider,
+    points: sampledDays.flatMap((time) => {
+      const value = scoreOn(time, provider.id);
+      return value == null ? [] : [{ time, value }];
+    }),
+  }));
+  const unscoredDays = sampledDays.filter((time) =>
+    providers.every((provider) => scoreOn(time, provider.id) == null),
+  );
   // Zoom the score axis to the observed range so close results stay legible.
   const scores = daily.flatMap((r) =>
     r.status === "completed"
@@ -148,6 +166,21 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
   );
   const y = (value: number) =>
     280 - ((value * 100 - yFloor) / (100 - yFloor)) * 240;
+  // Latest score labels at the right edge, nudged apart so they never overlap.
+  const endLabels = series
+    .filter(({ points }) => points.length)
+    .map(({ provider, points }) => ({
+      provider,
+      value: points.at(-1)!.value,
+      y: y(points.at(-1)!.value),
+    }))
+    .sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i++)
+    endLabels[i].y = Math.max(endLabels[i].y, endLabels[i - 1].y + 18);
+  const labelOverflow = (endLabels.at(-1)?.y ?? 0) - 280;
+  if (labelOverflow > 0) for (const label of endLabels) label.y -= labelOverflow;
+  const chartTop = 24;
+  const chartHeight = unscoredDays.length ? 348 : 326;
   const tickIntervals = width < 500 ? 3 : 6;
   const tickStep = dayCount <= 7
     ? Math.max(1, Math.ceil((dayCount - 1) / tickIntervals))
@@ -182,13 +215,14 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
           </span>
         </p>
         <Legend
+          solid
           active={active}
           onSelect={(id) => setActive(active === id ? null : id)}
         />
       </div>
       <div className="bench-history" ref={container}>
         <svg
-          viewBox={`0 0 ${width} 348`}
+          viewBox={`0 ${chartTop} ${width} ${chartHeight - chartTop}`}
           role="slider"
           tabIndex={0}
           aria-label="History date"
@@ -242,61 +276,51 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
             className="bench-history-cursor"
             x1={position(inspectedDay)}
             x2={position(inspectedDay)}
-            y1="35"
-            y2="336"
+            y1="40"
+            y2="280"
           />
-          {protocols.flatMap((protocol) =>
-            providers.map((p, providerIndex) => {
-              const scored = daily.flatMap((run) => {
-                const value =
-                  run.protocol === protocol && run.status === "completed"
-                    ? run.providers.find((v) => v.id === p.id)?.rate
-                    : null;
-                return value == null ? [] : [{ run, value }];
-              });
-              return (
-                <g
-                  key={`${protocol}-${p.id}`}
-                  opacity={active && active !== p.id ? 0.18 : 1}
+          {series.map(({ provider, points }) => (
+            <g
+              key={provider.id}
+              className="bench-history-series"
+              opacity={active && active !== provider.id ? 0.18 : 1}
+            >
+              <path
+                d={points
+                  .map(({ time, value }, i) =>
+                    `${i ? "L" : "M"}${position(time)},${y(value)}`,
+                  )
+                  .join(" ")}
+                style={{ stroke: provider.color }}
+              />
+              {points.map(({ time, value }) => (
+                <circle
+                  key={time}
+                  cx={position(time)}
+                  cy={y(value)}
+                  r={time === inspectedDay ? 4.5 : 2.75}
+                  fill={provider.color}
                 >
-                  {scored.map(({ run, value }, i) => {
-                    const previous = scored[i - 1];
-                    return (
-                      <g key={run.id}>
-                        {previous && (
-                          <line
-                            className={
-                              Date.parse(run.day) - Date.parse(previous.run.day) > dayMs
-                                ? "bench-history-bridge"
-                                : undefined
-                            }
-                            x1={x(previous.run)}
-                            x2={x(run)}
-                            y1={y(previous.value)}
-                            y2={y(value)}
-                            strokeLinecap="round"
-                            style={{
-                              stroke: p.color,
-                              strokeWidth: 2,
-                              strokeDasharray: patterns[providerIndex],
-                            }}
-                          />
-                        )}
-                        <circle
-                          cx={x(run)}
-                          cy={y(value)}
-                          r={Date.parse(run.day) === inspectedDay ? 4.5 : 3}
-                          fill={p.color}
-                        >
-                          <title>{`${run.day}: ${p.name} ${percent(value)}`}</title>
-                        </circle>
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            }),
-          )}
+                  <title>{`${dateLabel(time, true)}: ${provider.name} ${percent(value)}`}</title>
+                </circle>
+              ))}
+            </g>
+          ))}
+          {endLabels.map(({ provider, value, y: labelY }) => (
+            <text
+              key={provider.id}
+              className="bench-history-end"
+              x={plotRight + 10}
+              y={labelY + 5}
+              opacity={active && active !== provider.id ? 0.18 : 1}
+              style={{ fill: provider.color }}
+            >
+              {namedLabels && (
+                <tspan className="bench-history-end-name">{provider.name} </tspan>
+              )}
+              {percent(value)}
+            </text>
+          ))}
           {ticks.map((time, i) => (
             <text
               key={time}
@@ -309,48 +333,47 @@ export function Trend({ history, filtered }: { history: RunSummary[]; filtered: 
               {dateLabel(time)}
             </text>
           ))}
-          <line
-            className="bench-coverage-track"
-            x1={plotLeft}
-            x2={plotRight}
-            y1="331"
-            y2="331"
-          />
-          {sampledDays.map((time) => {
-            const scored = runsOnDay(time).some(
-              (r) =>
-                r.status === "completed" &&
-                r.providers.some((p) => p.rate != null),
-            );
-            return (
-              <circle
-                key={time}
-                cx={position(time)}
-                cy="331"
-                r="3"
-                className={`bench-coverage ${scored ? "is-scored" : "is-unscored"}`}
+          {unscoredDays.length > 0 && (
+            <>
+              <line
+                className="bench-coverage-track"
+                x1={plotLeft}
+                x2={plotRight}
+                y1="331"
+                y2="331"
               />
-            );
-          })}
+              {sampledDays.map((time) => (
+                <circle
+                  key={time}
+                  cx={position(time)}
+                  cy="331"
+                  r="3"
+                  className={`bench-coverage ${unscoredDays.includes(time) ? "is-unscored" : "is-scored"}`}
+                />
+              ))}
+            </>
+          )}
         </svg>
       </div>
-      <div className="bench-history-key" aria-label="Sample coverage legend">
-        <span>
-          <i className="is-scored" />
-          Score available
-        </span>
-        <span>
-          <i className="is-unscored" />
-          Sample without score
-        </span>
-      </div>
+      {unscoredDays.length > 0 && (
+        <div className="bench-history-key" aria-label="Sample coverage legend">
+          <span>
+            <i className="is-scored" />
+            Score available
+          </span>
+          <span>
+            <i className="is-unscored" />
+            Sample without score
+          </span>
+        </div>
+      )}
       <p className="bench-note" id="history-instructions">
         {filtered && !history.some((r) => r.pages > 0)
           ? history.some((r) => r.status === "unavailable")
             ? "Filtered results are unavailable for these dates."
             : "No pages match these filters."
           : latestCompleted ? "Showing the latest completed sample by default." : "No completed sample yet; showing the latest available sample."} Hover to preview a sample;
-        click, touch or use the arrow keys to keep it selected. Faint lines join samples across days that were not sampled; those days are not estimated.
+        click, touch or use the arrow keys to keep it selected. Lines join consecutive samples; days without a sample are not estimated.
       </p>
       <Button variant="pill-outline" size="sm" className="mb-6" onClick={() => {
         setSelectedDay(null);
