@@ -1,1 +1,1 @@
-TRACE — Daily web scraping benchmark by context.dev.
+TRACE — Weekly web scraping benchmark by context.dev.
