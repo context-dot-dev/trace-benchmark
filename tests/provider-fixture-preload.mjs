@@ -11,6 +11,7 @@ const endpoints = new Map([
   ["https://api.exa.ai/contents", "exa"],
   ["https://api.firecrawl.dev/v2/scrape", "firecrawl"],
   ["https://api.keenable.ai/v1/fetch", "keenable"],
+  ["https://api.specstream.ai/v1/extract", "specstream"],
   ["https://api.typesafe.ai/v1/systemone", "judge"],
 ]);
 const originalFetch = globalThis.fetch;

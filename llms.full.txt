@@ -41,7 +41,7 @@ GET /api/download requires run=<run-id>. It returns application/x-ndjson, one re
 
 GET /results.md returns live Markdown as text/plain; unavailable results return 503. GET /llms.txt is a static index. GET /llms-full.txt contains this reference plus a live results section when available. These documentation resources remain readable during results outages. The /llms.full.txt spelling redirects to /llms-full.txt.
 
-Provider IDs are context, exa, firecrawl, and keenable. Legacy API fields named useful retain their names under v6; interpret them using protocol. Timing values in JSON are milliseconds; rates and confidence half-widths are fractions. An overall score is category-weighted, not simply successful rows divided by all rows. Keep unresolved results, account-limit exclusions, and missing categories distinct.
+Provider IDs are context, exa, firecrawl, keenable, and specstream. Legacy API fields named useful retain their names under v6; interpret them using protocol. Timing values in JSON are milliseconds; rates and confidence half-widths are fractions. An overall score is category-weighted, not simply successful rows divided by all rows. Keep unresolved results, account-limit exclusions, and missing categories distinct.
 
 For 429 or 503 responses, respect Retry-After when present and use bounded exponential backoff. Cache successful live summaries for at most 900 seconds; do not poll per provider/page. Cite the exact run URL, UTC sample date, and protocol.
 
@@ -212,6 +212,7 @@ Each provider receives the same URLs through its production client, with compara
 | Exa | `maxAgeHours: 0` | `statuses[].source` |
 | Firecrawl | `maxAge: 0`, `storeInCache: false` | `metadata.cacheState` |
 | Keenable | `live=true` | `usage.sku` must be `fetch.live` |
+| SpecStream | Default live read | `results[0].read_from` must not be `archive` |
 
 An observed cache hit is recorded as `CACHED_RESPONSE`, remains unresolved, and is excluded from latency. It does not receive a successful grade. The benchmark relies on provider cache metadata; it cannot independently prove what happened inside a provider.
 

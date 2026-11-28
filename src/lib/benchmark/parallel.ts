@@ -21,6 +21,7 @@ const defaults: Record<Provider, { concurrency: number; rps: number }> = {
   exa: { concurrency: 512, rps: 5 },
   firecrawl: { concurrency: 50, rps: 100 },
   keenable: { concurrency: 100, rps: 8 },
+  specstream: { concurrency: 64, rps: 10 },
 };
 
 export function providerWorkers(env = process.env): ProviderWorker[] {

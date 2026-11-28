@@ -121,6 +121,13 @@ const fixture = createServer(async (req, res) => {
         data: { markdown: text, metadata: { statusCode: 200 } },
       }),
     );
+  else if (url.pathname === "/specstream")
+    res.end(
+      JSON.stringify({
+        results: [{ status: "ok", text, url: body.urls[0], final_url: body.urls[0], read_from: "live" }],
+        price_usd: 0.0008,
+      }),
+    );
   else res.end(JSON.stringify({ content: text }));
 });
 fixture.listen(0, "127.0.0.1");
@@ -232,16 +239,16 @@ try {
   let wiki = await store.db.execute(
     sql`select provider, url, provenance from scraping_bench.attempts where category='other'`,
   );
-  assert.equal(wiki.rows.length, 4);
+  assert.equal(wiki.rows.length, providers.length);
   assert.ok(wiki.rows.every((r) => r.provenance.revision === 2));
   const providerCalls = () =>
     requests.filter((r) => providers.some((p) => r === "/" + p.id)).length;
-  assert.equal(providerCalls(), 36);
+  assert.equal(providerCalls(), 9 * providers.length);
   const dailyDiscoveryCalls = wikipediaCalls();
   await runTick(store, options);
   clock = new Date("2026-11-03T23:50:00Z");
   await runTick(store, options);
-  assert.equal(providerCalls(), 36);
+  assert.equal(providerCalls(), 9 * providers.length);
   assert.equal(
     wikipediaCalls(),
     dailyDiscoveryCalls,

@@ -6,6 +6,7 @@ const LOGO_FILES: Record<string, string> = {
   exa: "/logos/exa.svg",
   keenable: "/logos/keenable.png",
   firecrawl: "/logos/firecrawl.png",
+  specstream: "/logos/specstream.svg",
 };
 
 export function ContextMark({ className }: { className?: string }) {
